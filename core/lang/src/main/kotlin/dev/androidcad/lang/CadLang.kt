@@ -1,0 +1,36 @@
+package dev.androidcad.lang
+
+/** Einstiegspunkt des Sprachkerns: Quelltext → CSG-Baum. Reines Kotlin/JVM, keine Android-Abhängigkeit. */
+public object CadLang {
+    /**
+     * Wertet [source] aus.
+     *
+     * @param overrides Customizer-Werte als OpenSCAD-Literale (`"breite" to "42"`); überschreiben
+     *   Zuweisungen auf oberster Ebene.
+     * @param files Quelle für `include`/`use`.
+     * @param isCancelled wird regelmäßig geprüft; `true` bricht mit [CadLangException] ab.
+     * @throws CadLangException bei Syntax- und Laufzeitfehlern.
+     */
+    public fun render(
+        source: String,
+        overrides: Map<String, String> = emptyMap(),
+        files: SourceProvider? = null,
+        isCancelled: () -> Boolean = { false },
+    ): RenderResult {
+        val helper = Evaluator(emptyMap(), null) { false }
+        val values = overrides.mapValues { (name, lit) ->
+            try {
+                helper.eval(Parser(Lexer(lit).tokenize()).parseSingleExpr(), Scope(null))
+            } catch (e: CadLangException) {
+                throw CadLangException("Ungültiger Wert für '$name': ${e.message}")
+            }
+        }
+        val program = Parser(Lexer(source).tokenize()).parseProgram()
+        val ev = Evaluator(values, files, isCancelled)
+        val root = ev.run(program)
+        return RenderResult(root, ev.echoes, ev.warnings)
+    }
+
+    /** Customizer-Parameter der Datei (siehe [Customizer]). */
+    public fun parameters(source: String): List<ParamSpec> = Customizer.parse(source)
+}

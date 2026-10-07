@@ -1,0 +1,46 @@
+package dev.androidcad.app
+
+import android.os.Bundle
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.lightColorScheme
+import androidx.lifecycle.lifecycleScope
+import dev.androidcad.model.ModelSession
+import dev.androidcad.project.ModelRepository
+import dev.androidcad.project.ProjectRepository
+import java.io.File
+
+class MainActivity : ComponentActivity() {
+    // Der Zustand lebt in der Activity (nicht in der Komposition) und wird beim Start aus dem
+    // zuletzt geöffneten Projekt wiederhergestellt – auch nach Prozess-Tod.
+    private val state by lazy {
+        CadState(ProjectRepository(File(filesDir, "projects")), lifecycleScope, "Box", DEFAULT_SOURCE)
+    }
+
+    // Skizzen und Modell werden im Projektspeicher (filesDir/models) gesichert und beim Start wiederhergestellt.
+    private val workspace by lazy {
+        WorkspaceState(lifecycleScope, ModelSession(ModelRepository(File(filesDir, "models"))), UiPrefs(File(filesDir, "ui.properties")))
+    }
+
+    // Eine Projektverwaltung für Modelle und Skripte; merkt sich, welche Art zuletzt bearbeitet wurde.
+    private val hub by lazy { ProjectHub(workspace, state, File(filesDir, "active-kind")) }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
+        setContent {
+            MaterialTheme(colorScheme = if (isSystemInDarkTheme()) darkColorScheme() else lightColorScheme()) {
+                AppRoot(hub)
+            }
+        }
+    }
+
+    override fun onStop() {
+        super.onStop()
+        hub.flush() // ausstehende Änderungen sofort sichern, bevor Android den Prozess beenden darf
+    }
+}
