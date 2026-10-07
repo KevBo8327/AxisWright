@@ -384,10 +384,8 @@ class Document {
                     datum[f.id] = resolved ?: f.plane
                 }
                 is MirrorBodyFeature -> try {
+                    // die Naht an der Spiegelebene entfernt combine (Flächen in einer Ebene werden eine)
                     body = combine(body, mirrorTool(body, f, datum), BodyOp.ADD)
-                    // Naht entfernen: Flächen, die auf beiden Seiten der Ebene in einer Fläche liegen, werden eine (Namen bleiben als Zweitnamen)
-                    val joined = try { body!!.unifyFaces() } catch (e: BrepException) { null }
-                    if (joined != null) { body?.close(); body = joined }
                 } catch (e: BrepException) {
                     errors[f.id] = "„${f.name}“: ${e.message}"
                 } catch (e: IllegalArgumentException) {
@@ -583,6 +581,10 @@ class Document {
     /**
      * Verknüpft Körper und Werkzeug. [tool] wird immer verbraucht; [body] nur bei Erfolg – schlägt die Operation fehl,
      * bleibt der bisherige Körper offen und unverändert, damit spätere Features weiterarbeiten können.
+     *
+     * Danach werden Flächen zusammengeführt, die auf derselben Fläche liegen (z. B. die Seiten zweier bündiger Blöcke) – sonst
+     * bliebe eine Naht, und Verrundungen endeten an ihr. Die vereinte Fläche behält alle Namen (ältester als Hauptname), Bezüge
+     * darauf bleiben gültig. Gelingt das Zusammenführen nicht, bleibt das Ergebnis mit Naht.
      */
     private fun combine(body: BrepShape?, tool: BrepShape, op: BodyOp): BrepShape {
         if (body == null) {
@@ -601,7 +603,9 @@ class Document {
             tool.close()
         }
         body.close()
-        return result
+        val joined = try { result.unifyFaces() } catch (e: BrepException) { return result }
+        result.close()
+        return joined
     }
 
     /**

@@ -156,6 +156,9 @@ prototypisch klären, bevor das Feature-Modell (M3) festgelegt wird.
   Werkzeug „Spiegeln“ ohne spiegelbares Feature in der Auswahl (Vorgabe: YZ-Ebene an der linken Körperseite, an der gewählten Arbeitsebene) oder per Knopf aus einer Feature-Spiegelung. Gespiegelte Flächen
   heißen `FaceRef(Spiegelung, Rolle, (Feature shl 25) or Element)` – Verrundungen am Spiegelbild überstehen Maßänderungen. Emulator: Platte an x = 0 → doppelte Platte, nochmals an der linken Seite → vierfach
 - [x] **Naht beim Körperspiegeln entfernt**: nach dem Vereinigen werden Flächen derselben Fläche zusammengeführt (`BrepShape.unifyFaces`, OCCT `ShapeUpgrade_UnifySameDomain` mit Verlauf).
+- [x] **Keine Nähte nach Booleans**: jedes Hinzufügen/Abtragen (Extrusion, Bohrung, Muster, Spiegeln) führt danach Flächen derselben Fläche zusammen (`Document.combine`).
+  Zwei bündige Blöcke ergeben einen Quader mit 6 Flächen; Deckel und Seiten sind unter den Namen beider Extrusionen auffindbar, eine Rundung an der Kante läuft über die
+  ganze Länge, Skizzen auf der Fläche des jüngeren Blocks finden ihre Ebene weiter. Schlägt das Zusammenführen fehl, bleibt der Körper mit Naht (Test `SeamlessBooleanTest`)
   Flächen haben dafür neben dem Hauptnamen **Zweitnamen**; die zusammengeführte Fläche heißt nach dem ältesten Feature, die übrigen Namen bleiben als Zweitnamen gültig (Suche über `facesWithTag`/`edgesBetween`,
   weitergereicht durch Booleans, Verrundungen, Transformationen und `retag`). Emulator: gespiegelte Platte 14 statt 18 Flächen, eine Verrundung läuft über die volle Länge
 - [ ] tiefere Verschachtelung
