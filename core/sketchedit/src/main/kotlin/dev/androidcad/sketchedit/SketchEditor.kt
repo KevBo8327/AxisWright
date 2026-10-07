@@ -788,7 +788,10 @@ public class SketchEditor(public val sketch: Sketch) {
     public fun confirmPendingAction(value: Double): Boolean {
         val p = pendingAction ?: return false
         pendingAction = null
-        if (!validDimension(p.kind, value)) { message = "Ungültiger Wert"; changed(); return false }
+        if (!validDimension(p.kind, value)) {
+            message = if (p.kind == ActionKind.PATTERN_COUNT) "Anzahl: ganze Zahl von 2 bis ${SketchOps.MAX_PATTERN_COUNT}" else "Ungültiger Wert"
+            changed(); return false
+        }
         return applyAction(p.kind, value)
     }
 
@@ -799,6 +802,7 @@ public class SketchEditor(public val sketch: Sketch) {
 
     private fun validDimension(kind: ActionKind, v: Double): Boolean = v.isFinite() && when (kind) {
         ActionKind.LENGTH, ActionKind.DISTANCE, ActionKind.RADIUS, ActionKind.DIAMETER -> v > 0
+        ActionKind.PATTERN_COUNT -> v >= 2 && v <= SketchOps.MAX_PATTERN_COUNT && v == Math.rint(v)
         else -> true
     }
 
@@ -812,6 +816,11 @@ public class SketchEditor(public val sketch: Sketch) {
                 SketchOps.centerOn(sketch, info.lines, info.rounds.filter { it != hole }, SketchOps.CenterTarget.Point(sketch.centerOf(hole)))
             }
             return runOp("Mittig zur Kante") { SketchOps.centerOnEdge(sketch, info.lines, info.rounds, edge!!) }
+        }
+        if (kind == ActionKind.PATTERN_COUNT) return runOp("Anzahl im Muster") {
+            val pattern = SketchOps.patternOf(sketch, info.points, info.lines, info.rounds)
+                ?: return@runOp dev.androidcad.sketch.OpResult.fail("Die Auswahl gehört zu keinem Muster.")
+            SketchOps.setPatternCount(sketch, pattern, value!!.toInt())
         }
         if (kind == ActionKind.FACE_CENTER) return runOp("Mittig auf Fläche") {
             val target = faceCenter?.invoke() ?: return@runOp dev.androidcad.sketch.OpResult.fail("Der Umriss der Fläche ist noch nicht bekannt – gleich noch einmal versuchen.")

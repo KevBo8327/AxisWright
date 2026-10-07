@@ -177,6 +177,7 @@ internal val BOTTOM_TOOLS_WIDTH = 720.dp
 private fun SketchTopBar(state: WorkspaceState, compact: Boolean, onPlaneDialog: () -> Unit) {
     val handle = state.handle
     val e = handle.editor
+    handle.version // Beobachtung: Rückgängig/Löschen hängen am Editorzustand, nicht an den Parametern
     val colors = MaterialTheme.colorScheme
     var menu by remember { mutableStateOf(false) }
     val fit = { handle.fit(referencePoints(state.referenceLines)) }

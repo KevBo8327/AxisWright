@@ -845,4 +845,158 @@ public object SketchOps {
         }
         return OpResult.ok("${count - 1} ${if (count == 2) "Kopie" else "Kopien"} um den Mittelpunkt.")
     }
+
+    // ---- Muster nachträglich ändern ---------------------------------------------------------------
+
+    /**
+     * Ein vorhandenes Skizzenmuster, erkannt an seinen [Translated]- bzw. [Rotated]-Ketten. [chains] enthält je Punkt der Vorlage die
+     * Punkte aller Exemplare (Index 0 = Original); beim Kreismuster ist der Mittelpunkt [center] kein Teil der Ketten.
+     */
+    public class SketchPattern internal constructor(
+        public val chains: List<List<PointId>>,
+        public val center: PointId?,
+        /** Drehwinkel zwischen zwei Exemplaren (nur Kreismuster). */
+        public val step: Double,
+    ) {
+        public val circular: Boolean get() = center != null
+        public val count: Int get() = chains.first().size
+        /** Voller Kreis: die Exemplare sind gleichmäßig über 360° verteilt (sonst liegt das letzte bei einem festen Winkel). */
+        public val fullCircle: Boolean get() = circular && abs(abs(step * count) - 360.0) < 1e-6
+    }
+
+    /** Schlüssel einer Musterkette: Hilfslinie (Reihe) bzw. Mittelpunkt und Winkel (Kreismuster). */
+    private fun patternKey(c: Constraint): Any? = when (c) {
+        is Translated -> c.from to c.to
+        is Rotated -> c.center to c.degrees
+        else -> null
+    }
+
+    /**
+     * Das Muster, zu dem die gewählten Elemente gehören (Original oder Kopie), oder `null`. Gehören sie zu mehreren Mustern oder ist die
+     * Kettenstruktur nicht eindeutig (etwa nach Handarbeit), gibt es kein Ergebnis.
+     */
+    public fun patternOf(s: Sketch, points: Collection<PointId>, lines: Collection<LineId>, rounds: Collection<RoundId>): SketchPattern? {
+        val links = s.constraintEntries.mapNotNull { e -> patternKey(e.constraint)?.let { it to e.constraint } }
+        if (links.isEmpty()) return null
+        val selected = LinkedHashSet<PointId>(points).apply { addAll(pointsOf(s, lines, rounds)) }
+        fun ends(c: Constraint) = when (c) { is Translated -> c.a to c.b; is Rotated -> c.a to c.b; else -> error("kein Muster") }
+        val keys = selected.flatMap { p -> links.filter { (_, c) -> ends(c).let { (a, b) -> a == p || b == p } }.map { it.first } }.toSet()
+        if (keys.size != 1) return null
+        val key = keys.single()
+        val next = HashMap<PointId, PointId>(); val prev = HashMap<PointId, PointId>()
+        for ((k, c) in links) if (k == key) {
+            val (a, b) = ends(c)
+            if (next.put(a, b) != null || prev.put(b, a) != null) return null
+        }
+        val chains = next.keys.filter { it !in prev }.map { root ->
+            val chain = mutableListOf(root)
+            while (true) { val n = next[chain.last()] ?: break; if (n in chain) return null; chain += n }
+            chain.toList()
+        }
+        if (chains.isEmpty() || chains.any { it.size != chains.first().size }) return null
+        val first = links.first { it.first == key }.second
+        return if (first is Rotated) SketchPattern(chains, first.center, first.degrees) else SketchPattern(chains, null, 0.0)
+    }
+
+    /** Elemente eines Exemplars: alle, deren Punkte nur aus [layer] (und dem Mittelpunkt) stammen. */
+    private fun layerElements(s: Sketch, layer: Set<PointId>, center: PointId?): Pair<List<LineId>, List<RoundId>> {
+        fun inside(ps: List<PointId>) = ps.all { it in layer || it == center } && ps.any { it in layer }
+        val lines = s.lineIds.filter { s.line(it).let { l -> inside(listOf(l.p1, l.p2)) } }
+        val rounds = s.circleIds.filter { inside(listOf(s.circle(it).center)) }.map { it as RoundId } +
+            s.arcIds.filter { s.arc(it).let { a -> inside(listOf(a.center, a.start, a.end)) } }
+        return lines to rounds
+    }
+
+    /**
+     * Ändert die Anzahl der Exemplare eines Musters auf [count] (mit Original). Weniger: die letzten Kopien entfallen samt ihrer
+     * Bedingungen. Mehr: neue Kopien hängen sich an die letzte an. Beim Kreismuster über 360° wird der Winkelschritt neu verteilt,
+     * bei einem Teilkreis bleibt der Gesamtwinkel gleich.
+     */
+    public fun setPatternCount(s: Sketch, pattern: SketchPattern, count: Int): OpResult {
+        if (count < 2) return OpResult.fail("Anzahl muss mindestens 2 sein")
+        if (count > MAX_PATTERN_COUNT) return OpResult.fail("Höchstens $MAX_PATTERN_COUNT Exemplare")
+        val old = pattern.count
+        if (count == old) return OpResult.fail("Das Muster hat schon $count Exemplare")
+        val chains = pattern.chains
+        fun layer(k: Int) = chains.map { it[k] }.toSet()
+        // Vorlage: Elemente der ersten Kopie, zurückgeführt auf das Original (so zählen nur Elemente, die wirklich kopiert wurden)
+        val back = chains.associate { it[1] to it[0] }
+        val (copyLines, copyRounds) = layerElements(s, layer(1), pattern.center)
+        val (origLines, origRounds) = layerElements(s, layer(0), pattern.center)
+        fun orig(p: PointId) = back[p] ?: p
+        val srcLines = copyLines.mapNotNull { id ->
+            val l = s.line(id)
+            origLines.firstOrNull { o -> s.line(o).let { it.p1 == orig(l.p1) && it.p2 == orig(l.p2) } }
+        }
+        fun circlesAt(all: List<RoundId>, center: PointId) = all.filterIsInstance<CircleId>().filter { s.circle(it).center == center }
+        val srcRounds = copyRounds.mapNotNull { id ->
+            when (id) {
+                is CircleId -> s.circle(id).center.let { c -> circlesAt(origRounds, orig(c)).getOrNull(circlesAt(copyRounds, c).indexOf(id)) }
+                is ArcId -> s.arc(id).let { a ->
+                    origRounds.filterIsInstance<ArcId>().firstOrNull { o -> s.arc(o).let { it.center == orig(a.center) && it.start == orig(a.start) && it.end == orig(a.end) } }
+                }
+            }
+        }
+        if (srcLines.isEmpty() && srcRounds.isEmpty()) return OpResult.fail("Die Vorlage des Musters ist nicht mehr vollständig")
+
+        if (count < old) for (k in count until old) layer(k).forEach { s.remove(it) }
+
+        val step = when {
+            !pattern.circular -> 0.0
+            pattern.fullCircle -> pattern.step * old / count
+            else -> pattern.step * (old - 1) / (count - 1)
+        }
+        if (pattern.circular && step != pattern.step) {
+            val c = s.point(pattern.center!!)
+            val tail = chains.flatMap { it.drop(1).take(minOf(count, old) - 1) }.toSet()
+            for (e in s.constraintEntries) {
+                val r = e.constraint as? Rotated ?: continue
+                if (r.center == pattern.center && r.degrees == pattern.step && r.b in tail) s.replace(e.id, r.copy(degrees = step))
+            }
+            // Kopien gleich an ihre neue Stelle legen, damit der Löser nur noch nachfasst
+            for (chain in chains) {
+                val q = s.point(chain[0])
+                for (k in 1 until minOf(count, old)) {
+                    val t = Math.toRadians(step * k)
+                    s.movePoint(chain[k], c.x + cos(t) * (q.x - c.x) - sin(t) * (q.y - c.y), c.y + sin(t) * (q.x - c.x) + cos(t) * (q.y - c.y))
+                }
+            }
+        }
+
+        if (count > old) {
+            val lastRounds = layerElements(s, layer(old - 1), pattern.center).second
+            var prevCircles = srcRounds.filterIsInstance<CircleId>().associateWith { src ->
+                val c = s.circle(src).center
+                val last = chains.first { it[0] == c }.last()
+                circlesAt(lastRounds, last)[circlesAt(origRounds, c).indexOf(src)]
+            }
+            var prev = chains.associate { it[0] to it.last() }
+            val vector = if (pattern.circular) null
+            else s.constraintEntries.firstNotNullOf { e -> (e.constraint as? Translated)?.takeIf { it.a == chains[0][0] } }
+            for (k in old until count) {
+                val map = HashMap<PointId, PointId>()
+                pattern.center?.let { map[it] = it }
+                for (chain in chains) {
+                    val from = prev.getValue(chain[0])
+                    val q = s.point(from)
+                    val n = if (vector != null) {
+                        val f = s.point(vector.from); val to = s.point(vector.to)
+                        s.addPoint(q.x + to.x - f.x, q.y + to.y - f.y).also { s.add(Translated(from, it, vector.from, vector.to)) }
+                    } else {
+                        val c = s.point(pattern.center!!); val t = Math.toRadians(step)
+                        s.addPoint(c.x + cos(t) * (q.x - c.x) - sin(t) * (q.y - c.y), c.y + sin(t) * (q.x - c.x) + cos(t) * (q.y - c.y))
+                            .also { s.add(Rotated(from, it, pattern.center, step)) }
+                    }
+                    map[chain[0]] = n
+                }
+                prevCircles = copyElements(s, srcLines, srcRounds, map, prevCircles)
+                prev = chains.associate { it[0] to map.getValue(it[0]) }
+            }
+        }
+        val added = count - old
+        return OpResult.ok(if (added > 0) "$added ${if (added == 1) "Exemplar" else "Exemplare"} ergänzt – jetzt $count." else "${-added} ${if (added == -1) "Exemplar" else "Exemplare"} entfernt – jetzt $count.")
+    }
+
+    /** Obergrenze für die Anzahl der Exemplare eines Skizzenmusters (die Skizze bleibt damit lösbar und bedienbar). */
+    public const val MAX_PATTERN_COUNT: Int = 100
 }

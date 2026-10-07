@@ -67,6 +67,7 @@ public enum class ActionKind(public val label: String, public val symbol: String
     FACE_CENTER("Mittig auf Fläche", "⊡", ActionGroup.OTHER),
     HOLE_CENTER("Mittig auf Bohrung", "◎", ActionGroup.OTHER),
     EDGE_CENTER("Mittig zur Kante", "⊥", ActionGroup.OTHER),
+    PATTERN_COUNT("Anzahl im Muster", "#", ActionGroup.OTHER, true),
 }
 
 /** Verfügbare Aktion für die aktuelle Auswahl; [defaultValue] ist bei Maßen der Wert der Zeichnung. */
@@ -99,7 +100,12 @@ internal object ConstraintActions {
         ActionKind.entries.filter { kind -> i.lines.none { SketchOps.axisOf(sketch, it) != null } || kind !in NOT_FOR_AXES }.mapNotNull { kind ->
             if (kind == ActionKind.CONSTRUCTION) return@mapNotNull if (i.lines.isNotEmpty() || i.rounds.isNotEmpty()) ActionOption(kind) else null
             val built = build(sketch, kind, i, value = null) ?: return@mapNotNull null
-            ActionOption(kind, if (kind.needsValue) defaultValue(sketch, built.firstOrNull()) else null)
+            val default = when {
+                kind == ActionKind.PATTERN_COUNT -> SketchOps.patternOf(sketch, i.points, i.lines, i.rounds)?.count?.toDouble()
+                kind.needsValue -> defaultValue(sketch, built.firstOrNull())
+                else -> null
+            }
+            ActionOption(kind, default)
         }
 
     private fun defaultValue(sketch: Sketch, c: Constraint?): Double? =
@@ -163,6 +169,8 @@ internal object ConstraintActions {
             // Form + genau eine projizierte Bohrung bzw. Kante als Bezug
             ActionKind.HOLE_CENTER -> referenceTarget(sketch, i)?.let { (l, r) -> if (r != null && l == null) emptyList() else null }
             ActionKind.EDGE_CENTER -> referenceTarget(sketch, i)?.let { (l, r) -> if (l != null && r == null) emptyList() else null }
+            // ganzes Muster: Kopien ergänzen oder entfernen (im Editor über SketchOps)
+            ActionKind.PATTERN_COUNT -> if (SketchOps.patternOf(sketch, i.points, i.lines, i.rounds) != null) emptyList() else null
             ActionKind.ORIGIN_CORNER, ActionKind.ORIGIN_CENTER, ActionKind.FACE_CENTER -> {
                 val shape = i.lines.filter { SketchOps.axisOf(sketch, it) == null }
                 if (shape.isNotEmpty() || i.rounds.isNotEmpty()) emptyList() else null

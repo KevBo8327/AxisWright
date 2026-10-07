@@ -89,6 +89,10 @@ prototypisch klären, bevor das Feature-Modell (M3) festgelegt wird.
 - [x] **Skizzenmuster** (Werkzeuggruppe „Muster“ der Skizze): Auswahl → **Reihe** (Linie als Richtung antippen – die Seite bestimmt die Richtung – oder X/Y; Anzahl, Abstand) bzw. **Kreis**
   (Punkt/Kreis als Mittelpunkt oder Ursprung; Anzahl, Winkel, 360° = voller Kreis). Parametrisch über neue Constraints `Translated` (b − a = Mustervektor, eine Hilfslinie mit Längenmaß = Abstand)
   und `Rotated` (Drehung um den Mittelpunkt); Kreise über eine Kette gleicher Radien. Bestimmtheit bleibt erhalten (bestimmtes Original → bestimmte Kopien). Emulator: 6 Kreise um den Ursprung; Rechteckreihe, Abstand per Maß 25 → 40, extrudiert
+- [x] **Anzahl eines Skizzenmusters nachträglich ändern**: Original oder Kopie antippen → „# Anzahl im Muster“. Das Muster wird an seinen `Translated`-/`Rotated`-Ketten erkannt
+  (`SketchOps.patternOf`, keine eigene Musterverwaltung nötig); mehr Exemplare hängen sich an die letzte Kopie, weniger entfernen die letzten samt Bedingungen
+  (`SketchOps.setPatternCount`). Kreismuster über 360° verteilen sich neu, Teilkreise behalten ihren Gesamtwinkel. Ganze Zahl 2 … 100, rückgängig machbar
+  ![Anzahl im Muster](screenshot_muster_anzahl.png)
 - [x] **Lage der Skizze bestimmen**: X- und Y-Achse sind antippbar (feste Konstruktionslinien, `SketchOps.axisOf`) – alle Bedingungen/Maße gelten auch gegenüber den Achsen (Auf Kurve, Kollinear,
   Symmetrisch, Abstand, Winkel …; Unsinniges wie „Gleich“/„Fixieren“ wird bei gewählter Achse nicht angeboten). Schnellaktionen **„Ecke auf Ursprung“** und **„Mittig auf Ursprung“** (Hilfsdiagonale mit dem Ursprung
   als Mittelpunkt – bleibt bei Maßänderungen mittig). Statuszeile erkennt „Form bestimmt – Lage (und Drehung) noch frei“ (`SketchOps.placementFreedom`, Drehung per Probe-Drehung geprüft). Ursprung deutlicher
@@ -107,7 +111,7 @@ prototypisch klären, bevor das Feature-Modell (M3) festgelegt wird.
 - [x] **Overlay-Layout, Schritt 3 (kleine Geräte)**: Werkzeuge unten/Einstellungen als Blatt unter 720 dp Breite **und** im Hochformat (auch Tablets), kompakte Kopfzeile nur unter 600 dp;
   3D-Bild rückt neben offene Karten (Modell im freien Bereich zentriert); Skizze passt mit freien Rändern für Werkzeugleiste und Statusplakette ein (`SketchEditor.fit(left, top)`) und passt beim Drehen
   neu ein. Geprüft: Pixel Tablet, 8″-Tablet quer/hoch (960 × 600 dp), Smartphone hoch/quer (448 × 997 dp)
-- [ ] **Offen in M2:** vorhandenen Körper im Skizzenmodus blass als Referenz zeigen, optionale 3D-Vorschau auf breiten Fenstern, freie Ebenen (Kamera auf beliebige Normale ausrichten), Bemaßen per Ziehen eines Etiketts (Position), Bemaßungs-Vorschlag beim Zeichnen, Fase in 2D, nachträgliches Ändern der Anzahl eines Skizzenmusters, Trimmen von Kreisen/Bögen an Elementen mit Maßen (Maße der gekürzten Linie entfallen),
+- [ ] **Offen in M2:** vorhandenen Körper im Skizzenmodus blass als Referenz zeigen, optionale 3D-Vorschau auf breiten Fenstern, freie Ebenen (Kamera auf beliebige Normale ausrichten), Bemaßen per Ziehen eines Etiketts (Position), Bemaßungs-Vorschlag beim Zeichnen, Fase in 2D, Trimmen von Kreisen/Bögen an Elementen mit Maßen (Maße der gekürzten Linie entfallen),
   Ellipse/Spline, Skizzenebene auf eine Körperfläche legen (XZ/YZ/Versatz ✓), Constraint-Leiste: „deaktiviert“ statt versteckt bei unzulässigen Aktionen,
   Stift-Gesten (z. B. Durchstreichen = Löschen), Zwei-Finger-Tippen = Rückgängig
 
