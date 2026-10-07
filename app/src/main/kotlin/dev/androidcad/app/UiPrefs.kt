@@ -26,6 +26,15 @@ class UiPrefs(private val file: File? = null) {
             save()
         }
 
+    /** Gemerkter Text unter [key] (z. B. die zuletzt gewählte Zeichenvariante) oder `null`. */
+    fun text(key: String): String? = props.getProperty(key)
+
+    fun putText(key: String, value: String) {
+        if (props.getProperty(key) == value) return
+        props.setProperty(key, value)
+        save()
+    }
+
     private fun save() {
         val f = file ?: return
         try { f.outputStream().use { props.store(it, "Bedienvorlieben") } } catch (_: Exception) { }

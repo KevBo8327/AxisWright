@@ -295,6 +295,7 @@ class WorkspaceState(private val scope: CoroutineScope, private val session: Mod
     private fun bindEditor() {
         handle.editor.onSketchChanged = { onSketchChanged() }
         handle.editor.faceCenter = if (activeSketch.onFace != null) ::faceCenterTarget else null
+        applyDrawModes(handle.editor, prefs)
         updateRegions()
     }
 

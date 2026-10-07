@@ -417,6 +417,12 @@ private fun DrawScope.drawPreview(editor: SketchEditor, p: Preview, c: SketchCol
             drawLine(c.preview.copy(alpha = 0.4f), o(p.center), o(p.start), 1f)
             drawLine(c.preview.copy(alpha = 0.4f), o(p.center), o(p.end), 1f)
         }
+        is Preview.Polygon -> {
+            val path = androidx.compose.ui.graphics.Path()
+            p.points.forEachIndexed { i, q -> val s = o(q); if (i == 0) path.moveTo(s.x, s.y) else path.lineTo(s.x, s.y) }
+            path.close()
+            drawPath(path, c.preview, style = Stroke(2.5f, pathEffect = dash))
+        }
         is Preview.Box -> Unit
     }
 }

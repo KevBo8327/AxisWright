@@ -13,6 +13,9 @@ import dev.androidcad.sketch.Horizontal
 import dev.androidcad.sketch.LineId
 import dev.androidcad.sketch.Midpoint
 import dev.androidcad.sketch.OpResult
+import dev.androidcad.sketch.Parallel
+import dev.androidcad.sketch.Perpendicular
+import dev.androidcad.sketch.TangentLineRound
 import dev.androidcad.sketch.SketchOps
 import dev.androidcad.sketch.PointId
 import dev.androidcad.sketch.PointOnLine
@@ -64,6 +67,42 @@ public enum class Tool {
     public val isPattern: Boolean get() = this == PATTERN_LINEAR || this == PATTERN_CIRCULAR
 }
 
+/** Varianten des Rechteck-Werkzeugs. */
+public enum class RectMode(public val label: String) {
+    /** Zwei gegenüberliegende Ecken (achsparallel). */
+    CORNERS("Ecke–Ecke"),
+
+    /** Mittelpunkt, dann eine Ecke – das Rechteck bleibt über eine Hilfsdiagonale mittig auf dem Punkt. */
+    CENTER("Mittelpunkt"),
+
+    /** Zwei Punkte einer Kante (beliebig schräg), dann die Höhe. */
+    THREE_POINTS("3 Punkte"),
+}
+
+/** Varianten des Kreis-Werkzeugs. */
+public enum class CircleMode(public val label: String) {
+    /** Mittelpunkt, dann ein Punkt auf dem Kreis. */
+    CENTER("Mittelpunkt"),
+
+    /** Zwei gegenüberliegende Punkte (Durchmesser). */
+    TWO_POINTS("2 Punkte"),
+
+    /** Drei Punkte auf dem Kreis. */
+    THREE_POINTS("3 Punkte"),
+}
+
+/** Varianten des Bogen-Werkzeugs. */
+public enum class ArcMode(public val label: String) {
+    /** Mittelpunkt, Start, dann die Richtung des Endes (gegen den Uhrzeigersinn). */
+    CENTER("Mittelpunkt"),
+
+    /** Start, Ende, dann ein Punkt auf dem Bogen. */
+    THREE_POINTS("3 Punkte"),
+
+    /** Beginnt am Ende einer Linie oder eines Bogens und setzt sie tangential fort (Zug wie beim Linienwerkzeug). */
+    TANGENT("Tangential"),
+}
+
 public enum class PointerKind { MOUSE, TOUCH, STYLUS }
 
 public enum class PointerButton { PRIMARY, SECONDARY, MIDDLE, ERASER }
@@ -72,6 +111,9 @@ public enum class PointerButton { PRIMARY, SECONDARY, MIDDLE, ERASER }
 public sealed interface Preview {
     public data class Line(val a: Vec2, val b: Vec2) : Preview
     public data class Rect(val a: Vec2, val b: Vec2) : Preview
+
+    /** Geschlossener Linienzug (z. B. schräges Rechteck). */
+    public data class Polygon(val points: List<Vec2>) : Preview
     public data class Circle(val center: Vec2, val radius: Double) : Preview
 
     /** Bogen um [center] von [start] nach [end], gegen den Uhrzeigersinn. */
@@ -124,6 +166,18 @@ public class SketchEditor(public val sketch: Sketch) {
         private set
     public var gridSnap: Boolean = true
         set(v) { field = v; changed() }
+
+    /** Variante des Rechteck-Werkzeugs; ein Wechsel bricht eine angefangene Form ab. */
+    public var rectMode: RectMode = RectMode.CORNERS
+        set(v) { if (field != v) { field = v; resetDrawing() }; changed() }
+
+    /** Variante des Kreis-Werkzeugs. */
+    public var circleMode: CircleMode = CircleMode.CENTER
+        set(v) { if (field != v) { field = v; resetDrawing() }; changed() }
+
+    /** Variante des Bogen-Werkzeugs. */
+    public var arcMode: ArcMode = ArcMode.CENTER
+        set(v) { if (field != v) { field = v; resetDrawing() }; changed() }
 
     /** Abstand (mm) des Versatz-Werkzeugs. */
     public var offsetDistance: Double = 5.0
@@ -180,11 +234,17 @@ public class SketchEditor(public val sketch: Sketch) {
     private var down: Down? = null
     private var drag: DragState? = null
     private var erasing = false
-    private var pending: SnapResult? = null   // erster Punkt bei Linie/Rechteck/Kreis; Mittelpunkt beim Bogen
-    private var arcStart: SnapResult? = null
+    private var pending: SnapResult? = null   // erster Punkt (beim Bogen um den Mittelpunkt: der Mittelpunkt)
+    private var second: SnapResult? = null    // zweiter Punkt bei Formen aus drei Punkten
 
     /** `true`, solange eine mehrteilige Zeichenaktion läuft (z. B. Linienzug) – dann bietet die Oberfläche „Fertig“ an. */
     public val drawingInProgress: Boolean get() = pending != null
+
+    /** Wie viele Punkte der laufenden Form schon gesetzt sind (0 … 2) – für den Hinweis der Oberfläche. */
+    public val drawStep: Int get() = when { pending == null -> 0; second == null -> 1; else -> 2 }
+
+    /** `true`, wenn die laufende Aktion ein Zug ist, der mit „Fertig“ endet (Linien, tangentiale Bögen). */
+    public val drawingChain: Boolean get() = tool == Tool.LINE || (tool == Tool.ARC && arcMode == ArcMode.TANGENT)
 
     init {
         status = sketch.solve()
@@ -408,7 +468,7 @@ public class SketchEditor(public val sketch: Sketch) {
         drag = null
         down = null
         pending = null
-        arcStart = null
+        second = null
         preview = null
         if (offsetSource != null) { offsetSource = null; selection = emptySet() }
         if (tool == Tool.MIRROR) { mirrorSource = emptySet(); tool = Tool.SELECT; message = null }
@@ -494,11 +554,37 @@ public class SketchEditor(public val sketch: Sketch) {
         val start = pending ?: d?.snap
         preview = when (tool) {
             Tool.LINE -> start?.let { Preview.Line(it.position, snap.position) }
-            Tool.RECTANGLE -> start?.let { Preview.Rect(it.position, snap.position) }
-            Tool.CIRCLE -> start?.let { Preview.Circle(it.position, dist(it.position, snap.position)) }
-            Tool.ARC -> {
+            Tool.RECTANGLE -> when (rectMode) {
+                RectMode.CORNERS -> start?.let { Preview.Rect(it.position, snap.position) }
+                RectMode.CENTER -> start?.let { c -> Preview.Rect(Vec2(2 * c.position.x - snap.position.x, 2 * c.position.y - snap.position.y), snap.position) }
+                RectMode.THREE_POINTS -> when (val b = second) {
+                    null -> start?.let { Preview.Line(it.position, snap.position) }
+                    else -> rect3(pending!!.position, b.position, snap.position)?.let { Preview.Polygon(it) } ?: Preview.Line(pending!!.position, b.position)
+                }
+            }
+            Tool.CIRCLE -> when (circleMode) {
+                CircleMode.CENTER -> start?.let { Preview.Circle(it.position, dist(it.position, snap.position)) }
+                CircleMode.TWO_POINTS -> start?.let { Preview.Circle(mid(it.position, snap.position), dist(it.position, snap.position) / 2) }
+                CircleMode.THREE_POINTS -> when (val b = second) {
+                    null -> start?.let { Preview.Line(it.position, snap.position) }
+                    else -> circumcenter(pending!!.position, b.position, snap.position)?.let { Preview.Circle(it, dist(it, snap.position)) }
+                        ?: Preview.Line(pending!!.position, b.position)
+                }
+            }
+            Tool.ARC -> if (arcMode == ArcMode.THREE_POINTS) {
+                val a = pending; val b = second
+                when {
+                    a != null && b != null -> arc3(a.position, b.position, snap.position)?.let { (c, s, e) -> Preview.Arc(c, s, e) } ?: Preview.Line(a.position, b.position)
+                    a != null -> Preview.Line(a.position, snap.position)
+                    else -> null
+                }
+            } else if (arcMode == ArcMode.TANGENT) {
+                pending?.point?.let { p -> tangentAt(p)?.let { (t, _) -> tangentArc(sketch.point(p), t, snap.position) } }
+                    ?.let { (c, s, e) -> Preview.Arc(c, s, e) }
+                    ?: pending?.let { Preview.Line(it.position, snap.position) }
+            } else {
                 val c = pending
-                val s = arcStart
+                val s = second
                 when {
                     c != null && s != null -> {
                         val r = dist(c.position, s.position)
@@ -522,23 +608,39 @@ public class SketchEditor(public val sketch: Sketch) {
                 pending == null -> pending = first
                 else -> finishLine(pending!!, up)?.let { pending = SnapResult(sketch.point(it), SnapKind.POINT, point = it) }
             }
-            Tool.RECTANGLE -> when {
-                dragged && pending == null -> { finishRect(first, up); pending = null }
+            Tool.RECTANGLE -> if (rectMode == RectMode.THREE_POINTS) threeTaps(first, up, dragged) { a, b, c -> finishRect3(a, b, c) }
+            else when {
+                dragged && pending == null -> { finishTwoPointRect(first, up); pending = null }
                 pending == null -> pending = first
-                else -> { finishRect(pending!!, up); pending = null }
+                else -> { finishTwoPointRect(pending!!, up); pending = null }
             }
-            Tool.CIRCLE -> when {
-                dragged && pending == null -> { finishCircle(first, up); pending = null }
+            Tool.CIRCLE -> if (circleMode == CircleMode.THREE_POINTS) threeTaps(first, up, dragged) { a, b, c -> finishCircle3(a, b, c) }
+            else when {
+                dragged && pending == null -> { finishTwoPointCircle(first, up); pending = null }
                 pending == null -> pending = first
-                else -> { finishCircle(pending!!, up); pending = null }
+                else -> { finishTwoPointCircle(pending!!, up); pending = null }
             }
-            Tool.ARC -> {
-                val c = pending
-                val s = arcStart
-                when {
-                    c == null -> pending = first
-                    s == null -> if (dist(c.position, first.position) > MIN_SIZE) arcStart = first
-                    else -> { finishArc(c, s, up.position); pending = null; arcStart = null }
+            Tool.ARC -> when (arcMode) {
+                ArcMode.THREE_POINTS -> threeTaps(first, up, dragged) { a, b, c -> finishArc3(a, b, c) }
+                ArcMode.TANGENT -> {
+                    val start = pending
+                    when {
+                        start == null -> {
+                            val p = first.point
+                            if (p != null && tangentAt(p) != null) pending = first
+                            else message = "Tangential: am Ende einer Linie oder eines Bogens beginnen."
+                        }
+                        else -> finishTangentArc(start.point!!, up)?.let { pending = SnapResult(sketch.point(it), SnapKind.POINT, point = it) }
+                    }
+                }
+                ArcMode.CENTER -> {
+                    val c = pending
+                    val s = second
+                    when {
+                        c == null -> pending = first
+                        s == null -> if (dist(c.position, first.position) > MIN_SIZE) second = first
+                        else -> { finishArc(c, s, up.position); pending = null; second = null }
+                    }
                 }
             }
             Tool.SELECT, Tool.TRIM, Tool.EXTEND, Tool.OFFSET, Tool.FILLET, Tool.MIRROR, Tool.PATTERN_LINEAR, Tool.PATTERN_CIRCULAR -> Unit
@@ -695,6 +797,168 @@ public class SketchEditor(public val sketch: Sketch) {
             dy == 0.0 && dx > 0 -> tryAdd(Horizontal(line))
             dx == 0.0 && dy > 0 -> tryAdd(Vertical(line))
         }
+    }
+
+    /** Drei Punkte nacheinander (der erste darf auch gezogen werden: Ziehen setzt die ersten beiden). */
+    private fun threeTaps(first: SnapResult, up: SnapResult, dragged: Boolean, finish: (SnapResult, SnapResult, SnapResult) -> Unit) {
+        val a = pending; val b = second
+        when {
+            a == null && dragged -> if (dist(first.position, up.position) > MIN_SIZE) { pending = first; second = up }
+            a == null -> pending = first
+            b == null -> if (dist(a.position, up.position) > MIN_SIZE) second = up
+            else -> { finish(a, b, up); pending = null; second = null }
+        }
+    }
+
+    private fun resetDrawing() {
+        pending = null; second = null; preview = null
+    }
+
+    private fun finishTwoPointRect(a: SnapResult, b: SnapResult) = if (rectMode == RectMode.CENTER) finishCenterRect(a, b) else finishRect(a, b)
+
+    private fun finishTwoPointCircle(a: SnapResult, b: SnapResult) = if (circleMode == CircleMode.TWO_POINTS) finishCircle2(a, b) else finishCircle(a, b)
+
+    /** Rechteck um den Mittelpunkt [center]: Hilfsdiagonale mit Mittelpunkt-Bedingung, die Ecke bei [corner] folgt dem Fang. */
+    private fun finishCenterRect(center: SnapResult, corner: SnapResult) {
+        val c = center.position; val q = corner.position
+        val dx = abs(q.x - c.x); val dy = abs(q.y - c.y)
+        if (dx < MIN_SIZE / 2 || dy < MIN_SIZE / 2) return
+        val r = sketch.addRectangle(c.x - dx, c.y - dy, c.x + dx, c.y + dy)
+        val diagonal = sketch.addLine(r.corners[0], r.corners[2], construction = true)
+        val extra = ArrayList<Constraint>()
+        val m = materialize(center, extra)
+        sketch.add(Midpoint(m, diagonal))
+        extra.forEach(::tryAdd)
+        val near = r.corners.minBy { dist(sketch.point(it), q) }
+        constraintsFor(near, corner).forEach(::tryAdd)
+        commit("Rechteck", analyze = true)
+    }
+
+    /** Ecken eines Rechtecks mit der Kante [a]–[b] und der Höhe bis [c] (senkrecht zur Kante), oder `null`, wenn es zu klein ist. */
+    private fun rect3(a: Vec2, b: Vec2, c: Vec2): List<Vec2>? {
+        val len = dist(a, b)
+        if (len < MIN_SIZE) return null
+        val nx = -(b.y - a.y) / len; val ny = (b.x - a.x) / len
+        val h = (c.x - a.x) * nx + (c.y - a.y) * ny
+        if (abs(h) < MIN_SIZE) return null
+        return listOf(a, b, Vec2(b.x + nx * h, b.y + ny * h), Vec2(a.x + nx * h, a.y + ny * h))
+    }
+
+    /** Schräges Rechteck: Kante [a]–[b], Höhe bis [c]. Gegenüberliegende Seiten parallel, eine Ecke rechtwinklig. */
+    private fun finishRect3(a: SnapResult, b: SnapResult, c: SnapResult) {
+        val pts = rect3(a.position, b.position, c.position) ?: return
+        val extra = ArrayList<Constraint>()
+        val p0 = materialize(a, extra)
+        val p1 = materialize(b, extra)
+        if (p0 == p1) { sketch.removeOrphanPoints(); return }
+        val p2 = sketch.addPoint(pts[2].x, pts[2].y)
+        val p3 = sketch.addPoint(pts[3].x, pts[3].y)
+        val e0 = sketch.addLine(p0, p1); val e1 = sketch.addLine(p1, p2); val e2 = sketch.addLine(p2, p3); val e3 = sketch.addLine(p3, p0)
+        sketch.add(Perpendicular(e0, e1)); sketch.add(Parallel(e0, e2)); sketch.add(Parallel(e1, e3))
+        extra.forEach(::tryAdd)
+        autoHorizontalVertical(e0)
+        commit("Rechteck", analyze = true)
+    }
+
+    /** Gefangene vorhandene Punkte liegen danach auf der Kurve (Kreis durch zwei bzw. drei Punkte, Bogen durch einen Punkt). */
+    private fun bindOnRound(s: SnapResult, round: dev.androidcad.sketch.RoundId) {
+        if (s.kind == SnapKind.POINT && s.point != null) tryAdd(PointOnRound(s.point, round))
+    }
+
+    private fun finishCircle2(a: SnapResult, b: SnapResult) {
+        val r = dist(a.position, b.position) / 2
+        if (r < MIN_SIZE / 2) return
+        val m = mid(a.position, b.position)
+        val circle = sketch.addCircle(sketch.addPoint(m.x, m.y), r)
+        bindOnRound(a, circle); bindOnRound(b, circle)
+        commit("Kreis", analyze = true)
+    }
+
+    private fun finishCircle3(a: SnapResult, b: SnapResult, c: SnapResult) {
+        val m = circumcenter(a.position, b.position, c.position) ?: run { message = "Die drei Punkte liegen auf einer Geraden."; return }
+        val r = dist(m, a.position)
+        if (r < MIN_SIZE) return
+        val circle = sketch.addCircle(sketch.addPoint(m.x, m.y), r)
+        bindOnRound(a, circle); bindOnRound(b, circle); bindOnRound(c, circle)
+        commit("Kreis", analyze = true)
+    }
+
+    /** Bogen von [s] nach [e] durch [m]: Mittelpunkt, Start, Ende (gegen den Uhrzeigersinn) – oder `null`, wenn alles auf einer Geraden liegt. */
+    private fun arc3(s: Vec2, e: Vec2, m: Vec2): Triple<Vec2, Vec2, Vec2>? {
+        val c = circumcenter(s, m, e) ?: return null
+        val tau = 2 * Math.PI
+        fun turn(p: Vec2) = ((angleOf(c, p) - angleOf(c, s)) % tau + tau) % tau
+        return if (turn(m) < turn(e)) Triple(c, s, e) else Triple(c, e, s)
+    }
+
+    private fun finishArc3(s: SnapResult, e: SnapResult, through: SnapResult) {
+        val (c, start, _) = arc3(s.position, e.position, through.position) ?: run { message = "Die drei Punkte liegen auf einer Geraden."; return }
+        if (dist(c, s.position) < MIN_SIZE) return
+        val extra = ArrayList<Constraint>()
+        val ps = materialize(s, extra)
+        val pe = materialize(e, extra)
+        if (ps == pe) { sketch.removeOrphanPoints(); return }
+        val center = sketch.addPoint(c.x, c.y)
+        val arc = if (start == s.position) sketch.addArc(center, ps, pe) else sketch.addArc(center, pe, ps)
+        extra.forEach(::tryAdd)
+        bindOnRound(through, arc)
+        commit("Bogen", analyze = true)
+    }
+
+    /**
+     * Richtung, in der eine Kontur am Endpunkt [p] weiterläuft (Einheitsvektor), und das Element, das dort endet – die jüngste Linie
+     * bzw. der jüngste Bogen (beim Weiterzeichnen eines Zugs das zuletzt gezeichnete). `null`, wenn dort nichts endet.
+     */
+    private fun tangentAt(p: PointId): Pair<Vec2, Any>? {
+        val here = sketch.point(p)
+        val lines = sketch.lineIds.filter { id -> SketchOps.axisOf(sketch, id) == null && sketch.line(id).let { it.p1 == p || it.p2 == p } }
+        val arcs = sketch.arcIds.filter { id -> sketch.arc(id).let { it.start == p || it.end == p } }
+        val newest = (lines.map { it.value to (it as Any) } + arcs.map { it.value to (it as Any) }).maxByOrNull { it.first }?.second ?: return null
+        val t = when (newest) {
+            is LineId -> sketch.line(newest).let { l -> sketch.point(if (l.p1 == p) l.p2 else l.p1) }.let { o -> Vec2(here.x - o.x, here.y - o.y) }
+            is ArcId -> {
+                val c = sketch.point(sketch.arc(newest).center)
+                val rx = here.x - c.x; val ry = here.y - c.y
+                // am Ende läuft der Bogen gegen den Uhrzeigersinn weiter, am Anfang in Gegenrichtung
+                if (sketch.arc(newest).end == p) Vec2(-ry, rx) else Vec2(ry, -rx)
+            }
+            else -> return null
+        }
+        val len = hypot(t.x, t.y)
+        if (len < 1e-12) return null
+        return Vec2(t.x / len, t.y / len) to newest
+    }
+
+    /** Tangentialer Bogen ab [s] in Richtung [t] bis [e]: Mittelpunkt, Start, Ende (gegen den Uhrzeigersinn) – `null`, wenn [e] geradeaus liegt. */
+    private fun tangentArc(s: Vec2, t: Vec2, e: Vec2): Triple<Vec2, Vec2, Vec2>? {
+        val dx = e.x - s.x; val dy = e.y - s.y
+        val nx = -t.y; val ny = t.x
+        val side = 2 * (dx * nx + dy * ny)
+        val d2 = dx * dx + dy * dy
+        if (d2 < MIN_SIZE * MIN_SIZE || abs(side) < 1e-6 * kotlin.math.sqrt(d2)) return null
+        val r = d2 / side
+        if (abs(r) > MAX_TANGENT_RADIUS) return null
+        val c = Vec2(s.x + nx * r, s.y + ny * r)
+        return if (r > 0) Triple(c, s, e) else Triple(c, e, s)
+    }
+
+    /** Setzt die Kontur am Punkt [start] mit einem tangentialen Bogen bis [end] fort; zurück kommt der Endpunkt (für den Zug). */
+    private fun finishTangentArc(start: PointId, end: SnapResult): PointId? {
+        val (t, source) = tangentAt(start) ?: return null
+        val s = sketch.point(start)
+        val (c, from, _) = tangentArc(s, t, end.position) ?: run { message = "Das Ende liegt geradeaus – dafür das Linienwerkzeug nehmen."; return null }
+        val extra = ArrayList<Constraint>()
+        val pe = materialize(end, extra)
+        if (pe == start) return null
+        val center = sketch.addPoint(c.x, c.y)
+        val arc = if (from == s) sketch.addArc(center, start, pe) else sketch.addArc(center, pe, start)
+        when (source) {
+            is LineId -> sketch.add(TangentLineRound(source, arc))
+            is ArcId -> sketch.addTangent(source, arc)
+        }
+        extra.forEach(::tryAdd)
+        commit("Bogen", analyze = true)
+        return pe
     }
 
     private fun finishRect(a: SnapResult, b: SnapResult) {
@@ -1025,6 +1289,17 @@ public class SketchEditor(public val sketch: Sketch) {
 
     private fun dist(a: Vec2, b: Vec2) = hypot(a.x - b.x, a.y - b.y)
 
+    private fun mid(a: Vec2, b: Vec2) = Vec2((a.x + b.x) / 2, (a.y + b.y) / 2)
+
+    /** Mittelpunkt des Kreises durch drei Punkte; `null`, wenn sie (fast) auf einer Geraden liegen. */
+    private fun circumcenter(a: Vec2, b: Vec2, c: Vec2): Vec2? {
+        val d = 2 * (a.x * (b.y - c.y) + b.x * (c.y - a.y) + c.x * (a.y - b.y))
+        val scale = maxOf(dist(a, b), dist(b, c), dist(a, c))
+        if (abs(d) < 1e-6 * scale * scale) return null
+        val a2 = a.x * a.x + a.y * a.y; val b2 = b.x * b.x + b.y * b.y; val c2 = c.x * c.x + c.y * c.y
+        return Vec2((a2 * (b.y - c.y) + b2 * (c.y - a.y) + c2 * (a.y - b.y)) / d, (a2 * (c.x - b.x) + b2 * (a.x - c.x) + c2 * (b.x - a.x)) / d)
+    }
+
     private fun angleOf(from: Vec2, to: Vec2) = atan2(to.y - from.y, to.x - from.x)
 
     private fun hitTolerancePx(kind: PointerKind): Double = if (kind == PointerKind.TOUCH) 16.0 else HIT_TOLERANCE_PX
@@ -1039,5 +1314,8 @@ public class SketchEditor(public val sketch: Sketch) {
         public const val MAX_PATTERN: Int = 50
         private const val AUTO_ANGLE_DEG = 3.0
         private const val MIN_SIZE = 1e-6
+
+        /** Größter Radius eines tangentialen Bogens (mm); darüber gilt das Ende als geradeaus. */
+        private const val MAX_TANGENT_RADIUS = 1e5
     }
 }
