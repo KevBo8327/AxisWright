@@ -37,6 +37,9 @@ Entscheidungen: Vertrieb über **Google Play**, **Freemium** (Pro als einmaliger
 - [ ] **Phase 0 – Fundament:**
   - [x] App-Name **Partwright** (Store-Titel z. B. „Partwright 3D – CAD für Tablet & Stift“), App-Kennung `io.github.kevbo8327.partwright`
     (vorher `dev.androidcad.app`; nach dem ersten Upload nicht mehr änderbar). Geprüft: EUIPO und Play Store ohne Treffer, DPMA ohne Treffer für „Partwright“ (auch ohne „3D“); Domain vorerst nicht gesichert
+  - [x] Release-Build: Signatur über nicht eingecheckte `keystore.properties` (sonst Debug-Schlüssel zum Testen), R8 + Ressourcen-Verkleinerung,
+    `bundleRelease` → AAB (≈ 16 MB Download je Gerät). Release-APK auf dem Emulator geprüft (Skizze, Extrusion, Verrundung, Lizenzseite – keine
+    JNI-/R8-Fehler). Offen: Upload-Schlüssel erzeugen (Nutzer, siehe README)
   - [ ] noch offen:
   Lizenzen (OCCT LGPL → als gemeinsame `.so` ausliefern, Lizenzseite für OCCT/manifold/Clipper2, Lizenz des eigenen Codes);
   signierter Release-AAB (Play App Signing, R8-Regeln für JNI); Test auf echter arm64-Hardware mit Stift; CI (GitHub Actions); App-Icon

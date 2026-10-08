@@ -10,6 +10,11 @@ captures/
 *.apk
 *.aab
 
+# Signatur: Upload-Schlüssel und Zugangsdaten nie einchecken
+keystore.properties
+*.jks
+*.keystore
+
 # OpenCascade: Quelltext und Android-Builds werden per Skript erzeugt (scripts/build-occt.ps1)
 third_party/occt/
 third_party/occt-android/

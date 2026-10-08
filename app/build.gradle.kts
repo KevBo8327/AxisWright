@@ -1,6 +1,21 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
+}
+
+/*
+ * Signatur des Release-Builds: Der Upload-Schlüssel liegt NICHT im Repository. `keystore.properties` im Projektordner
+ * (ebenfalls nicht eingecheckt) nennt ihn:
+ *   storeFile=C:/Pfad/zu/partwright-upload.jks
+ *   storePassword=…
+ *   keyAlias=upload
+ *   keyPassword=…
+ * Fehlt die Datei, wird der Release-Build zum lokalen Testen mit dem Debug-Schlüssel signiert (Google Play lehnt solche Pakete ab).
+ */
+val keystoreProps = Properties().apply {
+    rootProject.file("keystore.properties").takeIf { it.isFile }?.inputStream()?.use { load(it) }
 }
 
 android {
@@ -18,10 +33,21 @@ android {
         ndk { abiFilters += listOf("arm64-v8a", "x86_64") }
     }
 
+    signingConfigs {
+        if (keystoreProps.getProperty("storeFile") != null) create("upload") {
+            storeFile = file(keystoreProps.getProperty("storeFile"))
+            storePassword = keystoreProps.getProperty("storePassword")
+            keyAlias = keystoreProps.getProperty("keyAlias")
+            keyPassword = keystoreProps.getProperty("keyPassword")
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            signingConfig = signingConfigs.findByName("upload") ?: signingConfigs.getByName("debug")
         }
     }
 

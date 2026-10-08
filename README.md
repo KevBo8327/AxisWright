@@ -103,6 +103,17 @@ Zum schnellen Testen nur einer ABI: `./gradlew :core:brep:connectedDebugAndroidT
 `local.properties` mit `sdk.dir=…` wird lokal angelegt (nicht eingecheckt). Die nativen Debug-Builds sind mit `-O2`
 optimiert, damit Messungen aussagekräftig sind.
 
+**Release-Build (Google Play):** einmalig einen Upload-Schlüssel erzeugen – **außerhalb** des Projektordners aufbewahren und sichern
+(ohne ihn lassen sich keine Updates hochladen; bei Verlust hilft nur ein Antrag auf Schlüsseltausch bei Google):
+
+```powershell
+& "C:\Program Files\Android\Android Studio\jbr\bin\keytool.exe" -genkeypair -v -keystore C:\Users\<Name>\Schluessel\partwright-upload.jks -alias upload -keyalg RSA -keysize 4096 -validity 10000
+```
+
+Dann `keystore.properties` im Projektordner anlegen (wird nicht eingecheckt) mit `storeFile`, `storePassword`, `keyAlias=upload`, `keyPassword`
+und `./gradlew :app:bundleRelease` ausführen → `app/build/outputs/bundle/release/app-release.aab`. Ohne `keystore.properties` signiert der
+Build mit dem Debug-Schlüssel (nur zum lokalen Testen; Google Play lehnt das ab). Download je Gerät ≈ 16 MB (native Bibliotheken ≈ 15 MB).
+
 **Referenzdaten:** `samples/reference/*.stl` sind mit OpenSCAD 2021.01 aus der aktuellen
 `samples/streaming_halterung.scad` erzeugt (Modus pro Teil, z. B. `-D 'mode="arm"'`). Bei Änderung der SCAD-Datei neu erzeugen.
 
