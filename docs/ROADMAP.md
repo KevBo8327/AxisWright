@@ -43,9 +43,11 @@ Entscheidungen: Vertrieb über **Google Play**, **Freemium** (Pro als einmaliger
   - [x] OpenCascade als **gemeinsame Bibliotheken** (`scripts/build-occt.ps1`, Standard `-LibraryType Shared` → `third_party/occt-android-shared/<abi>`;
     `cadbrep` bindet die `libTK*.so` als importierte Ziele ein, Gradle packt sie mit). Kosten: nativer Teil ≈ 37,6 statt 21,9 MB je ABI (unkomprimiert)
   - [x] Lizenzseite (Projektmenü › „Lizenzen …“) mit OCCT (LGPL 2.1 + Ausnahme, Hinweis zum Austausch), Manifold, Clipper2; Texte in `assets/licenses`, Test `LicensesTest`
-- [ ] **Phase 1 – Umfang 1.0:** STEP-Export (OCCT `STEPControl_Writer`), 3MF-Export, Projekt teilen/importieren mit Formatversion,
-  Messen, Parameter-Tabelle; kleine Lücken (Mittelebene, gedrehte Grundebene, Körperumriss direkt antippbar, zwei Layout-Punkte).
-  Nach 1.0: Drehen, Sweep/Loft, Schnittansicht, Ellipse/Spline, Baugruppen
+- [ ] **Phase 1 – Umfang 1.0:** **Drehen** (Revolve, `BRepPrimAPI_MakeRevol`) und **Schale/Aushöhlen** (`BRepOffsetAPI_MakeThickSolid`) –
+  beschlossen am 08.10.2026, Grundwerkzeuge für Wellen/Knöpfe bzw. Gehäuse; **Projekt teilen/importieren** mit Formatversion (vor der Beta);
+  STEP-Export (OCCT `STEPControl_Writer`), 3MF-Export, Messen, Parameter-Tabelle (darf notfalls in das erste Update rutschen);
+  kleine Lücken (Mittelebene, gedrehte Grundebene, Körperumriss direkt antippbar, zwei Layout-Punkte).
+  Nach 1.0: Sweep/Loft, Schnittansicht, Ellipse/Spline, Baugruppen
 - [ ] **Phase 2 – Qualität:** verständliche Fehler statt Abbruch, Autosave/Wiederherstellen, Grenzen bei großen Modellen,
   Einführung beim ersten Start, Beispielprojekte, Hilfe zu Gesten; Stift/Maus/Chromebook auf echten Geräten; Barrierefreiheit (Grundstufe)
 - [ ] **Phase 3 – Übersetzung:** Texte aus dem Code in `strings.xml` (Englisch Standard, Deutsch `values-de`), Meldungen der Kernmodule über Schlüssel
@@ -57,7 +59,8 @@ Entscheidungen: Vertrieb über **Google Play**, **Freemium** (Pro als einmaliger
   - Regeln: eigene Daten nie sperren (immer öffnen, bearbeiten, als STL exportieren); Pro-Funktionen sichtbar mit „(Pro)“ und kurzer Erklärung
   - Technik: Google Play Billing mit Wiederherstellen und Offline-Zwischenspeicher, Sperren zentral in einem `Entitlements`-Objekt
 - [ ] **Phase 5 – Store:** Entwicklerkonto, Datenschutzerklärung (öffentliche URL), Data-Safety, Inhaltsbewertung, Store-Eintrag DE/EN mit Screenshots
-- [ ] **Phase 6 – Tests und Start:** interner Test → **geschlossener Test mit ≥ 12 Testern über ≥ 14 Tage** (Pflicht für neue Privatkonten)
+- [ ] **Phase 6 – Tests und Start:** interner Test → **geschlossener Test mit ≥ 12 Testern über ≥ 14 Tage** (Pflicht für neue Privatkonten; als Beta,
+  sobald Projekt-Export und Drehen da sind – Rückmeldungen fließen noch in die 1.0)
   → Produktionszugang → gestaffelter Rollout; Android Vitals beobachten
 
 ## Meilensteine
