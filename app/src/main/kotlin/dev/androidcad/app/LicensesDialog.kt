@@ -45,11 +45,19 @@ internal val THIRD_PARTY = listOf(
     ),
     ThirdParty(
         "Manifold 3", "Körperberechnung im Skript-Editor (OpenSCAD)", "Apache License 2.0",
-        "https://github.com/elalish/manifold", listOf("manifold_apache_2.0.txt"),
+        "https://github.com/elalish/manifold", listOf("apache_2.0.txt"),
     ),
     ThirdParty(
         "Clipper2", "2D-Polygonoperationen (über Manifold)", "Boost Software License 1.0",
         "https://github.com/AngusJohnson/Clipper2", listOf("clipper2_bsl_1.0.txt"),
+    ),
+    ThirdParty(
+        "Kotlin-Standardbibliothek und kotlinx.coroutines", "Programmiersprache und nebenläufige Abläufe",
+        "Apache License 2.0", "© JetBrains s.r.o. und Mitwirkende · https://github.com/JetBrains/kotlin", listOf("apache_2.0.txt"),
+    ),
+    ThirdParty(
+        "AndroidX: Jetpack Compose, Material 3, Activity", "Oberfläche", "Apache License 2.0",
+        "© The Android Open Source Project · https://developer.android.com/jetpack/androidx", listOf("apache_2.0.txt"),
     ),
 )
 

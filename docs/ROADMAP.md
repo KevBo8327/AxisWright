@@ -46,8 +46,13 @@ Entscheidungen: Vertrieb über **Google Play**, **Freemium** (Pro als einmaliger
 - [ ] **Phase 2 – Qualität:** verständliche Fehler statt Abbruch, Autosave/Wiederherstellen, Grenzen bei großen Modellen,
   Einführung beim ersten Start, Beispielprojekte, Hilfe zu Gesten; Stift/Maus/Chromebook auf echten Geräten; Barrierefreiheit (Grundstufe)
 - [ ] **Phase 3 – Übersetzung:** Texte aus dem Code in `strings.xml` (Englisch Standard, Deutsch `values-de`), Meldungen der Kernmodule über Schlüssel
-- [ ] **Phase 4 – Freemium:** frei = Modellieren + STL; Pro = STEP/3MF, Parameter-Tabelle, unbegrenzte Projekte (Vorschlag);
-  Google Play Billing mit Wiederherstellen und Offline-Zwischenspeicher, Sperren zentral in einem `Entitlements`-Objekt
+- [ ] **Phase 4 – Freemium** (Aufteilung beschlossen am 08.10.2026; Grundsatz: Konstruieren frei, Pro = Datenaustausch und Arbeitskomfort):
+  - **Frei:** alle Skizzen- und Körperwerkzeuge (auch künftige wie Drehen), Messen, **STL-Export**, Projekte teilen/importieren,
+    Skript-Editor (OpenSCAD); **keine Begrenzung der Projektanzahl**
+  - **Pro (einmaliger Kauf, ca. 15–25 €):** STEP-Export (später Import), 3MF-Export, Parameter-Tabelle; später DXF-Export von Skizzen,
+    technische Zeichnungen (PDF), Varianten/Konfigurationen
+  - Regeln: eigene Daten nie sperren (immer öffnen, bearbeiten, als STL exportieren); Pro-Funktionen sichtbar mit „(Pro)“ und kurzer Erklärung
+  - Technik: Google Play Billing mit Wiederherstellen und Offline-Zwischenspeicher, Sperren zentral in einem `Entitlements`-Objekt
 - [ ] **Phase 5 – Store:** Entwicklerkonto, Datenschutzerklärung (öffentliche URL), Data-Safety, Inhaltsbewertung, Store-Eintrag DE/EN mit Screenshots
 - [ ] **Phase 6 – Tests und Start:** interner Test → **geschlossener Test mit ≥ 12 Testern über ≥ 14 Tage** (Pflicht für neue Privatkonten)
   → Produktionszugang → gestaffelter Rollout; Android Vitals beobachten
