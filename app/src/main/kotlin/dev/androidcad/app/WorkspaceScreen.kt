@@ -25,6 +25,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.FilterChip
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
@@ -83,6 +84,7 @@ import dev.androidcad.sketchedit.Tool
 import dev.androidcad.sketchedit.RectMode
 import dev.androidcad.sketchedit.CircleMode
 import dev.androidcad.sketchedit.ArcMode
+import dev.androidcad.sketchedit.LineMode
 import dev.androidcad.sketchedit.formatValue
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -377,6 +379,8 @@ private fun BoxScope.ContextBar(handle: EditorHandle, prefs: UiPrefs, bottomGap:
         }
         Column(
             Modifier.offset { IntOffset(x.toInt(), y.toInt()) }.onSizeChanged { size = it }
+                // Tipps auf Hinweis oder Hintergrund der Leiste dürfen nicht auf der Zeichenfläche landen (sonst entstünden dort Punkte)
+                .pointerInput(Unit) { awaitPointerEventScope { while (true) awaitPointerEvent().changes.forEach { it.consume() } } }
                 .widthIn(max = with(density) { (w - 2 * margin).toDp() })
                 .background(colors.surface.copy(alpha = 0.97f), shape).border(0.5.dp, colors.outlineVariant, shape)
                 .padding(horizontal = 8.dp, vertical = 6.dp),
@@ -480,7 +484,10 @@ private fun AlignChip(kinds: List<ActionKind>, onPick: (ActionKind) -> Unit) {
 
 private fun hintFor(e: SketchEditor): String = when (e.tool) {
     Tool.SELECT -> "Tippe Elemente an oder ziehe ein Rechteck auf. Ziehen verschiebt – die Bedingungen bleiben erhalten."
-    Tool.LINE -> "Linie: Punkte nacheinander antippen (Stift: ziehen). „Fertig“ oder Esc beendet den Linienzug."
+    Tool.LINE -> when (e.lineMode) {
+        LineMode.NORMAL -> "Linie: Punkte nacheinander antippen (Stift: ziehen). „Fertig“ oder Esc beendet den Linienzug."
+        LineMode.TANGENT -> "Tangente: Anfang und Ende antippen – ein Ende auf einem Kreis oder Bogen (oder beide: Tangente zwischen zwei Kreisen)."
+    }
     Tool.RECTANGLE -> when (e.rectMode) {
         RectMode.CORNERS -> "Rechteck: zwei gegenüberliegende Ecken antippen oder aufziehen."
         RectMode.CENTER -> if (e.drawStep == 0) "Rechteck: zuerst den Mittelpunkt antippen (z. B. den Ursprung)." else "Rechteck: jetzt eine Ecke – die Form bleibt mittig."
@@ -490,6 +497,9 @@ private fun hintFor(e: SketchEditor): String = when (e.tool) {
         CircleMode.CENTER -> "Kreis: Mittelpunkt, dann einen Punkt auf dem Kreis."
         CircleMode.TWO_POINTS -> "Kreis: zwei gegenüberliegende Punkte antippen (Durchmesser)."
         CircleMode.THREE_POINTS -> "Kreis: drei Punkte auf dem Kreis antippen (${e.drawStep} von 3)."
+        CircleMode.TANGENT2 -> if (e.drawStep < 2) "Kreis: zwei Linien, Kreise oder Bögen antippen, die er berühren soll (${e.drawStep} von 2)."
+        else "Kreis: jetzt die Lage antippen – sie bestimmt die Größe."
+        CircleMode.TANGENT3 -> "Kreis: drei Linien, Kreise oder Bögen antippen, die er berühren soll (${e.drawStep} von 3) – nahe der Berührstelle."
     }
     Tool.ARC -> when (e.arcMode) {
         ArcMode.CENTER -> "Bogen: Mittelpunkt, Startpunkt, dann die Richtung des Endes (gegen den Uhrzeigersinn)."
@@ -508,7 +518,7 @@ private fun hintFor(e: SketchEditor): String = when (e.tool) {
     Tool.PATTERN_CIRCULAR -> "Kreismuster: Tippe einen Punkt oder Kreis als Mittelpunkt an oder nimm den Ursprung. 360° = voller Kreis."
 }
 
-/** Auswahl der Variante beim Rechteck, Kreis und Bogen; die Wahl bleibt über einen Neustart erhalten ([applyDrawModes]). */
+/** Auswahl der Variante bei Linie, Rechteck, Kreis und Bogen; die Wahl bleibt über einen Neustart erhalten ([applyDrawModes]). */
 @Composable
 private fun DrawVariants(handle: EditorHandle, prefs: UiPrefs) {
     val e = handle.editor
@@ -518,6 +528,7 @@ private fun DrawVariants(handle: EditorHandle, prefs: UiPrefs) {
         FilterChip(selected = m == current, onClick = { onPick(m) }, label = { Text(label(m)) })
     }
     when (e.tool) {
+        Tool.LINE -> chips(LineMode.entries, e.lineMode, { it.label }) { e.lineMode = it; prefs.putText(PREF_LINE, it.name) }
         Tool.RECTANGLE -> chips(RectMode.entries, e.rectMode, { it.label }) { e.rectMode = it; prefs.putText(PREF_RECT, it.name) }
         Tool.CIRCLE -> chips(CircleMode.entries, e.circleMode, { it.label }) { e.circleMode = it; prefs.putText(PREF_CIRCLE, it.name) }
         Tool.ARC -> chips(ArcMode.entries, e.arcMode, { it.label }) { e.arcMode = it; prefs.putText(PREF_ARC, it.name) }
@@ -525,12 +536,14 @@ private fun DrawVariants(handle: EditorHandle, prefs: UiPrefs) {
     }
 }
 
+private const val PREF_LINE = "sketch.line"
 private const val PREF_RECT = "sketch.rect"
 private const val PREF_CIRCLE = "sketch.circle"
 private const val PREF_ARC = "sketch.arc"
 
 /** Übernimmt die zuletzt gewählten Zeichenvarianten in einen (neuen) Editor. */
 internal fun applyDrawModes(e: SketchEditor, prefs: UiPrefs) {
+    prefs.text(PREF_LINE)?.let { v -> LineMode.entries.firstOrNull { it.name == v } }?.let { e.lineMode = it }
     prefs.text(PREF_RECT)?.let { v -> RectMode.entries.firstOrNull { it.name == v } }?.let { e.rectMode = it }
     prefs.text(PREF_CIRCLE)?.let { v -> CircleMode.entries.firstOrNull { it.name == v } }?.let { e.circleMode = it }
     prefs.text(PREF_ARC)?.let { v -> ArcMode.entries.firstOrNull { it.name == v } }?.let { e.arcMode = it }

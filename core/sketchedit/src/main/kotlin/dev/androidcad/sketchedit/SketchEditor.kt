@@ -89,6 +89,25 @@ public enum class CircleMode(public val label: String) {
 
     /** Drei Punkte auf dem Kreis. */
     THREE_POINTS("3 Punkte"),
+
+    /** Berührt zwei Elemente (Linien, Kreise, Bögen); ein dritter Tipp gibt die Lage und damit die Größe vor. */
+    TANGENT2("2 Tangenten"),
+
+    /** Berührt drei Elemente – Lage und Größe folgen daraus. */
+    TANGENT3("3 Tangenten"),
+    ;
+
+    /** Anzahl der Elemente, die der Kreis berühren soll (0 = keine Tangenten-Variante). */
+    public val tangents: Int get() = when (this) { TANGENT2 -> 2; TANGENT3 -> 3; else -> 0 }
+}
+
+/** Varianten des Linien-Werkzeugs. */
+public enum class LineMode(public val label: String) {
+    /** Gerade Linie(n) von Punkt zu Punkt. */
+    NORMAL("Linie"),
+
+    /** Endet die Linie auf einem Kreis oder Bogen, berührt sie ihn dort (an einem Ende oder an beiden: Tangente zwischen zwei Kreisen). */
+    TANGENT("Tangential"),
 }
 
 /** Varianten des Bogen-Werkzeugs. */
@@ -167,6 +186,10 @@ public class SketchEditor(public val sketch: Sketch) {
     public var gridSnap: Boolean = true
         set(v) { field = v; changed() }
 
+    /** Variante des Linien-Werkzeugs; ein Wechsel bricht einen angefangenen Zug ab. */
+    public var lineMode: LineMode = LineMode.NORMAL
+        set(v) { if (field != v) { field = v; resetDrawing() }; changed() }
+
     /** Variante des Rechteck-Werkzeugs; ein Wechsel bricht eine angefangene Form ab. */
     public var rectMode: RectMode = RectMode.CORNERS
         set(v) { if (field != v) { field = v; resetDrawing() }; changed() }
@@ -236,12 +259,18 @@ public class SketchEditor(public val sketch: Sketch) {
     private var erasing = false
     private var pending: SnapResult? = null   // erster Punkt (beim Bogen um den Mittelpunkt: der Mittelpunkt)
     private var second: SnapResult? = null    // zweiter Punkt bei Formen aus drei Punkten
+    private var tangentPicks: List<Pair<Sel, Vec2>> = emptyList()  // Kreis an Tangenten: gewählte Elemente und Tippstellen
 
     /** `true`, solange eine mehrteilige Zeichenaktion läuft (z. B. Linienzug) – dann bietet die Oberfläche „Fertig“ an. */
-    public val drawingInProgress: Boolean get() = pending != null
+    public val drawingInProgress: Boolean get() = pending != null || tangentPicks.isNotEmpty()
 
-    /** Wie viele Punkte der laufenden Form schon gesetzt sind (0 … 2) – für den Hinweis der Oberfläche. */
-    public val drawStep: Int get() = when { pending == null -> 0; second == null -> 1; else -> 2 }
+    /** Wie viele Punkte bzw. Elemente der laufenden Form schon gesetzt sind (0 … 3) – für den Hinweis der Oberfläche. */
+    public val drawStep: Int get() = when {
+        tool == Tool.CIRCLE && circleMode.tangents > 0 -> tangentPicks.size
+        pending == null -> 0
+        second == null -> 1
+        else -> 2
+    }
 
     /** `true`, wenn die laufende Aktion ein Zug ist, der mit „Fertig“ endet (Linien, tangentiale Bögen). */
     public val drawingChain: Boolean get() = tool == Tool.LINE || (tool == Tool.ARC && arcMode == ArcMode.TANGENT)
@@ -469,6 +498,7 @@ public class SketchEditor(public val sketch: Sketch) {
         down = null
         pending = null
         second = null
+        if (tangentPicks.isNotEmpty()) { tangentPicks = emptyList(); selection = emptySet() }
         preview = null
         if (offsetSource != null) { offsetSource = null; selection = emptySet() }
         if (tool == Tool.MIRROR) { mirrorSource = emptySet(); tool = Tool.SELECT; message = null }
@@ -553,7 +583,11 @@ public class SketchEditor(public val sketch: Sketch) {
     private fun updateDrawPreview(snap: SnapResult, d: Down?) {
         val start = pending ?: d?.snap
         preview = when (tool) {
-            Tool.LINE -> start?.let { Preview.Line(it.position, snap.position) }
+            Tool.LINE -> start?.let { a ->
+                if (lineMode == LineMode.TANGENT) trial { s -> tangentLine(s, a, snap) }?.let { (s, id) -> s.line(id).let { Preview.Line(s.point(it.p1), s.point(it.p2)) } }
+                    ?: Preview.Line(a.position, snap.position)
+                else Preview.Line(a.position, snap.position)
+            }
             Tool.RECTANGLE -> when (rectMode) {
                 RectMode.CORNERS -> start?.let { Preview.Rect(it.position, snap.position) }
                 RectMode.CENTER -> start?.let { c -> Preview.Rect(Vec2(2 * c.position.x - snap.position.x, 2 * c.position.y - snap.position.y), snap.position) }
@@ -565,6 +599,10 @@ public class SketchEditor(public val sketch: Sketch) {
             Tool.CIRCLE -> when (circleMode) {
                 CircleMode.CENTER -> start?.let { Preview.Circle(it.position, dist(it.position, snap.position)) }
                 CircleMode.TWO_POINTS -> start?.let { Preview.Circle(mid(it.position, snap.position), dist(it.position, snap.position) / 2) }
+                CircleMode.TANGENT2 -> if (tangentPicks.size == 2) {
+                    trial { s -> tangentCircle(s, tangentPicks.map { it.first }, snap.position) }?.let { (s, id) -> s.circle(id).let { Preview.Circle(s.point(it.center), it.radius) } }
+                } else null
+                CircleMode.TANGENT3 -> null
                 CircleMode.THREE_POINTS -> when (val b = second) {
                     null -> start?.let { Preview.Line(it.position, snap.position) }
                     else -> circumcenter(pending!!.position, b.position, snap.position)?.let { Preview.Circle(it, dist(it, snap.position)) }
@@ -604,9 +642,9 @@ public class SketchEditor(public val sketch: Sketch) {
         val first = d.snap ?: return
         when (tool) {
             Tool.LINE -> when {
-                dragged && pending == null -> { finishLine(first, up); pending = null }   // Stift: ziehen = eine Linie
+                dragged && pending == null -> { finishAnyLine(first, up); pending = null }   // Stift: ziehen = eine Linie
                 pending == null -> pending = first
-                else -> finishLine(pending!!, up)?.let { pending = SnapResult(sketch.point(it), SnapKind.POINT, point = it) }
+                else -> finishAnyLine(pending!!, up)?.let { pending = SnapResult(sketch.point(it), SnapKind.POINT, point = it) }
             }
             Tool.RECTANGLE -> if (rectMode == RectMode.THREE_POINTS) threeTaps(first, up, dragged) { a, b, c -> finishRect3(a, b, c) }
             else when {
@@ -614,7 +652,8 @@ public class SketchEditor(public val sketch: Sketch) {
                 pending == null -> pending = first
                 else -> { finishTwoPointRect(pending!!, up); pending = null }
             }
-            Tool.CIRCLE -> if (circleMode == CircleMode.THREE_POINTS) threeTaps(first, up, dragged) { a, b, c -> finishCircle3(a, b, c) }
+            Tool.CIRCLE -> if (circleMode.tangents > 0) tangentCircleTap(d)
+            else if (circleMode == CircleMode.THREE_POINTS) threeTaps(first, up, dragged) { a, b, c -> finishCircle3(a, b, c) }
             else when {
                 dragged && pending == null -> { finishTwoPointCircle(first, up); pending = null }
                 pending == null -> pending = first
@@ -799,6 +838,127 @@ public class SketchEditor(public val sketch: Sketch) {
         }
     }
 
+    /**
+     * Probiert eine Konstruktion auf einer Kopie der Skizze aus ([build] legt an und gibt das neue Element zurück) und löst sie –
+     * für die Vorschau von Formen, deren Lage erst der Löser findet. `null`, wenn es nicht geht.
+     */
+    private fun <T> trial(build: (Sketch) -> T?): Pair<Sketch, T>? {
+        val copy = sketch.copy()
+        return placeNew(copy, build)?.let { copy to it }
+    }
+
+    /**
+     * Legt mit [build] neue Elemente in [s] an und löst so, dass sich möglichst nur die neuen bewegen: Punkte und Kreisradien, die es
+     * vorher gab, werden dafür kurz festgehalten. Geht es so nicht, darf auch Vorhandenes nachgeben. `null`, wenn es gar nicht lösbar
+     * ist (die Skizze ist dann verändert – der Aufrufer stellt sie wieder her).
+     */
+    private fun <T> placeNew(s: Sketch, build: (Sketch) -> T?): T? {
+        val points = s.pointIds.toSet()
+        val circles = s.circleIds.toSet()
+        val id = try { build(s) } catch (e: IllegalArgumentException) { null } ?: return null
+        val pins = points.map { p -> s.point(p).let { v -> s.add(Fixed(p, v.x, v.y)) } } + circles.map { c -> s.add(RadiusDim(c, s.circle(c).radius)) }
+        s.solve(SolveOptions(analyze = false))
+        pins.forEach { s.remove(it) }
+        return if (s.solve(SolveOptions(analyze = false)).isSolved) id else null
+    }
+
+    /** Linie oder (Variante „Tangential“) tangentiale Linie. */
+    private fun finishAnyLine(a: SnapResult, b: SnapResult): PointId? = if (lineMode == LineMode.TANGENT) finishTangentLine(a, b) else finishLine(a, b)
+
+    /** Ein Kreis bzw. Bogen, auf dem ein Linienende gefangen wurde – nur dort kann die Linie ihn berühren. */
+    private fun roundOf(s: SnapResult): dev.androidcad.sketch.RoundId? = if (s.kind == SnapKind.ON_ROUND) s.round else null
+
+    /**
+     * Legt in [s] eine Linie von [a] nach [b] an, die jeden Kreis/Bogen berührt, auf dem eines ihrer Enden gefangen wurde (Ende auf der
+     * Kurve + [TangentLineRound]); der Löser schiebt die Enden an die Berührstellen. `null`, wenn kein Ende auf einem Kreis liegt.
+     */
+    private fun tangentLine(s: Sketch, a: SnapResult, b: SnapResult): LineId? {
+        val rounds = listOfNotNull(roundOf(a), roundOf(b)).distinct()
+        if (rounds.isEmpty() || dist(a.position, b.position) < MIN_SIZE) return null
+        fun end(p: SnapResult): PointId = p.point ?: s.addPoint(p.position.x, p.position.y).also { id ->
+            when (p.kind) {
+                SnapKind.ON_ROUND -> s.add(PointOnRound(id, p.round!!))
+                else -> constraintsFor(id, p).forEach { s.add(it) }
+            }
+        }
+        val pa = end(a); val pb = end(b)
+        if (pa == pb) return null
+        val line = s.addLine(pa, pb)
+        rounds.forEach { s.add(TangentLineRound(line, it)) }
+        return line
+    }
+
+    private fun finishTangentLine(a: SnapResult, b: SnapResult): PointId? {
+        if (roundOf(a) == null && roundOf(b) == null) { message = "Tangential: Anfang oder Ende auf einen Kreis oder Bogen legen."; return null }
+        val before = sketch.copy()
+        val line = placeNew(sketch) { s -> tangentLine(s, a, b) }
+        if (line == null) {
+            sketch.restore(before); message = "Hier gibt es keine Tangente."; return null
+        }
+        commit("Tangente", analyze = true)
+        return sketch.line(line).p2
+    }
+
+    /** Abstand von [p] zu einem Element (Linie: Gerade; Kreis/Bogen: Vollkreis). */
+    private fun distanceTo(s: Sketch, sel: Sel, p: Vec2): Double = when (sel) {
+        is Sel.L -> abs(s.signedDistanceTo(sel.id, p))
+        is Sel.C -> s.circle(sel.id).let { abs(dist(s.point(it.center), p) - it.radius) }
+        is Sel.A -> abs(dist(s.point(s.arc(sel.id).center), p) - s.radiusOf(sel.id))
+        else -> 0.0
+    }
+
+    private fun Sketch.signedDistanceTo(line: LineId, p: Vec2): Double {
+        val l = line(line); val a = point(l.p1); val b = point(l.p2)
+        val len = hypot(b.x - a.x, b.y - a.y).coerceAtLeast(1e-12)
+        return ((b.x - a.x) * (p.y - a.y) - (b.y - a.y) * (p.x - a.x)) / len
+    }
+
+    /**
+     * Legt in [s] einen Kreis um [center] an, der alle [elements] berührt (Startradius = mittlerer Abstand; innen/außen ergibt sich aus
+     * der Lage, [Sketch.addTangent]); der Löser findet die genaue Lage. `null` ohne sinnvollen Startradius.
+     */
+    private fun tangentCircle(s: Sketch, elements: List<Sel>, center: Vec2): CircleId? {
+        val r = elements.map { distanceTo(s, it, center) }.average()
+        if (!r.isFinite() || r < MIN_SIZE) return null
+        val circle = s.addCircle(s.addPoint(center.x, center.y), r)
+        for (e in elements) when (e) {
+            is Sel.L -> s.add(TangentLineRound(e.id, circle))
+            is Sel.C -> s.addTangent(e.id, circle)
+            is Sel.A -> s.addTangent(e.id, circle)
+            else -> return null
+        }
+        return circle
+    }
+
+    /** Ein Tipp beim Kreis an Tangenten: Element wählen bzw. (bei zwei Tangenten) zuletzt die Lage. */
+    private fun tangentCircleTap(d: Down) {
+        val need = circleMode.tangents
+        if (tangentPicks.size < need) {
+            val tol = view.worldLength(hitTolerancePx(d.kind))
+            val hit = HitTest.hitCurve(sketch, d.world, tol) ?: axisAt(d.world, tol)
+            if (hit == null || hit is Sel.P || hit is Sel.K) { message = "Tippe eine Linie, einen Kreis oder Bogen an."; return }
+            if (tangentPicks.any { it.first == hit }) { message = "Dieses Element ist schon gewählt."; return }
+            tangentPicks = tangentPicks + (hit to d.world)
+            selection = tangentPicks.map { it.first }.toSet()
+            if (need == 3 && tangentPicks.size == 3) {
+                // Startlage: Kreis durch die drei Tippstellen (sie liegen meist nahe den Berührpunkten)
+                val (p, q, r) = tangentPicks.map { it.second }
+                finishTangentCircle(circumcenter(p, q, r) ?: Vec2((p.x + q.x + r.x) / 3, (p.y + q.y + r.y) / 3))
+            }
+        } else finishTangentCircle(d.world)
+    }
+
+    private fun finishTangentCircle(center: Vec2) {
+        val elements = tangentPicks.map { it.first }
+        tangentPicks = emptyList(); selection = emptySet()
+        val before = sketch.copy()
+        val circle = placeNew(sketch) { s -> tangentCircle(s, elements, center) }
+        if (circle == null || sketch.circle(circle).radius < MIN_SIZE) {
+            sketch.restore(before); message = "Kein Kreis gefunden, der alle gewählten Elemente berührt."; return
+        }
+        commit("Kreis", analyze = true)
+    }
+
     /** Drei Punkte nacheinander (der erste darf auch gezogen werden: Ziehen setzt die ersten beiden). */
     private fun threeTaps(first: SnapResult, up: SnapResult, dragged: Boolean, finish: (SnapResult, SnapResult, SnapResult) -> Unit) {
         val a = pending; val b = second
@@ -812,6 +972,7 @@ public class SketchEditor(public val sketch: Sketch) {
 
     private fun resetDrawing() {
         pending = null; second = null; preview = null
+        if (tangentPicks.isNotEmpty()) { tangentPicks = emptyList(); selection = emptySet() }
     }
 
     private fun finishTwoPointRect(a: SnapResult, b: SnapResult) = if (rectMode == RectMode.CENTER) finishCenterRect(a, b) else finishRect(a, b)
