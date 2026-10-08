@@ -59,6 +59,7 @@ internal fun ProjectMenu(hub: ProjectHub) {
     var deleting by remember { mutableStateOf<ProjectEntry?>(null) }
     var showAll by remember { mutableStateOf(false) }
     var showExamples by remember { mutableStateOf(false) }
+    var showLicenses by remember { mutableStateOf(false) }
     val importer = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) scope.launch {
             val text = withContext(Dispatchers.IO) { context.contentResolver.openInputStream(uri)?.use { it.readBytes().toString(Charsets.UTF_8) } }
@@ -96,6 +97,8 @@ internal fun ProjectMenu(hub: ProjectHub) {
             MenuItem("Umbenennen …") { open = false; renaming = true }
             DropdownMenuItem(text = { Text("Duplizieren") }, enabled = current != null, onClick = { open = false; current?.let(hub::duplicate) })
             DropdownMenuItem(text = { Text("Löschen …") }, enabled = current != null, onClick = { open = false; deleting = current })
+            HorizontalDivider()
+            MenuItem("Lizenzen …") { open = false; showLicenses = true }
         }
     }
 
@@ -120,6 +123,7 @@ internal fun ProjectMenu(hub: ProjectHub) {
     }
     if (showAll) AllProjectsDialog(hub, onDelete = { deleting = it }, onDismiss = { showAll = false })
     if (showExamples) ExamplesDialog(hub, onDismiss = { showExamples = false })
+    if (showLicenses) LicensesDialog(onDismiss = { showLicenses = false })
 }
 
 @Composable

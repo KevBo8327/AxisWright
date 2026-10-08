@@ -1,4 +1,4 @@
-﻿*.iml
+*.iml
 .gradle/
 build/
 local.properties
@@ -13,4 +13,5 @@ captures/
 # OpenCascade: Quelltext und Android-Builds werden per Skript erzeugt (scripts/build-occt.ps1)
 third_party/occt/
 third_party/occt-android/
+third_party/occt-android-shared/
 build-occt/

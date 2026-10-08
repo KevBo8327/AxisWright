@@ -1,6 +1,11 @@
 <#
 .SYNOPSIS
-  Baut OpenCascade (statisch) für Android und installiert es nach third_party/occt-android/<abi>.
+  Baut OpenCascade für Android: standardmäßig als gemeinsame Bibliotheken (.so) nach third_party/occt-android-shared/<abi>,
+  mit -LibraryType Static wie früher statisch nach third_party/occt-android/<abi>.
+
+  Gemeinsame Bibliotheken sind der Standard, weil OpenCascade unter der LGPL 2.1 steht: Die App liefert die OCCT-.so-Dateien
+  unverändert mit, Nutzer können sie gegen eine eigene Version tauschen (Neu-Linkbarkeit) – ohne dass Objektdateien der App
+  veröffentlicht werden müssen.
 
 .DESCRIPTION
   Nur die Module, die für die B-Rep-Modellierung nötig sind:
@@ -12,11 +17,13 @@
 
 .EXAMPLE
   ./scripts/build-occt.ps1 -Abis x86_64
+  ./scripts/build-occt.ps1 -Abis x86_64 -LibraryType Static
   ./scripts/build-occt.ps1 -Abis arm64-v8a,x86_64 -WithDataExchange
 #>
 param(
     [string[]]$Abis = @("x86_64", "arm64-v8a"),
     [switch]$WithDataExchange,
+    [ValidateSet("Shared", "Static")] [string]$LibraryType = "Shared",
     [string]$Sdk = "$env:LOCALAPPDATA\Android\Sdk",
     [string]$NdkVersion = "28.2.13676358",
     [string]$CMakeVersion = "3.31.6",
@@ -32,9 +39,10 @@ $ninja = Join-Path $cmakeBin "ninja.exe"
 foreach ($p in @($src, $ndk, $cmake, $ninja)) { if (-not (Test-Path $p)) { throw "Nicht gefunden: $p" } }
 
 foreach ($abi in $Abis) {
-    $build = Join-Path $root "build-occt/$abi"
-    $prefix = Join-Path $root "third_party/occt-android/$abi"
-    Write-Host "=== OpenCascade für $abi ===" -ForegroundColor Cyan
+    $shared = $LibraryType -eq "Shared"
+    $build = Join-Path $root ($(if ($shared) { "build-occt/$abi-shared" } else { "build-occt/$abi" }))
+    $prefix = Join-Path $root ($(if ($shared) { "third_party/occt-android-shared/$abi" } else { "third_party/occt-android/$abi" }))
+    Write-Host "=== OpenCascade für $abi ($LibraryType) ===" -ForegroundColor Cyan
     $dataExchange = if ($WithDataExchange) { "ON" } else { "OFF" }
     & $cmake -S $src -B $build -G Ninja `
         "-DCMAKE_MAKE_PROGRAM=$ninja" `
@@ -43,7 +51,8 @@ foreach ($abi in $Abis) {
         "-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON" `
         "-DCMAKE_BUILD_TYPE=Release" "-DCMAKE_POSITION_INDEPENDENT_CODE=ON" `
         "-DCMAKE_INSTALL_PREFIX=$prefix" "-DINSTALL_DIR=$prefix" `
-        "-DBUILD_LIBRARY_TYPE=Static" `
+        "-DBUILD_LIBRARY_TYPE=$LibraryType" `
+        "-DCMAKE_SHARED_LINKER_FLAGS=-Wl,-z,max-page-size=16384" `
         "-DBUILD_MODULE_FoundationClasses=ON" "-DBUILD_MODULE_ModelingData=ON" "-DBUILD_MODULE_ModelingAlgorithms=ON" `
         "-DBUILD_MODULE_Visualization=OFF" "-DBUILD_MODULE_ApplicationFramework=OFF" `
         "-DBUILD_MODULE_DataExchange=$dataExchange" "-DBUILD_MODULE_DETools=OFF" "-DBUILD_MODULE_Draw=OFF" `

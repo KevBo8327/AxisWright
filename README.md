@@ -83,7 +83,7 @@ Voraussetzungen: Android SDK (Plattform 36), JDK 17+ (Android-Studio-JBR genügt
 dl.google.com/android/repository oder per `sdkmanager "cmake;3.31.6"`).
 
 **OpenCascade (für `:core:brep`):** wird nicht ins Repo eingecheckt. Einmalig Quelltext holen und je ABI bauen
-(≈ 25 min pro ABI auf 32 Kernen; Ergebnis nach `third_party/occt-android/<abi>`):
+(≈ 25 min pro ABI auf 32 Kernen; Ergebnis als gemeinsame Bibliotheken nach `third_party/occt-android-shared/<abi>`):
 
 ```powershell
 git clone --depth 1 --branch V7_9_3 https://github.com/Open-Cascade-SAS/OCCT.git third_party/occt
@@ -108,3 +108,6 @@ optimiert, damit Messungen aussagekräftig sind.
 Der Sprachkern ist eine **eigene Implementierung** (kein OpenSCAD-Code, kein CGAL) – bewusst, um die GPL nicht auf die App
 auszudehnen. Eingebunden in `third_party/`: [Manifold](https://github.com/elalish/manifold) (Apache 2.0) und
 [Clipper2](https://github.com/AngusJohnson/Clipper2) (Boost Software License).
+[Open CASCADE Technology](https://github.com/Open-Cascade-SAS/OCCT) 7.9.3 steht unter der **LGPL 2.1 mit Open-CASCADE-Ausnahme**:
+Es wird **unverändert als gemeinsame Bibliotheken** (`libTK*.so`) mitgeliefert, die sich gegen eine selbst gebaute Version tauschen
+lassen (`scripts/build-occt.ps1`). Die App zeigt alle Lizenztexte unter Projektmenü › „Lizenzen …“ (`app/src/main/assets/licenses`).
