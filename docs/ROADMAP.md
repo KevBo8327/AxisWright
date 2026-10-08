@@ -29,6 +29,26 @@ Bekannte Schwerpunkte/Risiken: Constraint-Solver (Robustheit, Dragging in Echtze
 Referenzen auf Flächen/Kanten nach Parameteränderung), Auswahl/Picking im Viewport, Stift-/Maus-/Touch-Eingabe,
 App-Größe (OCCT) und Build-Zeiten.
 
+## Weg zur Veröffentlichung (Plan vom 08.10.2026)
+
+Entscheidungen: Vertrieb über **Google Play**, **Freemium** (Pro als einmaliger In-App-Kauf), **Deutsch + Englisch**, **schlanke 1.0**
+(heutiger Stand stabil + Export, Messen, Parameter), weitere Funktionen als Updates. Grobe Dauer: ca. 3–4 Monate.
+
+- [ ] **Phase 0 – Fundament:** App-Name und endgültiger Paketname (heute `dev.androidcad.app`, nach dem ersten Upload nicht mehr änderbar);
+  Lizenzen (OCCT LGPL → als gemeinsame `.so` ausliefern, Lizenzseite für OCCT/manifold/Clipper2, Lizenz des eigenen Codes);
+  signierter Release-AAB (Play App Signing, R8-Regeln für JNI); Test auf echter arm64-Hardware mit Stift; CI (GitHub Actions); App-Icon
+- [ ] **Phase 1 – Umfang 1.0:** STEP-Export (OCCT `STEPControl_Writer`), 3MF-Export, Projekt teilen/importieren mit Formatversion,
+  Messen, Parameter-Tabelle; kleine Lücken (Mittelebene, gedrehte Grundebene, Körperumriss direkt antippbar, zwei Layout-Punkte).
+  Nach 1.0: Drehen, Sweep/Loft, Schnittansicht, Ellipse/Spline, Baugruppen
+- [ ] **Phase 2 – Qualität:** verständliche Fehler statt Abbruch, Autosave/Wiederherstellen, Grenzen bei großen Modellen,
+  Einführung beim ersten Start, Beispielprojekte, Hilfe zu Gesten; Stift/Maus/Chromebook auf echten Geräten; Barrierefreiheit (Grundstufe)
+- [ ] **Phase 3 – Übersetzung:** Texte aus dem Code in `strings.xml` (Englisch Standard, Deutsch `values-de`), Meldungen der Kernmodule über Schlüssel
+- [ ] **Phase 4 – Freemium:** frei = Modellieren + STL; Pro = STEP/3MF, Parameter-Tabelle, unbegrenzte Projekte (Vorschlag);
+  Google Play Billing mit Wiederherstellen und Offline-Zwischenspeicher, Sperren zentral in einem `Entitlements`-Objekt
+- [ ] **Phase 5 – Store:** Entwicklerkonto, Datenschutzerklärung (öffentliche URL), Data-Safety, Inhaltsbewertung, Store-Eintrag DE/EN mit Screenshots
+- [ ] **Phase 6 – Tests und Start:** interner Test → **geschlossener Test mit ≥ 12 Testern über ≥ 14 Tage** (Pflicht für neue Privatkonten)
+  → Produktionszugang → gestaffelter Rollout; Android Vitals beobachten
+
 ## Meilensteine
 
 ### M0 – OpenCascade-Machbarkeit  (fast abgeschlossen)
