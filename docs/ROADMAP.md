@@ -34,7 +34,10 @@ App-Größe (OCCT) und Build-Zeiten.
 Entscheidungen: Vertrieb über **Google Play**, **Freemium** (Pro als einmaliger In-App-Kauf), **Deutsch + Englisch**, **schlanke 1.0**
 (heutiger Stand stabil + Export, Messen, Parameter), weitere Funktionen als Updates. Grobe Dauer: ca. 3–4 Monate.
 
-- [ ] **Phase 0 – Fundament:** App-Name und endgültiger Paketname (heute `dev.androidcad.app`, nach dem ersten Upload nicht mehr änderbar);
+- [ ] **Phase 0 – Fundament:**
+  - [x] App-Name **Partwright** (Store-Titel z. B. „Partwright 3D – CAD für Tablet & Stift“), App-Kennung `io.github.kevbo8327.partwright`
+    (vorher `dev.androidcad.app`; nach dem ersten Upload nicht mehr änderbar). Geprüft: EUIPO und Play Store ohne Treffer, DPMA ohne Treffer für „Partwright“ (auch ohne „3D“); Domain vorerst nicht gesichert
+  - [ ] noch offen:
   Lizenzen (OCCT LGPL → als gemeinsame `.so` ausliefern, Lizenzseite für OCCT/manifold/Clipper2, Lizenz des eigenen Codes);
   signierter Release-AAB (Play App Signing, R8-Regeln für JNI); Test auf echter arm64-Hardware mit Stift; CI (GitHub Actions); App-Icon
   - [x] OpenCascade als **gemeinsame Bibliotheken** (`scripts/build-occt.ps1`, Standard `-LibraryType Shared` → `third_party/occt-android-shared/<abi>`;

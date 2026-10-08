@@ -8,7 +8,8 @@ android {
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "dev.androidcad.app"
+        // endgültige App-Kennung im Play Store (nach dem ersten Upload nicht mehr änderbar); der Code-Namespace bleibt dev.androidcad
+        applicationId = "io.github.kevbo8327.partwright"
         minSdk = 26
         targetSdk = 36
         versionCode = 1

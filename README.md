@@ -1,4 +1,6 @@
-# Android CAD
+# Partwright
+
+Arbeitsname bis Oktober 2026: „Android CAD“. App-Kennung: `io.github.kevbo8327.partwright`.
 
 Parametrische CAD-App für Android-Tablets und Googlebooks: **OpenSCAD-kompatible Skriptsprache** +
 automatisch erzeugte **Customizer-Oberfläche** (Slider, Auswahl, Schalter), echte **Manifold-Geometrie**,
