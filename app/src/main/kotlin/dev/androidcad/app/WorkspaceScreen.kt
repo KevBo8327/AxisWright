@@ -85,6 +85,7 @@ import dev.androidcad.sketchedit.RectMode
 import dev.androidcad.sketchedit.CircleMode
 import dev.androidcad.sketchedit.ArcMode
 import dev.androidcad.sketchedit.LineMode
+import dev.androidcad.sketchedit.PolygonMode
 import dev.androidcad.sketchedit.formatValue
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -236,6 +237,8 @@ private fun sketchToolGroups(e: SketchEditor, multiSelect: Boolean, onMultiSelec
         Tool.RECTANGLE -> CadIcon.RECTANGLE
         Tool.CIRCLE -> CadIcon.CIRCLE
         Tool.ARC -> CadIcon.ARC
+        Tool.SLOT -> CadIcon.SLOT
+        Tool.POLYGON -> CadIcon.POLYGON
         else -> CadIcon.LINE
     }
     return listOf(
@@ -244,6 +247,7 @@ private fun sketchToolGroups(e: SketchEditor, multiSelect: Boolean, onMultiSelec
         ToolGroup("Zeichnen", drawIcon, listOf(
             tool("Linie", CadIcon.LINE, Tool.LINE), tool("Rechteck", CadIcon.RECTANGLE, Tool.RECTANGLE),
             tool("Kreis", CadIcon.CIRCLE, Tool.CIRCLE), tool("Bogen", CadIcon.ARC, Tool.ARC),
+            tool("Langloch", CadIcon.SLOT, Tool.SLOT), tool("Vieleck", CadIcon.POLYGON, Tool.POLYGON),
         )),
         ToolGroup("Bearbeiten", CadIcon.TRIM, listOf(
             tool("Trimmen", CadIcon.TRIM, Tool.TRIM), tool("Verlängern", CadIcon.EXTEND, Tool.EXTEND),
@@ -501,6 +505,11 @@ private fun hintFor(e: SketchEditor): String = when (e.tool) {
         else "Kreis: jetzt die Lage antippen – sie bestimmt die Größe."
         CircleMode.TANGENT3 -> "Kreis: drei Linien, Kreise oder Bögen antippen, die er berühren soll (${e.drawStep} von 3) – nahe der Berührstelle."
     }
+    Tool.SLOT -> listOf("Langloch: Mittelpunkt der ersten Rundung antippen.", "Langloch: Mittelpunkt der zweiten Rundung.", "Langloch: jetzt die Breite antippen.")[e.drawStep]
+    Tool.POLYGON -> when (e.polygonMode) {
+        PolygonMode.INSCRIBED -> if (e.drawStep == 0) "Vieleck: Mittelpunkt antippen." else "Vieleck: eine Ecke antippen (Größe und Drehung)."
+        PolygonMode.CIRCUMSCRIBED -> if (e.drawStep == 0) "Vieleck: Mittelpunkt antippen." else "Vieleck: eine Seitenmitte antippen – der Kreisdurchmesser ist die Schlüsselweite."
+    }
     Tool.ARC -> when (e.arcMode) {
         ArcMode.CENTER -> "Bogen: Mittelpunkt, Startpunkt, dann die Richtung des Endes (gegen den Uhrzeigersinn)."
         ArcMode.THREE_POINTS -> listOf("Bogen: Startpunkt antippen.", "Bogen: Endpunkt antippen.", "Bogen: einen Punkt antippen, durch den er läuft.")[e.drawStep]
@@ -532,17 +541,25 @@ private fun DrawVariants(handle: EditorHandle, prefs: UiPrefs) {
         Tool.RECTANGLE -> chips(RectMode.entries, e.rectMode, { it.label }) { e.rectMode = it; prefs.putText(PREF_RECT, it.name) }
         Tool.CIRCLE -> chips(CircleMode.entries, e.circleMode, { it.label }) { e.circleMode = it; prefs.putText(PREF_CIRCLE, it.name) }
         Tool.ARC -> chips(ArcMode.entries, e.arcMode, { it.label }) { e.arcMode = it; prefs.putText(PREF_ARC, it.name) }
+        Tool.POLYGON -> {
+            ToolNumberField("Ecken", e.polygonSides.toDouble()) { e.polygonSides = Math.round(it).toInt(); prefs.putText(PREF_POLYGON_SIDES, e.polygonSides.toString()) }
+            chips(PolygonMode.entries, e.polygonMode, { it.label }) { e.polygonMode = it; prefs.putText(PREF_POLYGON, it.name) }
+        }
         else -> Unit
     }
 }
 
 private const val PREF_LINE = "sketch.line"
+private const val PREF_POLYGON = "sketch.polygon"
+private const val PREF_POLYGON_SIDES = "sketch.polygon.sides"
 private const val PREF_RECT = "sketch.rect"
 private const val PREF_CIRCLE = "sketch.circle"
 private const val PREF_ARC = "sketch.arc"
 
 /** Übernimmt die zuletzt gewählten Zeichenvarianten in einen (neuen) Editor. */
 internal fun applyDrawModes(e: SketchEditor, prefs: UiPrefs) {
+    prefs.text(PREF_POLYGON)?.let { v -> PolygonMode.entries.firstOrNull { it.name == v } }?.let { e.polygonMode = it }
+    prefs.text(PREF_POLYGON_SIDES)?.toIntOrNull()?.let { e.polygonSides = it }
     prefs.text(PREF_LINE)?.let { v -> LineMode.entries.firstOrNull { it.name == v } }?.let { e.lineMode = it }
     prefs.text(PREF_RECT)?.let { v -> RectMode.entries.firstOrNull { it.name == v } }?.let { e.rectMode = it }
     prefs.text(PREF_CIRCLE)?.let { v -> CircleMode.entries.firstOrNull { it.name == v } }?.let { e.circleMode = it }

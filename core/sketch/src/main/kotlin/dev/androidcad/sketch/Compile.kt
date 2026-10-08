@@ -100,6 +100,22 @@ private fun round(sketch: Sketch, map: VarMap, id: RoundId): Round = when (id) {
     }
 }
 
+/** Punkte, die ein Kreis/Bogen selbst trägt (Bogenenden). */
+private fun roundPoints(sketch: Sketch, id: RoundId): List<PointId> = when (id) {
+    is ArcId -> sketch.arc(id).let { listOf(it.start, it.end) }
+    is CircleId -> sketch.constraintEntries.mapNotNull { (it.constraint as? PointOnRound)?.takeIf { c -> c.round == id }?.point }
+}
+
+/**
+ * Ein Punkt aus [candidates], der auf allen [rounds] liegt – als Bogenende oder über [PointOnRound] –, also die Berührstelle einer
+ * Tangential-Bedingung; `null`, wenn es keinen gibt.
+ */
+private fun touchPoint(sketch: Sketch, candidates: List<PointId>, rounds: List<RoundId>): PointId? {
+    val onRound = sketch.constraintEntries.mapNotNull { (it.constraint as? PointOnRound)?.let { c -> c.point to c.round } }.toSet()
+    fun lies(p: PointId, r: RoundId) = (r is ArcId && sketch.arc(r).let { it.start == p || it.end == p }) || (p to r) in onRound
+    return candidates.firstOrNull { p -> rounds.all { lies(p, it) } }
+}
+
 private fun compileConstraint(sketch: Sketch, map: VarMap, owner: Int, c: Constraint): List<Eq> {
     fun eq(vars: IntArray, count: Int, fn: ResidualFn) = listOf(Eq(owner, vars, count, fn))
 
@@ -186,6 +202,17 @@ private fun compileConstraint(sketch: Sketch, map: VarMap, owner: Int, c: Constr
         }
         is TangentLineRound -> {
             val l = sketch.line(c.line); val r = round(sketch, map, c.round)
+            val touch = touchPoint(sketch, listOf(l.p1, l.p2), listOf(c.round))
+            if (touch != null) {
+                // Linie endet auf der Kurve: Radius zum Endpunkt ⟂ Linie. Gleichwertig, aber auch in erster Ordnung eindeutig – sonst
+                // könnte das Ende scheinbar frei entlang der Tangente gleiten (falsche Freiheitsgrade, schlechte Konvergenz).
+                val other = if (touch == l.p1) l.p2 else l.p1
+                val px = map.x(touch); val py = map.y(touch); val qx = map.x(other); val qy = map.y(other)
+                return listOf(Eq(owner, intArrayOf(px, py, qx, qy, r.cx, r.cy), 1) { x, o, k ->
+                    val dx = x[qx] - x[px]; val dy = x[qy] - x[py]
+                    o[k] = ((x[px] - x[r.cx]) * dx + (x[py] - x[r.cy]) * dy) / max(hypot(dx, dy), EPS)
+                })
+            }
             val ax = map.x(l.p1); val ay = map.y(l.p1); val bx = map.x(l.p2); val by = map.y(l.p2)
             eq(intArrayOf(ax, ay, bx, by) + r.vars, 1) { x, o, k ->
                 val dx = x[bx] - x[ax]; val dy = x[by] - x[ay]
@@ -195,6 +222,15 @@ private fun compileConstraint(sketch: Sketch, map: VarMap, owner: Int, c: Constr
         }
         is TangentRoundRound -> {
             val ra = round(sketch, map, c.a); val rb = round(sketch, map, c.b)
+            val touch = touchPoint(sketch, roundPoints(sketch, c.a), listOf(c.a, c.b))
+            if (touch != null) {
+                // gemeinsamer Punkt auf beiden Kurven: Berührung ⇔ Mittelpunkte und Punkt auf einer Geraden
+                val px = map.x(touch); val py = map.y(touch)
+                return listOf(Eq(owner, intArrayOf(px, py, ra.cx, ra.cy, rb.cx, rb.cy), 1) { x, o, k ->
+                    val ux = x[ra.cx] - x[px]; val uy = x[ra.cy] - x[py]
+                    o[k] = (ux * (x[rb.cy] - x[py]) - uy * (x[rb.cx] - x[px])) / max(hypot(ux, uy), EPS)
+                })
+            }
             eq(ra.vars + rb.vars, 1) { x, o, k ->
                 val d = hypot(x[ra.cx] - x[rb.cx], x[ra.cy] - x[rb.cy])
                 val r1 = ra.radius(x); val r2 = rb.radius(x)

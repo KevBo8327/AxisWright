@@ -423,6 +423,7 @@ private fun DrawScope.drawPreview(editor: SketchEditor, p: Preview, c: SketchCol
             path.close()
             drawPath(path, c.preview, style = Stroke(2.5f, pathEffect = dash))
         }
+        is Preview.Group -> p.parts.forEach { drawPreview(editor, it, c) }
         is Preview.Box -> Unit
     }
 }

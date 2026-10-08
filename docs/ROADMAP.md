@@ -105,6 +105,13 @@ prototypisch klären, bevor das Feature-Modell (M3) festgelegt wird.
   festgehalten, damit sich nur das Neue bewegt (`placeNew`). Vorschau über eine Probe auf einer Kopie der Skizze. Außerdem: Tipps auf die Kontextleiste
   landen nicht mehr auf der Zeichenfläche. Tests `TangentDrawTest`
   ![Tangenten](screenshot_tangenten.png)
+- [x] **Zeichenvarianten, Gruppe 3**: Werkzeuge **Langloch** (Mitten der beiden Rundungen, dann die Breite; zwei gleiche Halbkreise, zwei tangentiale Linien,
+  Hilfs-Mittellinie für die Länge – 5 Freiheitsgrade) und **Vieleck** (3 … 64 Ecken; Mittelpunkt, dann Ecke bzw. Seitenmitte; „Ecken auf Kreis“ oder „Seiten am Kreis“
+  mit Inkreis = Schlüsselweite – 4 Freiheitsgrade, auch bei gerader Eckenzahl kein Kippen wie bei einer Raute). Eckenzahl und Variante bleiben gemerkt.
+  **Löser:** Tangential-Bedingungen an einer gemeinsamen Berührstelle (Bogenende oder Punkt auf dem Kreis) werden als „Radius ⟂ Linie“ bzw. „Mittelpunkte und
+  Punkt auf einer Geraden“ formuliert – gleichwertig, aber ohne scheinbare Freiheitsgrade (vorher galt das Ende als frei entlang der Tangente; betraf auch
+  Eckenverrundung und tangentiale Bögen). Tests `SlotPolygonTest`, `TangencyDofTest`
+  ![Langloch und Vieleck](screenshot_langloch_vieleck.png)
 - [x] **Lage der Skizze bestimmen**: X- und Y-Achse sind antippbar (feste Konstruktionslinien, `SketchOps.axisOf`) – alle Bedingungen/Maße gelten auch gegenüber den Achsen (Auf Kurve, Kollinear,
   Symmetrisch, Abstand, Winkel …; Unsinniges wie „Gleich“/„Fixieren“ wird bei gewählter Achse nicht angeboten). Schnellaktionen **„Ecke auf Ursprung“** und **„Mittig auf Ursprung“** (Hilfsdiagonale mit dem Ursprung
   als Mittelpunkt – bleibt bei Maßänderungen mittig). Statuszeile erkennt „Form bestimmt – Lage (und Drehung) noch frei“ (`SketchOps.placementFreedom`, Drehung per Probe-Drehung geprüft). Ursprung deutlicher
@@ -123,7 +130,7 @@ prototypisch klären, bevor das Feature-Modell (M3) festgelegt wird.
 - [x] **Overlay-Layout, Schritt 3 (kleine Geräte)**: Werkzeuge unten/Einstellungen als Blatt unter 720 dp Breite **und** im Hochformat (auch Tablets), kompakte Kopfzeile nur unter 600 dp;
   3D-Bild rückt neben offene Karten (Modell im freien Bereich zentriert); Skizze passt mit freien Rändern für Werkzeugleiste und Statusplakette ein (`SketchEditor.fit(left, top)`) und passt beim Drehen
   neu ein. Geprüft: Pixel Tablet, 8″-Tablet quer/hoch (960 × 600 dp), Smartphone hoch/quer (448 × 997 dp)
-- [ ] **Offen in M2:** Zeichenvarianten Gruppe 3 (Langloch, n-Eck), später Ellipse und Spline; vorhandenen Körper im Skizzenmodus blass als Referenz zeigen, optionale 3D-Vorschau auf breiten Fenstern, freie Ebenen (Kamera auf beliebige Normale ausrichten), Bemaßen per Ziehen eines Etiketts (Position), Bemaßungs-Vorschlag beim Zeichnen, Fase in 2D, Trimmen von Kreisen/Bögen an Elementen mit Maßen (Maße der gekürzten Linie entfallen),
+- [ ] **Offen in M2:** Zeichenvarianten später: Ellipse und Spline; vorhandenen Körper im Skizzenmodus blass als Referenz zeigen, optionale 3D-Vorschau auf breiten Fenstern, freie Ebenen (Kamera auf beliebige Normale ausrichten), Bemaßen per Ziehen eines Etiketts (Position), Bemaßungs-Vorschlag beim Zeichnen, Fase in 2D, Trimmen von Kreisen/Bögen an Elementen mit Maßen (Maße der gekürzten Linie entfallen),
   Ellipse/Spline, Skizzenebene auf eine Körperfläche legen (XZ/YZ/Versatz ✓), Constraint-Leiste: „deaktiviert“ statt versteckt bei unzulässigen Aktionen,
   Stift-Gesten (z. B. Durchstreichen = Löschen), Zwei-Finger-Tippen = Rückgängig
 

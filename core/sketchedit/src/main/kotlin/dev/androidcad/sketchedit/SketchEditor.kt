@@ -13,6 +13,8 @@ import dev.androidcad.sketch.Horizontal
 import dev.androidcad.sketch.LineId
 import dev.androidcad.sketch.Midpoint
 import dev.androidcad.sketch.OpResult
+import dev.androidcad.sketch.EqualLength
+import dev.androidcad.sketch.EqualRadius
 import dev.androidcad.sketch.Parallel
 import dev.androidcad.sketch.Perpendicular
 import dev.androidcad.sketch.TangentLineRound
@@ -37,6 +39,12 @@ import kotlin.math.tan
 
 public enum class Tool {
     SELECT, LINE, RECTANGLE, CIRCLE, ARC,
+
+    /** Langloch: Mittelpunkte der beiden Rundungen, dann die Breite. */
+    SLOT,
+
+    /** Regelmäßiges Vieleck: Mittelpunkt, dann eine Ecke bzw. Seitenmitte (siehe [PolygonMode]). */
+    POLYGON,
 
     /** Element an der angetippten Stelle bis zu den nächsten Schnittpunkten kürzen. */
     TRIM,
@@ -101,6 +109,15 @@ public enum class CircleMode(public val label: String) {
     public val tangents: Int get() = when (this) { TANGENT2 -> 2; TANGENT3 -> 3; else -> 0 }
 }
 
+/** Varianten des Vieleck-Werkzeugs: wie das Vieleck an seinem (Hilfs-)Kreis liegt. */
+public enum class PolygonMode(public val label: String) {
+    /** Ecken auf dem Kreis (Kreis = Umkreis); der zweite Tipp setzt eine Ecke. */
+    INSCRIBED("Ecken auf Kreis"),
+
+    /** Seiten berühren den Kreis (Kreis = Inkreis, Durchmesser = Schlüsselweite); der zweite Tipp setzt eine Seitenmitte. */
+    CIRCUMSCRIBED("Seiten am Kreis"),
+}
+
 /** Varianten des Linien-Werkzeugs. */
 public enum class LineMode(public val label: String) {
     /** Gerade Linie(n) von Punkt zu Punkt. */
@@ -133,6 +150,9 @@ public sealed interface Preview {
 
     /** Geschlossener Linienzug (z. B. schräges Rechteck). */
     public data class Polygon(val points: List<Vec2>) : Preview
+
+    /** Mehrere Teile auf einmal (z. B. Langloch: zwei Linien und zwei Bögen). */
+    public data class Group(val parts: List<Preview>) : Preview
     public data class Circle(val center: Vec2, val radius: Double) : Preview
 
     /** Bogen um [center] von [start] nach [end], gegen den Uhrzeigersinn. */
@@ -185,6 +205,14 @@ public class SketchEditor(public val sketch: Sketch) {
         private set
     public var gridSnap: Boolean = true
         set(v) { field = v; changed() }
+
+    /** Variante des Vieleck-Werkzeugs. */
+    public var polygonMode: PolygonMode = PolygonMode.INSCRIBED
+        set(v) { if (field != v) { field = v; resetDrawing() }; changed() }
+
+    /** Anzahl der Ecken des Vieleck-Werkzeugs (3 … [MAX_POLYGON_SIDES]). */
+    public var polygonSides: Int = 6
+        set(v) { field = v.coerceIn(3, MAX_POLYGON_SIDES); changed() }
 
     /** Variante des Linien-Werkzeugs; ein Wechsel bricht einen angefangenen Zug ab. */
     public var lineMode: LineMode = LineMode.NORMAL
@@ -609,6 +637,15 @@ public class SketchEditor(public val sketch: Sketch) {
                         ?: Preview.Line(pending!!.position, b.position)
                 }
             }
+            Tool.SLOT -> when (val b = second) {
+                null -> start?.let { Preview.Line(it.position, snap.position) }
+                else -> slot(pending!!.position, b.position, snap.position)?.let { g ->
+                    Preview.Group(listOf(Preview.Line(g[0], g[1]), Preview.Line(g[2], g[3]), Preview.Arc(b.position, g[2], g[1]), Preview.Arc(pending!!.position, g[0], g[3])))
+                } ?: Preview.Line(pending!!.position, b.position)
+            }
+            Tool.POLYGON -> start?.let { c ->
+                polygon(c.position, snap.position)?.let { Preview.Group(listOf(Preview.Polygon(it), Preview.Circle(c.position, dist(c.position, snap.position)))) }
+            }
             Tool.ARC -> if (arcMode == ArcMode.THREE_POINTS) {
                 val a = pending; val b = second
                 when {
@@ -658,6 +695,12 @@ public class SketchEditor(public val sketch: Sketch) {
                 dragged && pending == null -> { finishTwoPointCircle(first, up); pending = null }
                 pending == null -> pending = first
                 else -> { finishTwoPointCircle(pending!!, up); pending = null }
+            }
+            Tool.SLOT -> threeTaps(first, up, dragged) { a, b, c -> finishSlot(a, b, c) }
+            Tool.POLYGON -> when {
+                dragged && pending == null -> { finishPolygon(first, up); pending = null }
+                pending == null -> pending = first
+                else -> { finishPolygon(pending!!, up); pending = null }
             }
             Tool.ARC -> when (arcMode) {
                 ArcMode.THREE_POINTS -> threeTaps(first, up, dragged) { a, b, c -> finishArc3(a, b, c) }
@@ -957,6 +1000,72 @@ public class SketchEditor(public val sketch: Sketch) {
             sketch.restore(before); message = "Kein Kreis gefunden, der alle gewählten Elemente berührt."; return
         }
         commit("Kreis", analyze = true)
+    }
+
+    /**
+     * Ecken eines Langlochs mit den Rundungsmitten [c1], [c2] und der halben Breite = Abstand von [w] zur Mittellinie:
+     * oben bei c1, oben bei c2, unten bei c2, unten bei c1 – oder `null`, wenn es zu klein ist.
+     */
+    private fun slot(c1: Vec2, c2: Vec2, w: Vec2): List<Vec2>? {
+        val len = dist(c1, c2)
+        if (len < MIN_SIZE) return null
+        val nx = -(c2.y - c1.y) / len; val ny = (c2.x - c1.x) / len
+        val r = abs((w.x - c1.x) * nx + (w.y - c1.y) * ny)
+        if (r < MIN_SIZE) return null
+        return listOf(Vec2(c1.x + nx * r, c1.y + ny * r), Vec2(c2.x + nx * r, c2.y + ny * r), Vec2(c2.x - nx * r, c2.y - ny * r), Vec2(c1.x - nx * r, c1.y - ny * r))
+    }
+
+    /**
+     * Langloch: zwei Halbkreise (gleicher Radius) und zwei Linien, die sie berühren; dazu eine Hilfslinie zwischen den Mittelpunkten
+     * (für die Länge). Frei bleiben Lage, Richtung, Länge und Breite – 5 Freiheitsgrade.
+     */
+    private fun finishSlot(a: SnapResult, b: SnapResult, w: SnapResult) {
+        val g = slot(a.position, b.position, w.position) ?: return
+        val extra = ArrayList<Constraint>()
+        val c1 = materialize(a, extra)
+        val c2 = materialize(b, extra)
+        if (c1 == c2) { sketch.removeOrphanPoints(); return }
+        val p = g.map { sketch.addPoint(it.x, it.y) }
+        val top = sketch.addLine(p[0], p[1]); val bottom = sketch.addLine(p[2], p[3])
+        val end2 = sketch.addArc(c2, p[2], p[1]); val end1 = sketch.addArc(c1, p[0], p[3])
+        val axis = sketch.addLine(c1, c2, construction = true)
+        for (l in listOf(top, bottom)) for (r in listOf(end1, end2)) sketch.add(TangentLineRound(l, r))
+        sketch.add(EqualRadius(end1, end2))
+        extra.forEach(::tryAdd)
+        autoHorizontalVertical(axis)
+        commit("Langloch", analyze = true)
+    }
+
+    /** Ecken des Vielecks um [center]; [at] ist je nach [polygonMode] eine Ecke oder eine Seitenmitte. `null`, wenn zu klein. */
+    private fun polygon(center: Vec2, at: Vec2): List<Vec2>? {
+        val r = dist(center, at)
+        if (r < MIN_SIZE) return null
+        val n = polygonSides
+        val step = 2 * Math.PI / n
+        val base = angleOf(center, at)
+        val (start, radius) = if (polygonMode == PolygonMode.INSCRIBED) base to r else (base - step / 2) to r / kotlin.math.cos(step / 2)
+        return List(n) { k -> Vec2(center.x + radius * kotlin.math.cos(start + k * step), center.y + radius * kotlin.math.sin(start + k * step)) }
+    }
+
+    /**
+     * Regelmäßiges Vieleck mit Hilfskreis: gleich lange Seiten, Ecken auf dem Umkreis. Bei „Seiten am Kreis“ kommt der Inkreis dazu (eine
+     * Seite berührt ihn – die übrigen folgen); nur Seiten am Kreis reichten nicht, ein gleichseitiges Vieleck mit gerader Eckenzahl
+     * könnte sonst wie eine Raute kippen. Frei bleiben Mitte, Größe (Durchmesser bzw. Schlüsselweite) und Drehung – 4 Freiheitsgrade.
+     */
+    private fun finishPolygon(center: SnapResult, at: SnapResult) {
+        val pts = polygon(center.position, at.position) ?: return
+        val extra = ArrayList<Constraint>()
+        val c = materialize(center, extra)
+        val r = dist(center.position, at.position)
+        val outer = sketch.addCircle(c, if (polygonMode == PolygonMode.INSCRIBED) r else dist(center.position, pts[0]), construction = true)
+        val ids = pts.map { sketch.addPoint(it.x, it.y) }
+        val sides = ids.indices.map { k -> sketch.addLine(ids[k], ids[(k + 1) % ids.size]) }
+        // Kette statt Stern: die Symbole „=“ verteilen sich auf die Seiten, statt sich an der ersten zu sammeln
+        for (k in 1 until sides.size) sketch.add(EqualLength(sides[k - 1], sides[k]))
+        ids.forEach { sketch.add(PointOnRound(it, outer)) }
+        if (polygonMode == PolygonMode.CIRCUMSCRIBED) sketch.add(TangentLineRound(sides[0], sketch.addCircle(c, r, construction = true)))
+        extra.forEach(::tryAdd)
+        commit("Vieleck", analyze = true)
     }
 
     /** Drei Punkte nacheinander (der erste darf auch gezogen werden: Ziehen setzt die ersten beiden). */
@@ -1475,6 +1584,9 @@ public class SketchEditor(public val sketch: Sketch) {
         public const val MAX_PATTERN: Int = 50
         private const val AUTO_ANGLE_DEG = 3.0
         private const val MIN_SIZE = 1e-6
+
+        /** Höchste Eckenzahl des Vieleck-Werkzeugs. */
+        public const val MAX_POLYGON_SIDES: Int = 64
 
         /** Größter Radius eines tangentialen Bogens (mm); darüber gilt das Ende als geradeaus. */
         private const val MAX_TANGENT_RADIUS = 1e5

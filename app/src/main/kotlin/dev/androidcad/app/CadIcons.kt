@@ -30,6 +30,8 @@ enum class CadIcon(private vararg val parts: Part) {
     RECTANGLE(Part("M4 7 H20 V17 H4 Z")),
     CIRCLE(Part("M5 12 a7 7 0 1 0 14 0 a7 7 0 1 0 -14 0"), Part("M11 12 a1 1 0 1 0 2 0 a1 1 0 1 0 -2 0", filled = true)),
     ARC(Part("M5 17 A7 7 0 0 1 19 17"), Part("M11 17 a1 1 0 1 0 2 0 a1 1 0 1 0 -2 0", filled = true)),
+    SLOT(Part("M8 8 H16 A4 4 0 0 1 16 16 H8 A4 4 0 0 1 8 8 Z"), Part("M8 12 H16", dashed = true)),
+    POLYGON(Part("M12 3.5 L19.4 7.75 L19.4 16.25 L12 20.5 L4.6 16.25 L4.6 7.75 Z")),
     TRIM(Part("M9 4 V20"), Part("M9 12 H20"), Part("M3 12 H8", dashed = true)),
     EXTEND(Part("M19 4 V20"), Part("M3 12 H11"), Part("M11 12 H18", dashed = true), Part("M15 9 L18 12 L15 15")),
     OFFSET(Part("M4 20 V8 H18"), Part("M8 20 V12 H18", dashed = true)),
