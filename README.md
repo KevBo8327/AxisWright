@@ -114,6 +114,11 @@ Dann `keystore.properties` im Projektordner anlegen (wird nicht eingecheckt) mit
 und `./gradlew :app:bundleRelease` ausführen → `app/build/outputs/bundle/release/app-release.aab`. Ohne `keystore.properties` signiert der
 Build mit dem Debug-Schlüssel (nur zum lokalen Testen; Google Play lehnt das ab). Download je Gerät ≈ 16 MB (native Bibliotheken ≈ 15 MB).
 
+**Automatische Prüfung (GitHub Actions, `.github/workflows/ci.yml`):** bei jedem Push auf `main` und jedem Pull Request laufen die
+JVM-Tests und der App-Build (Debug-APK als Artefakt, Release-AAB). OpenCascade wird nur beim ersten Lauf bzw. nach Änderungen an
+`scripts/build-occt.ps1` gebaut (je ABI ein eigener Job, auf GitHub ca. 2–3 h) und danach aus dem Zwischenspeicher genommen.
+Gerätetests auf dem Emulator laufen weiter lokal.
+
 **App-Icon:** `python scripts/make-icon.py` erzeugt aus einer Geometrie-Beschreibung die Vektor-Icons (`res/drawable/ic_launcher_*`,
 `res/mipmap-anydpi-v26`) sowie Store-Symbol und Store-Grafik (`docs/store/`). Nicht die erzeugten Dateien von Hand ändern.
 

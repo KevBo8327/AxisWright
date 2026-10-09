@@ -12,7 +12,8 @@
   FoundationClasses, ModelingData, ModelingAlgorithms (keine Fremdbibliotheken).
   DataExchange (STEP) kann später mit -WithDataExchange zugeschaltet werden.
 
-  Voraussetzungen: Android SDK mit NDK 28.2.13676358 und CMake 3.31.6 (inkl. Ninja).
+  Voraussetzungen: Android SDK mit NDK 28.2.13676358 und CMake 3.31.6 (inkl. Ninja). Läuft unter Windows PowerShell 5.1
+  und PowerShell 7 (auch Linux, z. B. in GitHub Actions; SDK dann über ANDROID_HOME).
   Quelltext: third_party/occt (OCCT V7_9_3, `git clone --depth 1 --branch V7_9_3 ...`).
 
 .EXAMPLE
@@ -24,7 +25,8 @@ param(
     [string[]]$Abis = @("x86_64", "arm64-v8a"),
     [switch]$WithDataExchange,
     [ValidateSet("Shared", "Static")] [string]$LibraryType = "Shared",
-    [string]$Sdk = "$env:LOCALAPPDATA\Android\Sdk",
+    # Windows: Android-Studio-Standardpfad; Linux/macOS (z. B. GitHub Actions): ANDROID_HOME
+    [string]$Sdk = $(if ($env:ANDROID_HOME) { $env:ANDROID_HOME } else { "$env:LOCALAPPDATA\Android\Sdk" }),
     [string]$NdkVersion = "28.2.13676358",
     [string]$CMakeVersion = "3.31.6",
     [int]$ApiLevel = 26
@@ -34,8 +36,9 @@ $root = Split-Path $PSScriptRoot -Parent
 $src = Join-Path $root "third_party/occt"
 $ndk = Join-Path $Sdk "ndk/$NdkVersion"
 $cmakeBin = Join-Path $Sdk "cmake/$CMakeVersion/bin"
-$cmake = Join-Path $cmakeBin "cmake.exe"
-$ninja = Join-Path $cmakeBin "ninja.exe"
+$exe = if ($env:OS -eq "Windows_NT") { ".exe" } else { "" }
+$cmake = Join-Path $cmakeBin "cmake$exe"
+$ninja = Join-Path $cmakeBin "ninja$exe"
 foreach ($p in @($src, $ndk, $cmake, $ninja)) { if (-not (Test-Path $p)) { throw "Nicht gefunden: $p" } }
 
 foreach ($abi in $Abis) {

@@ -1,0 +1,109 @@
+# Automatische Prüfung bei jedem Push und Pull Request.
+#
+# 1. JVM-Tests: Skizzen-Engine, Editor, Modell-Logik, App-Logik – schnell, ohne native Bibliotheken.
+# 2. OpenCascade je ABI: nur beim ersten Lauf bzw. wenn sich scripts/build-occt.ps1 ändert (auf einem 4-Kern-Runner ca. 2–3 h);
+#    danach kommt das Ergebnis aus dem Zwischenspeicher.
+# 3. App bauen: Debug-APK und Release-AAB (Release mit Debug-Schlüssel signiert – der Upload-Schlüssel liegt nie auf GitHub).
+#
+# Gerätetests (Emulator) laufen weiterhin lokal: ./gradlew :core:model:connectedDebugAndroidTest :core:brep:connectedDebugAndroidTest
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  # nur bei Pull Requests abbrechen – auf main soll ein laufender OpenCascade-Build zu Ende kommen (sonst entsteht nie ein Zwischenspeicher)
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  NDK_VERSION: 28.2.13676358
+  CMAKE_VERSION: 3.31.6
+  OCCT_TAG: V7_9_3
+
+jobs:
+  jvm-tests:
+    name: JVM-Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Tests
+        run: ./gradlew test testDebugUnitTest --continue
+      - name: Testberichte hochladen
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: testberichte
+          path: '**/build/reports/tests/'
+          retention-days: 14
+
+  occt:
+    name: OpenCascade (${{ matrix.abi }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 340
+    strategy:
+      fail-fast: false
+      matrix:
+        abi: [x86_64, arm64-v8a]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Zwischenspeicher
+        id: cache
+        uses: actions/cache@v4
+        with:
+          path: third_party/occt-android-shared/${{ matrix.abi }}
+          key: occt-${{ env.OCCT_TAG }}-${{ matrix.abi }}-${{ hashFiles('scripts/build-occt.ps1') }}
+      - name: NDK und CMake installieren
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "ndk;$NDK_VERSION" "cmake;$CMAKE_VERSION" > /dev/null
+      - name: OpenCascade-Quelltext holen
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: git clone --depth 1 --branch "$OCCT_TAG" https://github.com/Open-Cascade-SAS/OCCT.git third_party/occt
+      - name: OpenCascade bauen
+        if: steps.cache.outputs.cache-hit != 'true'
+        shell: pwsh
+        run: ./scripts/build-occt.ps1 -Abis ${{ matrix.abi }}
+
+  build:
+    name: App bauen
+    needs: occt
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: gradle/actions/setup-gradle@v4
+      - name: NDK und CMake installieren
+        run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "ndk;$NDK_VERSION" "cmake;$CMAKE_VERSION" > /dev/null
+      - name: OpenCascade x86_64 aus dem Zwischenspeicher
+        uses: actions/cache/restore@v4
+        with:
+          path: third_party/occt-android-shared/x86_64
+          key: occt-${{ env.OCCT_TAG }}-x86_64-${{ hashFiles('scripts/build-occt.ps1') }}
+          fail-on-cache-miss: true
+      - name: OpenCascade arm64-v8a aus dem Zwischenspeicher
+        uses: actions/cache/restore@v4
+        with:
+          path: third_party/occt-android-shared/arm64-v8a
+          key: occt-${{ env.OCCT_TAG }}-arm64-v8a-${{ hashFiles('scripts/build-occt.ps1') }}
+          fail-on-cache-miss: true
+      - name: Debug-APK und Release-AAB
+        run: ./gradlew :app:assembleDebug :app:bundleRelease
+      - name: APK hochladen
+        uses: actions/upload-artifact@v4
+        with:
+          name: partwright-debug-apk
+          path: app/build/outputs/apk/debug/*.apk
+          retention-days: 14

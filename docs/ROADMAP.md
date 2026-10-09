@@ -44,6 +44,8 @@ Entscheidungen: Vertrieb über **Google Play**, **Freemium** (Pro als einmaliger
     einfarbiger Ebene (Themensymbole), Startbildschirm über `androidx.core:core-splashscreen` (einheitlich ab Android 8) mit detaillierterem Motiv (Lichtschein, Skizzenlinien,
     verdeckte Kanten) und ab Android 12 dem Schriftzug PARTWRIGHT (eigene Linienschrift, keine fremde Schriftart). Alles aus
     `scripts/make-icon.py` erzeugt, dazu Store-Symbol `docs/store/icon-512.png` und Store-Grafik `docs/store/feature-graphic.png`
+  - [x] **Automatische Prüfung** (GitHub Actions): JVM-Tests, OpenCascade je ABI mit Zwischenspeicher, Debug-APK und Release-AAB;
+    `scripts/build-occt.ps1` läuft dafür auch unter Linux (PowerShell 7, `ANDROID_HOME`)
   - [ ] noch offen:
   Lizenzen (OCCT LGPL → als gemeinsame `.so` ausliefern, Lizenzseite für OCCT/manifold/Clipper2, Lizenz des eigenen Codes);
   signierter Release-AAB (Play App Signing, R8-Regeln für JNI); Test auf echter arm64-Hardware mit Stift; CI (GitHub Actions); App-Icon
