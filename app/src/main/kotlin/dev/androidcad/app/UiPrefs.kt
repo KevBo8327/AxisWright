@@ -26,6 +26,19 @@ class UiPrefs(private val file: File? = null) {
             save()
         }
 
+    private var themeState by mutableStateOf(
+        ThemeMode.entries.firstOrNull { it.name == props.getProperty(THEME) } ?: ThemeMode.DARK,
+    )
+
+    /** Darstellung (Dunkel/Hell/System); Standard Dunkel. Änderungen färben die App sofort um. */
+    var themeMode: ThemeMode
+        get() = themeState
+        set(m) {
+            themeState = m
+            props.setProperty(THEME, m.name)
+            save()
+        }
+
     /** Gemerkter Text unter [key] (z. B. die zuletzt gewählte Zeichenvariante) oder `null`. */
     fun text(key: String): String? = props.getProperty(key)
 
@@ -42,5 +55,6 @@ class UiPrefs(private val file: File? = null) {
 
     private companion object {
         const val TREE_EXPANDED = "history.open"
+        const val THEME = "theme.mode"
     }
 }

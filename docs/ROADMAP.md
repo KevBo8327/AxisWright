@@ -52,6 +52,12 @@ Entscheidungen: Vertrieb über **Google Play**, **Freemium** (Pro als einmaliger
   - [x] OpenCascade als **gemeinsame Bibliotheken** (`scripts/build-occt.ps1`, Standard `-LibraryType Shared` → `third_party/occt-android-shared/<abi>`;
     `cadbrep` bindet die `libTK*.so` als importierte Ziele ein, Gradle packt sie mit). Kosten: nativer Teil ≈ 37,6 statt 21,9 MB je ABI (unkomprimiert)
   - [x] Lizenzseite (Projektmenü › „Lizenzen …“) mit OCCT (LGPL 2.1 + Ausnahme, Hinweis zum Austausch), Manifold, Clipper2; Texte in `assets/licenses`, Test `LicensesTest`
+- [x] **Farbkonzept „Blaupause“** (08.10.2026): eigenes Material-Farbschema hell/dunkel (`Theme.kt`, Standard **Dunkel**, Umschalter im
+  Projektmenü › Darstellung, gemerkt in `UiPrefs`) plus CAD-Farben (`CadColors`): 3D-Ansicht mit Verlaufshintergrund (in OpenGL), Modell in Stahlblau
+  mit dunklen Kanten, Auswahl orange; Skizze auf Blaupausen-Raster mit Zustandsfarben (weiß bestimmt, türkis beweglich, rot Widerspruch, gelb Maße).
+  **Glas-Flächen** (`Modifier.glass`) für Werkzeugleisten, Karten, Chips, Kontextleiste und Statusplakette: über der Skizze echte Unschärfe mit
+  Haze 1.6.10 (neuere Versionen verlangen compileSdk 37), über dem 3D-Bild nachgebildete Glas-Optik (OpenGL-Fläche ist für Compose nicht lesbar).
+  Vorschau: `docs/design/farbkonzept-*.png` (`scripts/theme-mockup.py`)
 - [ ] **Phase 1 – Umfang 1.0:** **Drehen** (Revolve, `BRepPrimAPI_MakeRevol`) und **Schale/Aushöhlen** (`BRepOffsetAPI_MakeThickSolid`) –
   beschlossen am 08.10.2026, Grundwerkzeuge für Wellen/Knöpfe bzw. Gehäuse; **Projekt teilen/importieren** mit Formatversion (vor der Beta);
   STEP-Export (OCCT `STEPControl_Writer`), 3MF-Export, Messen, Parameter-Tabelle (darf notfalls in das erste Update rutschen);

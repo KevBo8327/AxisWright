@@ -43,4 +43,18 @@ class UiPrefsTest {
             file.delete()
         }
     }
+
+    @Test
+    fun theThemeStartsDarkAndIsRemembered() {
+        val file = File.createTempFile("uiprefs", ".properties").also { it.delete() }
+        try {
+            assertEquals(ThemeMode.DARK, UiPrefs(file).themeMode, "Standard: dunkel")
+            UiPrefs(file).themeMode = ThemeMode.LIGHT
+            assertEquals(ThemeMode.LIGHT, UiPrefs(file).themeMode)
+            UiPrefs(file).themeMode = ThemeMode.SYSTEM
+            assertEquals(ThemeMode.SYSTEM, UiPrefs(file).themeMode)
+        } finally {
+            file.delete()
+        }
+    }
 }

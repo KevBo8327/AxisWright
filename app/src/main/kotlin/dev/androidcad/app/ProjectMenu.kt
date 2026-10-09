@@ -98,6 +98,17 @@ internal fun ProjectMenu(hub: ProjectHub) {
             DropdownMenuItem(text = { Text("Duplizieren") }, enabled = current != null, onClick = { open = false; current?.let(hub::duplicate) })
             DropdownMenuItem(text = { Text("Löschen …") }, enabled = current != null, onClick = { open = false; deleting = current })
             HorizontalDivider()
+            Text(
+                "Darstellung", Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
+                style = MaterialTheme.typography.labelMedium, color = colors.onSurfaceVariant,
+            )
+            ThemeMode.entries.forEach { m ->
+                DropdownMenuItem(
+                    text = { Text(m.label + if (hub.workspace.prefs.themeMode == m) "  ✓" else "") },
+                    onClick = { open = false; hub.workspace.prefs.themeMode = m },
+                )
+            }
+            HorizontalDivider()
             MenuItem("Lizenzen …") { open = false; showLicenses = true }
         }
     }

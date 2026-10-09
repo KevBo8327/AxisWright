@@ -51,6 +51,7 @@ import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.androidcad.sketch.SketchOps
 import dev.androidcad.sketch.Vec2
@@ -71,6 +72,7 @@ private class SketchColors(
     val grid: Color, val gridMajor: Color, val axisX: Color, val axisY: Color,
     val under: Color, val fully: Color, val construction: Color, val selected: Color, val hover: Color,
     val preview: Color, val conflict: Color, val text: Color, val labelBg: Color, val labelBorder: Color, val badgeBg: Color,
+    val dimension: Color,
 )
 
 /**
@@ -85,14 +87,16 @@ private class SketchColors(
 fun SketchCanvas(handle: EditorHandle, modifier: Modifier = Modifier, multiSelect: Boolean = false, reference: FloatArray? = null) {
     val editor = handle.editor
     val scheme = MaterialTheme.colorScheme
-    val colors = remember(scheme) {
+    val cad = CadTheme.colors
+    // Zustandsfarben des Farbkonzepts: weiß/dunkel = vollständig bestimmt, türkis/blau = beweglich, rot = Widerspruch, orange = Auswahl
+    val colors = remember(scheme, cad) {
         SketchColors(
-            grid = scheme.onSurface.copy(alpha = 0.07f), gridMajor = scheme.onSurface.copy(alpha = 0.16f),
-            axisX = Color(0xFFD32F2F).copy(alpha = 0.7f), axisY = Color(0xFF388E3C).copy(alpha = 0.7f),
-            under = Color(0xFF1E6FE0), fully = scheme.onSurface, construction = scheme.outline,
-            selected = Color(0xFFFF8F00), hover = Color(0xFFFFB74D), preview = scheme.primary,
-            conflict = Color(0xFFD32F2F), text = scheme.onSurface, labelBg = scheme.surface, labelBorder = scheme.outline,
-            badgeBg = scheme.secondaryContainer,
+            grid = cad.grid, gridMajor = cad.gridMajor,
+            axisX = cad.axisX.copy(alpha = 0.75f), axisY = cad.axisY.copy(alpha = 0.75f),
+            under = cad.underDefined, fully = cad.fullyDefined, construction = cad.construction,
+            selected = cad.selection, hover = cad.selection.copy(alpha = 0.6f), preview = cad.underDefined,
+            conflict = cad.conflict, text = scheme.onSurface, labelBg = cad.sketchBackground.copy(alpha = 0.88f), labelBorder = cad.dimension.copy(alpha = 0.55f),
+            badgeBg = scheme.surfaceContainerHigh, dimension = cad.dimension,
         )
     }
     val measurer = rememberTextMeasurer()
@@ -115,7 +119,7 @@ fun SketchCanvas(handle: EditorHandle, modifier: Modifier = Modifier, multiSelec
     Box(
         modifier
             .clipToBounds()
-            .background(scheme.surface)
+            .background(cad.sketchBackground)
             .onSizeChanged { size = it }
             .focusRequester(focus)
             .focusable()
@@ -231,8 +235,8 @@ private fun DrawScope.drawSketch(editor: SketchEditor, measurer: TextMeasurer, c
     drawGeometry(editor, c)
 
     // Auswahl und Hervorhebung
-    for (s in editor.selection) drawSel(editor, s, c.selected, 4.5f)
-    editor.hoverHit?.let { if (it !in editor.selection) drawSel(editor, it, c.hover, 3.5f) }
+    for (s in editor.selection) drawSel(editor, s, c.selected, 3.6.dp.toPx())
+    editor.hoverHit?.let { if (it !in editor.selection) drawSel(editor, it, c.hover, 3.dp.toPx()) }
 
     // Vorschau
     editor.preview?.let { drawPreview(editor, it, c) }
@@ -249,8 +253,8 @@ private fun DrawScope.drawSketch(editor: SketchEditor, measurer: TextMeasurer, c
         val selected = Sel.K(l.id) in editor.selection
         val half = Offset(l.halfWidth.toFloat(), l.halfHeight.toFloat())
         drawRoundRect(c.labelBg, center - half, Size(half.x * 2, half.y * 2), CornerRadius(6f))
-        drawRoundRect(if (selected) c.selected else c.under, center - half, Size(half.x * 2, half.y * 2), CornerRadius(6f), style = Stroke(1.5f))
-        drawCentered(measurer, l.text, center, TextStyle(color = c.under, fontSize = 13.sp))
+        drawRoundRect(if (selected) c.selected else c.labelBorder, center - half, Size(half.x * 2, half.y * 2), CornerRadius(6f), style = Stroke(1.5f))
+        drawCentered(measurer, l.text, center, TextStyle(color = c.dimension, fontSize = 13.sp))
     }
 
     // Fangmarke und Koordinaten
@@ -334,7 +338,9 @@ private fun DrawScope.drawGeometry(editor: SketchEditor, c: SketchColors) {
         constrained -> c.fully
         else -> c.under
     }
-    val dash = PathEffect.dashPathEffect(floatArrayOf(10f, 8f))
+    // Breiten in dp (nicht px): gleich kräftig auf jedem Bildschirm; Hilfslinien schmaler als Geometrie
+    val w = 2.4.dp.toPx(); val wc = 1.6.dp.toPx()
+    val dash = PathEffect.dashPathEffect(floatArrayOf(5.dp.toPx(), 4.dp.toPx()))
     // Achslinien (wählbare X-/Y-Achse) sind schon als Achsen gezeichnet
     val axisLines = sk.lineIds.filter { SketchOps.axisOf(sk, it) != null }.toSet()
     val axisPoints = axisLines.map { sk.line(it).p2 }.toSet()
@@ -342,18 +348,18 @@ private fun DrawScope.drawGeometry(editor: SketchEditor, c: SketchColors) {
         if (id in axisLines) continue
         val l = sk.line(id)
         val a = off(editor, sk.point(l.p1)); val b = off(editor, sk.point(l.p2))
-        drawLine(color(st?.constrainedLines?.contains(id) == true, l.construction), a, b, 2.5f, pathEffect = if (l.construction) dash else null)
+        drawLine(color(st?.constrainedLines?.contains(id) == true, l.construction), a, b, if (l.construction) wc else w, pathEffect = if (l.construction) dash else null)
     }
     for (id in sk.circleIds) {
         val ci = sk.circle(id)
         drawCircle(
             color(st?.constrainedCircles?.contains(id) == true, ci.construction), (ci.radius * editor.view.scale).toFloat(),
-            off(editor, sk.point(ci.center)), style = Stroke(2.5f, pathEffect = if (ci.construction) dash else null),
+            off(editor, sk.point(ci.center)), style = Stroke(if (ci.construction) wc else w, pathEffect = if (ci.construction) dash else null),
         )
     }
     for (id in sk.arcIds) {
         val a = sk.arc(id)
-        drawArcOf(editor, sk.point(a.center), sk.point(a.start), sk.point(a.end), color(st?.constrainedArcs?.contains(id) == true, a.construction), 2.5f, if (a.construction) dash else null)
+        drawArcOf(editor, sk.point(a.center), sk.point(a.start), sk.point(a.end), color(st?.constrainedArcs?.contains(id) == true, a.construction), if (a.construction) wc else w, if (a.construction) dash else null)
     }
     for (id in sk.pointIds) {
         val p = off(editor, sk.point(id))
@@ -365,7 +371,7 @@ private fun DrawScope.drawGeometry(editor: SketchEditor, c: SketchColors) {
             drawLine(c.text, Offset(p.x - 11, p.y), Offset(p.x + 11, p.y), 1.5f); drawLine(c.text, Offset(p.x, p.y - 11), Offset(p.x, p.y + 11), 1.5f)
         } else {
             val fully = st?.constrainedPoints?.contains(id) == true
-            drawCircle(if (conflict) c.conflict else if (fully) c.fully else c.under, 3.5f, p)
+            drawCircle(if (conflict) c.conflict else if (fully) c.fully else c.under, 3.dp.toPx(), p)
         }
     }
 }
@@ -402,18 +408,19 @@ private fun DrawScope.drawSel(editor: SketchEditor, s: Sel, color: Color, width:
 }
 
 private fun DrawScope.drawPreview(editor: SketchEditor, p: Preview, c: SketchColors) {
-    val dash = PathEffect.dashPathEffect(floatArrayOf(10f, 8f))
+    val dash = PathEffect.dashPathEffect(floatArrayOf(5.dp.toPx(), 4.dp.toPx()))
+    val w = 2.dp.toPx()
     val v = editor.view
     fun o(p: Vec2) = off(editor, p)
     when (p) {
-        is Preview.Line -> drawLine(c.preview, o(p.a), o(p.b), 2.5f, pathEffect = dash)
+        is Preview.Line -> drawLine(c.preview, o(p.a), o(p.b), w, pathEffect = dash)
         is Preview.Rect -> {
             val a = v.toScreen(p.a); val b = v.toScreen(p.b)
-            drawRect(c.preview, Offset(minOf(a.x, b.x).toFloat(), minOf(a.y, b.y).toFloat()), Size(kotlin.math.abs(a.x - b.x).toFloat(), kotlin.math.abs(a.y - b.y).toFloat()), style = Stroke(2.5f, pathEffect = dash))
+            drawRect(c.preview, Offset(minOf(a.x, b.x).toFloat(), minOf(a.y, b.y).toFloat()), Size(kotlin.math.abs(a.x - b.x).toFloat(), kotlin.math.abs(a.y - b.y).toFloat()), style = Stroke(w, pathEffect = dash))
         }
-        is Preview.Circle -> drawCircle(c.preview, (p.radius * v.scale).toFloat(), o(p.center), style = Stroke(2.5f, pathEffect = dash))
+        is Preview.Circle -> drawCircle(c.preview, (p.radius * v.scale).toFloat(), o(p.center), style = Stroke(w, pathEffect = dash))
         is Preview.Arc -> {
-            drawArcOf(editor, p.center, p.start, p.end, c.preview, 2.5f, dash)
+            drawArcOf(editor, p.center, p.start, p.end, c.preview, w, dash)
             drawLine(c.preview.copy(alpha = 0.4f), o(p.center), o(p.start), 1f)
             drawLine(c.preview.copy(alpha = 0.4f), o(p.center), o(p.end), 1f)
         }
@@ -421,7 +428,7 @@ private fun DrawScope.drawPreview(editor: SketchEditor, p: Preview, c: SketchCol
             val path = androidx.compose.ui.graphics.Path()
             p.points.forEachIndexed { i, q -> val s = o(q); if (i == 0) path.moveTo(s.x, s.y) else path.lineTo(s.x, s.y) }
             path.close()
-            drawPath(path, c.preview, style = Stroke(2.5f, pathEffect = dash))
+            drawPath(path, c.preview, style = Stroke(w, pathEffect = dash))
         }
         is Preview.Group -> p.parts.forEach { drawPreview(editor, it, c) }
         is Preview.Box -> Unit

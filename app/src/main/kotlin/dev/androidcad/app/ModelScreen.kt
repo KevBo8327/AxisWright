@@ -40,6 +40,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.compositeOver
@@ -107,11 +108,10 @@ internal fun ModelScreen(hub: ProjectHub) {
                     }
                 } else {
                     // das Modell zentriert sich im freien Bereich neben der Werkzeugleiste und den offenen Karten
-                    val colors = MaterialTheme.colorScheme
-                    val bg = colors.surfaceVariant.copy(alpha = 0.3f).compositeOver(colors.background)
+                    val cad = CadTheme.colors
                     val left = if (state.prefs.historyOpen) 372.dp else 76.dp
                     val right = if (state.panelVisible) CARD_WIDTH + 16.dp else 0.dp
-                    Box(Modifier.fillMaxSize().background(bg)) {
+                    Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(cad.viewportTop, cad.viewportBottom)))) {
                         ModelViewport(state, Modifier.fillMaxSize().padding(start = left, end = right))
                     }
                     Column(Modifier.fillMaxSize()) {
@@ -262,7 +262,7 @@ internal fun GroupBar(groups: List<ToolGroup>, vertical: Boolean, open: String?,
     if (vertical) {
         Row(modifier, verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             Column(
-                Modifier.background(colors.surface.copy(alpha = 0.92f), shape).border(0.5.dp, colors.outlineVariant, shape).padding(4.dp),
+                Modifier.glass(shape).padding(4.dp),
                 verticalArrangement = Arrangement.spacedBy(4.dp),
             ) { groups.forEach { group(it) } }
             groups.firstOrNull { it.label == open && !it.direct }?.let { g ->
@@ -288,7 +288,7 @@ private fun ToolStrip(g: ToolGroup, onDone: () -> Unit) {
     val colors = MaterialTheme.colorScheme
     val shape = RoundedCornerShape(14.dp)
     Row(
-        Modifier.background(colors.surface.copy(alpha = 0.97f), shape).border(0.5.dp, colors.outlineVariant, shape).padding(4.dp),
+        Modifier.glass(shape).padding(4.dp),
         horizontalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         g.tools.forEach { t -> ToolButton(t.label, t.icon, t.active, enabled = t.enabled, size = 56.dp) { onDone(); t.onClick() } }
@@ -306,7 +306,7 @@ private fun StepChip(state: WorkspaceState, modifier: Modifier) {
     val errors = state.output?.errorIds ?: emptySet()
     val shape = RoundedCornerShape(50)
     Row(
-        modifier.background(colors.primaryContainer.copy(alpha = 0.95f), shape).height(40.dp).padding(horizontal = 2.dp),
+        modifier.glass(shape).height(40.dp).padding(horizontal = 2.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         TextButton(onClick = { features.getOrNull(index - 1)?.let { state.select(it.id) } }, enabled = index > 0) {
@@ -369,7 +369,7 @@ private fun FloatingCard(
 ) {
     val colors = MaterialTheme.colorScheme
     val shape = RoundedCornerShape(16.dp)
-    Column(modifier.background(colors.surface.copy(alpha = 0.97f), shape).border(0.5.dp, colors.outlineVariant, shape)) {
+    Column(modifier.glass(shape)) {
         Row(
             Modifier.fillMaxWidth().let { if (onToggle != null) it.clickable(onClick = onToggle) else it }.padding(start = 14.dp, end = 2.dp, top = 2.dp, bottom = 2.dp),
             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -399,13 +399,14 @@ internal fun RailLabel(text: String) {
 @Composable
 private fun ModelViewport(state: WorkspaceState, modifier: Modifier) {
     val colors = MaterialTheme.colorScheme
+    val cad = CadTheme.colors
     val out = state.output
-    val background = colors.surfaceVariant.copy(alpha = 0.3f).compositeOver(colors.background)
-    Box(modifier.background(background)) {
+    Box(modifier.background(Brush.verticalGradient(listOf(cad.viewportTop, cad.viewportBottom)))) {
         val mesh = out?.mesh?.takeIf { !it.isEmpty }
         if (mesh != null || state.sketchOverlay != null) {
             MeshViewport(
-                mesh, state.camera, base = colors.primary, background = background,
+                mesh, state.camera, base = cad.model, background = cad.viewportTop, backgroundBottom = cad.viewportBottom,
+                lineColor = cad.modelEdge, highlightColor = cad.selection, sketchColor = cad.sketchInSpace,
                 edges = out?.edges, highlight = state.highlight, sketchLines = state.sketchOverlay,
                 pickEdges = if (state.edgeMode != null && out != null) EdgePickData(out.polylines, out.edgeCounts) else null,
                 onPickEdge = state::pickEdge,
@@ -445,7 +446,7 @@ private fun ViewMenu(state: WorkspaceState, modifier: Modifier) {
     Box(modifier) {
         TextButton(
             onClick = { open = true },
-            modifier = Modifier.background(colors.surface.copy(alpha = 0.92f), shape).border(0.5.dp, colors.outlineVariant, shape),
+            modifier = Modifier.glass(shape),
         ) { Text("Ansicht ▾") }
         DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
             StdView.entries.forEach { v -> DropdownMenuItem(text = { Text(v.label) }, onClick = { open = false; state.showView(v) }) }
@@ -459,7 +460,8 @@ private fun ViewMenu(state: WorkspaceState, modifier: Modifier) {
 private fun AxisTriad(camera: ViewCamera, modifier: Modifier) {
     val density = LocalDensity.current
     val labelColor = MaterialTheme.colorScheme.onSurface
-    val axisColors = listOf(Color(0xFFD32F2F), Color(0xFF388E3C), Color(0xFF1976D2))
+    val cad = CadTheme.colors
+    val axisColors = listOf(cad.axisX, cad.axisY, cad.axisZ)
     val yaw = camera.yaw; val pitch = camera.pitch // gelesen → bei jeder Drehung neu zeichnen
     val view = remember(yaw, pitch) { OrthoCamera(yaw, pitch, 1f, SceneFrame(FloatArray(3), 1f), 1, 1).view }
     Canvas(modifier) {

@@ -81,6 +81,9 @@ import dev.androidcad.sketchedit.PendingAction
 import dev.androidcad.sketchedit.ValueEdit
 import dev.androidcad.sketchedit.SketchEditor
 import dev.androidcad.sketchedit.Tool
+import dev.chrisbanes.haze.hazeSource
+import dev.chrisbanes.haze.rememberHazeState
+import androidx.compose.runtime.CompositionLocalProvider
 import dev.androidcad.sketchedit.RectMode
 import dev.androidcad.sketchedit.CircleMode
 import dev.androidcad.sketchedit.ArcMode
@@ -132,6 +135,9 @@ private fun SketchPanel(state: WorkspaceState, modifier: Modifier) {
     var multiSelect by rememberSaveable { mutableStateOf(false) }
     var planeDialog by remember { mutableStateOf(false) }
     var openGroup by remember { mutableStateOf<String?>(null) }
+    // Glas-Flächen über der Zeichenfläche bekommen echte Unschärfe: die Zeichenfläche ist ihre Quelle
+    val glassSource = rememberHazeState()
+    CompositionLocalProvider(LocalGlassSource provides glassSource) {
     BoxWithConstraints(modifier) {
         // Kopfzeile kompakt nur auf Smartphones; Werkzeuge unten auch auf Tablets im Hochformat (dort ist unten mehr Platz)
         val narrow = maxWidth < SKETCH_COMPACT_WIDTH
@@ -147,7 +153,7 @@ private fun SketchPanel(state: WorkspaceState, modifier: Modifier) {
             HorizontalDivider()
             NoticeRow(state)
             Box(Modifier.weight(1f).fillMaxWidth()) {
-                SketchCanvas(handle, Modifier.fillMaxSize(), multiSelect, state.referenceLines)
+                SketchCanvas(handle, Modifier.fillMaxSize().hazeSource(glassSource), multiSelect, state.referenceLines)
                 StatusPill(handle, Modifier.align(Alignment.TopCenter).padding(top = 8.dp))
                 // Meldungen des Editors oben im Zeichenfeld – wie die Fehlerzeile im Modellmodus
                 MessageBand(handle, Modifier.align(Alignment.TopStart).fillMaxWidth())
@@ -160,6 +166,7 @@ private fun SketchPanel(state: WorkspaceState, modifier: Modifier) {
             }
         }
         if (compact) GroupFlyout(groups, openGroup, { openGroup = it }, Modifier.align(Alignment.BottomCenter).padding(bottom = 76.dp))
+    }
     }
     handle.version // Beobachtung: bei jeder Änderung des Editors neu zusammensetzen
     ValueDialogs(handle.editor, handle.editor.pendingAction, handle.editor.valueEdit)
@@ -278,8 +285,8 @@ private fun StatusPill(handle: EditorHandle, modifier: Modifier) {
     val conflict = e.status?.isSolved == false
     val shape = RoundedCornerShape(50)
     Text(
-        text, modifier.background((if (conflict) colors.errorContainer else colors.surface).copy(alpha = 0.92f), shape)
-            .border(0.5.dp, colors.outlineVariant, shape).padding(horizontal = 12.dp, vertical = 4.dp),
+        text, (if (conflict) modifier.background(colors.errorContainer.copy(alpha = 0.92f), shape).border(0.5.dp, colors.outlineVariant, shape)
+        else modifier.glass(shape)).padding(horizontal = 12.dp, vertical = 4.dp),
         style = MaterialTheme.typography.labelMedium, color = if (conflict) colors.onErrorContainer else colors.primary, maxLines = 1,
     )
 }
@@ -386,7 +393,7 @@ private fun BoxScope.ContextBar(handle: EditorHandle, prefs: UiPrefs, bottomGap:
                 // Tipps auf Hinweis oder Hintergrund der Leiste dürfen nicht auf der Zeichenfläche landen (sonst entstünden dort Punkte)
                 .pointerInput(Unit) { awaitPointerEventScope { while (true) awaitPointerEvent().changes.forEach { it.consume() } } }
                 .widthIn(max = with(density) { (w - 2 * margin).toDp() })
-                .background(colors.surface.copy(alpha = 0.97f), shape).border(0.5.dp, colors.outlineVariant, shape)
+                .glass(shape)
                 .padding(horizontal = 8.dp, vertical = 6.dp),
             verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {

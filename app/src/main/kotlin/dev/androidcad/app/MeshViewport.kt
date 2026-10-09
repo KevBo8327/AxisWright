@@ -42,6 +42,8 @@ internal class MeshRenderer : GLSurfaceView.Renderer {
     @Volatile var zoom = 1f
     @Volatile var baseColor = floatArrayOf(0.4f, 0.3f, 0.7f)
     @Volatile var background = floatArrayOf(0.95f, 0.95f, 0.97f)
+    /** Untere Farbe des Hintergrundverlaufs (oben: [background]). */
+    @Volatile var backgroundBottom = floatArrayOf(0.95f, 0.95f, 0.97f)
     @Volatile var lineColor = floatArrayOf(0.1f, 0.1f, 0.15f)
     @Volatile var highlightColor = floatArrayOf(1f, 0.55f, 0f)
     @Volatile var sketchColor = floatArrayOf(0.1f, 0.4f, 0.95f)
@@ -61,6 +63,7 @@ internal class MeshRenderer : GLSurfaceView.Renderer {
     private val sketch = Lines()
 
     private var program = 0
+    private var gradientProgram = 0
     private var vbo = 0
     private var ibo = 0
     private var indexCount = 0
@@ -96,6 +99,7 @@ internal class MeshRenderer : GLSurfaceView.Renderer {
     override fun onSurfaceCreated(gl: GL10?, config: EGLConfig?) {
         GLES30.glEnable(GLES30.GL_DEPTH_TEST)
         program = link(VERTEX, FRAGMENT)
+        gradientProgram = link(GRADIENT_VERTEX, GRADIENT_FRAGMENT)
         val ids = IntArray(5)
         GLES30.glGenBuffers(5, ids, 0)
         vbo = ids[0]; ibo = ids[1]; edges.vbo = ids[2]; highlight.vbo = ids[3]; sketch.vbo = ids[4]
@@ -125,6 +129,7 @@ internal class MeshRenderer : GLSurfaceView.Renderer {
         val bg = background
         GLES30.glClearColor(bg[0], bg[1], bg[2], 1f)
         GLES30.glClear(GLES30.GL_COLOR_BUFFER_BIT or GLES30.GL_DEPTH_BUFFER_BIT)
+        drawBackground()
         if (indexCount == 0 && sketch.vertices == 0) return
 
         // Dieselbe Kamera wie beim Antippen (EdgePicker): Treffer im Bild stimmen exakt mit dem Gezeichneten überein.
@@ -173,6 +178,17 @@ internal class MeshRenderer : GLSurfaceView.Renderer {
         GLES30.glDisableVertexAttribArray(loc)
     }
 
+    /** Senkrechter Farbverlauf über das ganze Bild: ein bildschirmfüllendes Dreieck ohne Puffer (Ecken aus gl_VertexID). */
+    private fun drawBackground() {
+        val top = background; val bottom = backgroundBottom
+        GLES30.glDisable(GLES30.GL_DEPTH_TEST)
+        GLES30.glUseProgram(gradientProgram)
+        GLES30.glUniform3f(GLES30.glGetUniformLocation(gradientProgram, "uTop"), top[0], top[1], top[2])
+        GLES30.glUniform3f(GLES30.glGetUniformLocation(gradientProgram, "uBottom"), bottom[0], bottom[1], bottom[2])
+        GLES30.glDrawArrays(GLES30.GL_TRIANGLES, 0, 3)
+        GLES30.glEnable(GLES30.GL_DEPTH_TEST)
+    }
+
     /** Lädt Linienpaare in [vbo]; gibt die Anzahl der Eckpunkte zurück. */
     private fun uploadLines(vbo: Int, segments: FloatArray?): Int {
         if (segments == null || segments.isEmpty()) return 0
@@ -218,6 +234,20 @@ internal class MeshRenderer : GLSurfaceView.Renderer {
     }
 
     private companion object {
+        const val GRADIENT_VERTEX = """#version 300 es
+out float vY;
+void main() {
+    vec2 p = vec2(float((gl_VertexID << 1) & 2), float(gl_VertexID & 2)) * 2.0 - 1.0;  // (-1,-1), (3,-1), (-1,3)
+    vY = p.y * 0.5 + 0.5;
+    gl_Position = vec4(p, 0.0, 1.0);
+}"""
+        const val GRADIENT_FRAGMENT = """#version 300 es
+precision mediump float;
+uniform vec3 uTop;
+uniform vec3 uBottom;
+in float vY;
+out vec4 outColor;
+void main() { outColor = vec4(mix(uBottom, uTop, clamp(vY, 0.0, 1.0)), 1.0); }"""
         const val VERTEX = """#version 300 es
 uniform mat4 uMvp;
 uniform mat4 uView;
@@ -240,7 +270,7 @@ void main() {
     vec3 n = normalize(cross(dFdx(vViewPos), dFdy(vViewPos)));
     if (n.z < 0.0) n = -n;
     float diff = clamp(dot(n, normalize(vec3(-0.35, 0.45, 0.82))), 0.0, 1.0);
-    outColor = vec4(uColor * (0.30 + 0.70 * diff), 1.0);
+    outColor = vec4(uColor * (0.42 + 0.58 * diff), 1.0);  // kräftiges Grundlicht: auch abgewandte Seiten bleiben vor dunklem Grund lesbar
 }"""
     }
 }
@@ -261,6 +291,7 @@ internal class FacePickData(val triangleFace: IntArray)
 internal fun MeshViewport(
     mesh: Mesh?, camera: ViewCamera, base: Color, background: Color, modifier: Modifier = Modifier, edges: FloatArray? = null,
     lineColor: Color = Color(0xFF1B1B25), highlight: FloatArray? = null, sketchLines: FloatArray? = null, sketchColor: Color = Color(0xFF1A66F2),
+    backgroundBottom: Color = background, highlightColor: Color = Color(0xFFFF8C00),
     pickEdges: EdgePickData? = null, onPickEdge: ((Int) -> Unit)? = null,
     pickFaces: FacePickData? = null, onPickFace: ((FaceHit?) -> Unit)? = null,
 ) {
@@ -313,6 +344,8 @@ internal fun MeshViewport(
             renderer.yaw = camera.yaw; renderer.pitch = camera.pitch; renderer.zoom = camera.zoom
             renderer.baseColor = floatArrayOf(base.red, base.green, base.blue)
             renderer.background = floatArrayOf(background.red, background.green, background.blue)
+            renderer.backgroundBottom = floatArrayOf(backgroundBottom.red, backgroundBottom.green, backgroundBottom.blue)
+            renderer.highlightColor = floatArrayOf(highlightColor.red, highlightColor.green, highlightColor.blue)
             renderer.lineColor = floatArrayOf(lineColor.red, lineColor.green, lineColor.blue)
             renderer.sketchColor = floatArrayOf(sketchColor.red, sketchColor.green, sketchColor.blue)
             renderer.setMesh(mesh)

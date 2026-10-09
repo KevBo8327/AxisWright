@@ -52,6 +52,10 @@ internal val THIRD_PARTY = listOf(
         "https://github.com/AngusJohnson/Clipper2", listOf("clipper2_bsl_1.0.txt"),
     ),
     ThirdParty(
+        "Haze", "Glas-Effekt (Unschärfe hinter schwebenden Flächen)", "Apache License 2.0",
+        "© Chris Banes · https://github.com/chrisbanes/haze", listOf("apache_2.0.txt"),
+    ),
+    ThirdParty(
         "Kotlin-Standardbibliothek und kotlinx.coroutines", "Programmiersprache und nebenläufige Abläufe",
         "Apache License 2.0", "© JetBrains s.r.o. und Mitwirkende · https://github.com/JetBrains/kotlin", listOf("apache_2.0.txt"),
     ),

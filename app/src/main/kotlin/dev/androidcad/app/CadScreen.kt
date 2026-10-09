@@ -146,7 +146,11 @@ private fun Viewport(state: CadState, modifier: Modifier) {
     }
     Box(modifier.background(colors.surfaceVariant.copy(alpha = 0.3f))) {
         if (mesh != null && !mesh.isEmpty) {
-            MeshViewport(mesh, remember { ViewCamera() }, base = colors.primary, background = colors.surfaceVariant.copy(alpha = 0.3f).compositeOver(colors.background))
+            val cad = CadTheme.colors
+            MeshViewport(
+                mesh, remember { ViewCamera() }, base = cad.model, background = cad.viewportTop, backgroundBottom = cad.viewportBottom,
+                lineColor = cad.modelEdge, highlightColor = cad.selection, sketchColor = cad.sketchInSpace,
+            )
         } else {
             // Geometrie fehlgeschlagen oder leer: Hüllquader als Orientierungshilfe
             val boxes = remember(state.result) { state.result?.root?.let { collectBoxes(it) } ?: emptyList() }
