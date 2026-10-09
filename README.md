@@ -114,6 +114,9 @@ Dann `keystore.properties` im Projektordner anlegen (wird nicht eingecheckt) mit
 und `./gradlew :app:bundleRelease` ausführen → `app/build/outputs/bundle/release/app-release.aab`. Ohne `keystore.properties` signiert der
 Build mit dem Debug-Schlüssel (nur zum lokalen Testen; Google Play lehnt das ab). Download je Gerät ≈ 16 MB (native Bibliotheken ≈ 15 MB).
 
+**App-Icon:** `python scripts/make-icon.py` erzeugt aus einer Geometrie-Beschreibung die Vektor-Icons (`res/drawable/ic_launcher_*`,
+`res/mipmap-anydpi-v26`) sowie Store-Symbol und Store-Grafik (`docs/store/`). Nicht die erzeugten Dateien von Hand ändern.
+
 **Referenzdaten:** `samples/reference/*.stl` sind mit OpenSCAD 2021.01 aus der aktuellen
 `samples/streaming_halterung.scad` erzeugt (Modus pro Teil, z. B. `-D 'mode="arm"'`). Bei Änderung der SCAD-Datei neu erzeugen.
 

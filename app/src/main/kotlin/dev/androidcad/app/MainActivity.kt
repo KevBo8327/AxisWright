@@ -4,6 +4,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
@@ -30,6 +31,8 @@ class MainActivity : ComponentActivity() {
     private val hub by lazy { ProjectHub(workspace, state, File(filesDir, "active-kind")) }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        // Startbildschirm (Icon auf Indigo) – einheitlich ab Android 8 über die SplashScreen-Bibliothek, vor super.onCreate
+        installSplashScreen()
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- erzeugt von scripts/make-icon.py – nicht von Hand ändern -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
+    <path android:pathData="M0,0 H108 V108 H0 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient android:type="linear" android:startX="0" android:startY="0" android:endX="108" android:endY="108"
+                android:startColor="#0C1630" android:endColor="#16305A" />
+        </aapt:attr>
+    </path>
+    <path android:strokeColor="#2A4A7A" android:strokeAlpha="0.55" android:strokeWidth="0.5" android:pathData="M6,0 V108 M18,0 V108 M30,0 V108 M42,0 V108 M54,0 V108 M66,0 V108 M78,0 V108 M90,0 V108 M102,0 V108 M0,6 H108 M0,18 H108 M0,30 H108 M0,42 H108 M0,54 H108 M0,66 H108 M0,78 H108 M0,90 H108 M0,102 H108" />
+</vector>

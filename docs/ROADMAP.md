@@ -40,6 +40,10 @@ Entscheidungen: Vertrieb über **Google Play**, **Freemium** (Pro als einmaliger
   - [x] Release-Build: Signatur über nicht eingecheckte `keystore.properties` (sonst Debug-Schlüssel zum Testen), R8 + Ressourcen-Verkleinerung,
     `bundleRelease` → AAB (≈ 16 MB Download je Gerät). Release-APK auf dem Emulator geprüft (Skizze, Extrusion, Verrundung, Lizenzseite – keine
     JNI-/R8-Fehler). Offen: Upload-Schlüssel erzeugen (Nutzer, siehe README)
+  - [x] **App-Icon und Startbildschirm:** Stil „Blaupause“: türkise Skizzenfläche, blauer Block mit Tasche, orangefarbener Extrusionspfeil auf Marineblau mit Raster (nach Entwurf des Nutzers); adaptives Vektor-Icon mit
+    einfarbiger Ebene (Themensymbole), Startbildschirm über `androidx.core:core-splashscreen` (einheitlich ab Android 8) mit detaillierterem Motiv (Lichtschein, Skizzenlinien,
+    verdeckte Kanten) und ab Android 12 dem Schriftzug PARTWRIGHT (eigene Linienschrift, keine fremde Schriftart). Alles aus
+    `scripts/make-icon.py` erzeugt, dazu Store-Symbol `docs/store/icon-512.png` und Store-Grafik `docs/store/feature-graphic.png`
   - [ ] noch offen:
   Lizenzen (OCCT LGPL → als gemeinsame `.so` ausliefern, Lizenzseite für OCCT/manifold/Clipper2, Lizenz des eigenen Codes);
   signierter Release-AAB (Play App Signing, R8-Regeln für JNI); Test auf echter arm64-Hardware mit Stift; CI (GitHub Actions); App-Icon

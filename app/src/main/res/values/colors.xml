@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- wie SPLASH_BG in scripts/make-icon.py -->
+    <color name="splash_background">#0F1D3D</color>
+</resources>
