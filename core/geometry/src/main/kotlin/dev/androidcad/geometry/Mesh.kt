@@ -1,7 +1,10 @@
 package dev.androidcad.geometry
 
+import java.io.ByteArrayOutputStream
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
+import java.util.zip.ZipEntry
+import java.util.zip.ZipOutputStream
 import kotlin.math.sqrt
 
 /**
@@ -57,5 +60,52 @@ class Mesh(val positions: FloatArray, val triangles: IntArray) {
             buf.putShort(0)
         }
         return buf.array()
+    }
+
+    /**
+     * 3MF-Export (3D-Druck): ZIP mit dem Netz als Modell in Millimetern. Punkte mit gleichen Koordinaten werden zusammengeführt – das
+     * Netz aus OpenCascade hat je Fläche eigene Punkte, Slicer sähen sonst an jeder Flächengrenze offene Kanten.
+     */
+    fun toThreeMf(): ByteArray {
+        val index = HashMap<Triple<Float, Float, Float>, Int>()
+        val vertices = StringBuilder()
+        val ids = IntArray(vertexCount) { i ->
+            val key = Triple(positions[3 * i], positions[3 * i + 1], positions[3 * i + 2])
+            index.getOrPut(key) {
+                vertices.append("<vertex x=\"${key.first}\" y=\"${key.second}\" z=\"${key.third}\"/>\n")
+                index.size
+            }
+        }
+        val model = StringBuilder()
+        model.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
+        model.append("<model unit=\"millimeter\" xml:lang=\"de-DE\" xmlns=\"http://schemas.microsoft.com/3dmanufacturing/core/2015/02\">\n")
+        model.append("<resources><object id=\"1\" type=\"model\"><mesh><vertices>\n").append(vertices).append("</vertices><triangles>\n")
+        for (t in 0 until triangleCount) {
+            val a = ids[triangles[3 * t]]; val b = ids[triangles[3 * t + 1]]; val c = ids[triangles[3 * t + 2]]
+            if (a == b || b == c || a == c) continue // durch das Zusammenführen entartet
+            model.append("<triangle v1=\"$a\" v2=\"$b\" v3=\"$c\"/>\n")
+        }
+        model.append("</triangles></mesh></object></resources>\n<build><item objectid=\"1\"/></build>\n</model>\n")
+        val out = ByteArrayOutputStream()
+        ZipOutputStream(out).use { zip ->
+            fun entry(name: String, text: String) {
+                zip.putNextEntry(ZipEntry(name))
+                zip.write(text.toByteArray(Charsets.UTF_8))
+                zip.closeEntry()
+            }
+            entry(
+                "[Content_Types].xml",
+                "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\">" +
+                    "<Default Extension=\"rels\" ContentType=\"application/vnd.openxmlformats-package.relationships+xml\"/>" +
+                    "<Default Extension=\"model\" ContentType=\"application/vnd.ms-package.3dmanufacturing-3dmodel+xml\"/></Types>\n",
+            )
+            entry(
+                "_rels/.rels",
+                "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">" +
+                    "<Relationship Target=\"/3D/3dmodel.model\" Id=\"rel0\" Type=\"http://schemas.microsoft.com/3dmanufacturing/2013/01/3dmodel\"/></Relationships>\n",
+            )
+            entry("3D/3dmodel.model", model.toString())
+        }
+        return out.toByteArray()
     }
 }

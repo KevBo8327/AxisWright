@@ -232,6 +232,10 @@ internal fun ScriptTopBar(hub: ProjectHub) {
         val mesh = state.mesh
         if (uri != null && mesh != null) scope.launch(Dispatchers.IO) { context.contentResolver.openOutputStream(uri)?.use { it.write(mesh.toBinaryStl()) } }
     }
+    val threeMfExporter = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("model/3mf")) { uri ->
+        val mesh = state.mesh
+        if (uri != null && mesh != null) scope.launch(Dispatchers.IO) { context.contentResolver.openOutputStream(uri)?.use { it.write(mesh.toThreeMf()) } }
+    }
     val scadExporter = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("text/plain")) { uri ->
         if (uri != null) {
             val text = state.editor.text
@@ -261,6 +265,7 @@ internal fun ScriptTopBar(hub: ProjectHub) {
         Box {
             TextButton(onClick = { menu = true }) { Text("⋮") }
             DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                DropdownMenuItem(text = { Text("3MF exportieren (3D-Druck)") }, onClick = { menu = false; threeMfExporter.launch("${state.project.name.ifBlank { "modell" }}.3mf") }, enabled = state.mesh?.isEmpty == false)
                 DropdownMenuItem(text = { Text("Quelltext exportieren (.scad) …") }, onClick = { menu = false; scadExporter.launch("${state.project.name.ifBlank { "projekt" }}.scad") })
                 DropdownMenuItem(text = { Text("Zum Modell-Editor") }, onClick = { menu = false; hub.switchTo(ProjectKind.MODEL) })
             }
