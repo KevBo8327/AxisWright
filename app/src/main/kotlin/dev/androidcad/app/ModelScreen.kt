@@ -203,6 +203,8 @@ private fun ModelTopBar(hub: ProjectHub, compact: Boolean) {
                 style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
+        ActionButton(CadIcon.UNDO, "Rückgängig", enabled = state.canUndo, onClick = state::undo)
+        ActionButton(CadIcon.REDO, "Wiederholen", enabled = state.canRedo, onClick = state::redo)
         TextButton(onClick = { state.parametersOpen = !state.parametersOpen }) { Text(if (state.parametersOpen) "Parameter ✕" else "Parameter") }
         TextButton(onClick = { state.prefs.historyOpen = !state.prefs.historyOpen }) {
             Text(if (state.prefs.historyOpen) "Verlauf ✕" else "Verlauf")

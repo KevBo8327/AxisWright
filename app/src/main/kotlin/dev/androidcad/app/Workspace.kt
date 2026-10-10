@@ -347,6 +347,13 @@ class WorkspaceState(private val scope: CoroutineScope, private val session: Mod
     private val saveLock = Any()
     private val dirty: Boolean get() = editVersion != savedVersion
 
+    /** Rückgängig/Wiederholen im Modell: Momentaufnahmen des ganzen Dokuments (Speicherformat); ein neues Projekt beginnt neu. */
+    private var history = dev.androidcad.project.UndoHistory("")
+    var canUndo by mutableStateOf(false)
+        private set
+    var canRedo by mutableStateOf(false)
+        private set
+
     /** Ein Thread für Neuaufbauten: Ein laufender nativer Aufbau lässt sich nicht abbrechen; neue warten statt parallel zu rechnen. */
     @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
     private val buildDispatcher = Dispatchers.Default.limitedParallelism(1)
@@ -384,7 +391,17 @@ class WorkspaceState(private val scope: CoroutineScope, private val session: Mod
 
     // ---- Speichern / Projekte ---------------------------------------------------------------------
 
-    private fun markDirty() {
+    /**
+     * Merkt eine Änderung zum Speichern vor und nimmt den Stand in den Verlauf (schnelle Folgen wie Schieberegler-Ziehen werden ein
+     * Schritt). [record] = `false` für Änderungen, die der Aufbau nur nachführt (Ebenen, projizierte Kanten) – die rückgängig zu machen
+     * wäre sinnlos, der nächste Aufbau stellte sie wieder her.
+     */
+    private fun markDirty(record: Boolean = true) {
+        if (record) {
+            val text = DocumentCodec.encode(doc)
+            if (text != history.current) history.record(text, coalesceKey = selectedId) // Folgen am selben Feature werden ein Schritt
+            canUndo = history.canUndo; canRedo = history.canRedo
+        }
         editVersion++
         saveJob?.cancel()
         saveJob = scope.launch {
@@ -447,6 +464,8 @@ class WorkspaceState(private val scope: CoroutineScope, private val session: Mod
     private fun adopt(newDoc: Document) {
         doc = newDoc
         if (doc.features.none { it is SketchFeature }) doc.addSketch("Skizze 1")
+        history = dev.androidcad.project.UndoHistory(DocumentCodec.encode(doc))
+        canUndo = false; canRedo = false
         job?.cancel()
         replaceOutput(null)
         building = false
@@ -455,6 +474,23 @@ class WorkspaceState(private val scope: CoroutineScope, private val session: Mod
         cameraJob?.cancel()
         camera.snapTo(ViewCamera.ISO_YAW, ViewCamera.ISO_PITCH)
         if (hasExtrusions()) scheduleBuild(0)
+    }
+
+    /** Macht die letzte Änderung am Modell rückgängig (auch Änderungen an Skizzen, als ganzen Schritt). */
+    fun undo() { history.undo()?.let(::restore) }
+
+    fun redo() { history.redo()?.let(::restore) }
+
+    /** Stellt einen Stand aus dem Verlauf wieder her: Auswahl und Ansicht bleiben, soweit es das gewählte Feature noch gibt. */
+    private fun restore(text: String) {
+        val sel = selectedId
+        doc = DocumentCodec.decode(text) // stammt aus encode(): bleibt lesbar
+        handle.replace(SketchEditor(doc.features.filterIsInstance<SketchFeature>().first().sketch)) // alter Editor zeigt auf die alte Skizze
+        edgeMode = null; holeMode = null; shellMode = null; measureMode = null; planePick = false; faceSketchPick = false
+        select(sel?.takeIf { id -> doc.features.any { it.id == id } } ?: doc.features.last().id)
+        canUndo = history.canUndo; canRedo = history.canRedo
+        markDirty(record = false)
+        if (hasExtrusions()) scheduleBuild(0) else { job?.cancel(); replaceOutput(null); building = false }
     }
 
     // ---- Auswahl ----------------------------------------------------------------------------------
@@ -1068,7 +1104,7 @@ class WorkspaceState(private val scope: CoroutineScope, private val session: Mod
         if (changed) {
             activeSketch = doc.sketch(activeSketch.id)
             refresh()
-            markDirty()
+            markDirty(record = false)
         }
     }
 
@@ -1082,7 +1118,7 @@ class WorkspaceState(private val scope: CoroutineScope, private val session: Mod
         activeSketch = doc.sketch(activeSketch.id)
         handle.editor.refreshExternal()
         refresh()
-        markDirty()
+        markDirty(record = false)
     }
 
     /** Projiziert alle Kanten der Fläche, auf der die aktive Skizze liegt (Umriss und Löcher), als feste Referenz in die Skizze. */
