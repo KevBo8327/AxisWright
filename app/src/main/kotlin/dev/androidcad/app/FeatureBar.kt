@@ -229,6 +229,7 @@ fun FeatureControls(state: WorkspaceState) {
     val ex = state.extrusion
     val revolve = state.revolve
     val shellMode = state.shellMode
+    val measure = state.measureMode
     val shell = state.shell
     val fillet = state.fillet
     val mode = state.edgeMode
@@ -241,7 +242,14 @@ fun FeatureControls(state: WorkspaceState) {
         Modifier.fillMaxWidth().padding(12.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-        if (pattern != null && holeMode == null && mode == null && !state.faceSketchPick) {
+        if (measure != null) {
+            Text(
+                if (measure.picks.isEmpty()) "Tippe eine Kante oder Fläche an – oder zwei für Abstand und Winkel." else "Erneut tippen hebt die Wahl auf; ein drittes Teil ersetzt das älteste.",
+                style = MaterialTheme.typography.labelLarge,
+            )
+            measure.lines.forEach { Text(it, style = MaterialTheme.typography.bodyLarge) }
+            OutlinedButton(onClick = state::cancelMeasure, modifier = Modifier.fillMaxWidth()) { Text("Fertig") }
+        } else if (pattern != null && holeMode == null && mode == null && !state.faceSketchPick) {
             PatternControls(state, pattern)
         } else if (mirrorBody != null && holeMode == null && mode == null && !state.faceSketchPick && !state.planePick) {
             MirrorBodyControls(state, mirrorBody)

@@ -315,8 +315,10 @@ internal fun MeshViewport(
                 detectTapGestures { tap ->
                     val m = mesh ?: return@detectTapGestures
                     val cam = OrthoCamera(camera.yaw, camera.pitch, camera.zoom, SceneFrame.of(m.positions, sketchLines), size.width, size.height)
-                    if (pickEdges != null) {
-                        currentOnPick?.invoke(EdgePicker.pick(cam, tap.x, tap.y, pickEdges.polylines, pickEdges.counts, m.positions, m.triangles))
+                    // Kanten zuerst; mit beiden (Messen) trifft ein Tipp neben jede Kante die Fläche darunter
+                    val edge = pickEdges?.let { EdgePicker.pick(cam, tap.x, tap.y, it.polylines, it.counts, m.positions, m.triangles) } ?: -1
+                    if (pickEdges != null && (edge >= 0 || pickFaces == null)) {
+                        currentOnPick?.invoke(edge)
                     } else if (pickFaces != null) {
                         currentOnPickFace?.invoke(FacePicker.pick(cam, tap.x, tap.y, m.positions, m.triangles, pickFaces.triangleFace))
                     }

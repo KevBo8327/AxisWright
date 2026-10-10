@@ -242,6 +242,11 @@ private fun toolGroups(state: WorkspaceState, onNewSketch: () -> Unit): List<Too
                 if (state.edgeMode?.kind == EdgeKind.CHAMFER) state.cancelEdgeMode() else state.startEdgeMode(EdgeKind.CHAMFER)
             },
         )),
+        ToolGroup("Messen", CadIcon.MEASURE, listOf(
+            ToolDef("Messen", CadIcon.MEASURE, state.measureMode != null, state.output?.body != null) {
+                if (state.measureMode != null) state.cancelMeasure() else state.startMeasure()
+            },
+        ), direct = true),
         ToolGroup("Muster", CadIcon.PATTERN_LINEAR, listOf(
             ToolDef("Reihe", CadIcon.PATTERN_LINEAR, false, canPattern) { state.createPattern(PatternType.LINEAR) },
             ToolDef("Kreis", CadIcon.PATTERN_CIRCULAR, false, canPattern) { state.createPattern(PatternType.CIRCULAR) },
@@ -358,6 +363,7 @@ private fun SettingsCard(state: WorkspaceState, modifier: Modifier) {
         state.planePick -> "Neue Arbeitsebene" to CadIcon.PLANE
         state.holeMode != null -> "Bohrung setzen" to CadIcon.HOLE
         state.shellMode != null -> "Aushöhlen" to CadIcon.SHELL
+        state.measureMode != null -> "Messen" to CadIcon.MEASURE
         state.edgeMode != null -> if (state.edgeMode?.kind == EdgeKind.ROUND) "Verrunden" to CadIcon.ROUND else "Fase" to CadIcon.CHAMFER
         selected != null -> selected.name to selected.icon()
         else -> "Eigenschaften" to null
@@ -418,9 +424,9 @@ private fun ModelViewport(state: WorkspaceState, modifier: Modifier) {
                 mesh, state.camera, base = cad.model, background = cad.viewportTop, backgroundBottom = cad.viewportBottom,
                 lineColor = cad.modelEdge, highlightColor = cad.selection, sketchColor = cad.sketchInSpace,
                 edges = out?.edges, highlight = state.highlight, sketchLines = state.sketchOverlay,
-                pickEdges = if (state.edgeMode != null && out != null) EdgePickData(out.polylines, out.edgeCounts) else null,
+                pickEdges = if ((state.edgeMode != null || state.measureMode != null) && out != null) EdgePickData(out.polylines, out.edgeCounts) else null,
                 onPickEdge = state::pickEdge,
-                pickFaces = if ((state.holeMode != null || state.shellMode != null || state.faceSketchPick || state.planePick) && out != null) FacePickData(out.triangleFace) else null,
+                pickFaces = if ((state.holeMode != null || state.shellMode != null || state.measureMode != null || state.faceSketchPick || state.planePick) && out != null) FacePickData(out.triangleFace) else null,
                 onPickFace = state::pickFace,
             )
         }

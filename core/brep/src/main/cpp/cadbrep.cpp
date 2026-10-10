@@ -367,6 +367,14 @@ jlong storeSweep(Sweep& sweep, const ProfileInput& in, jlong firstTag, jlong las
   return store(result, std::move(tags));
 }
 
+// Teilform zum Messen: kind 0 = Fläche, 1 = Kante; id 1-basiert wie in faceGeometry/edgeInfo.
+TopoDS_Shape subShape(const TopoDS_Shape& s, jint kind, jint id) {
+  TopTools_IndexedMapOfShape m;
+  TopExp::MapShapes(s, kind == 0 ? TopAbs_FACE : TopAbs_EDGE, m);
+  if (id < 1 || id > m.Extent()) throw std::runtime_error("Flächen- bzw. Kanten-ID außerhalb des gültigen Bereichs");
+  return m(id);
+}
+
 }  // namespace
 
 extern "C" {
@@ -660,6 +668,26 @@ JNIEXPORT jlong JNICALL Java_dev_androidcad_brep_NativeBrep_unifyFaces(JNIEnv* e
       aliases[i].assign(names[i].begin() + 1, names[i].end());
     }
     return store(result, std::move(tags), std::move(aliases));
+  });
+}
+
+// Kürzester Abstand zweier Flächen/Kanten: 7 Werte – Abstand, nächster Punkt auf a (x y z), nächster Punkt auf b (x y z).
+JNIEXPORT jdoubleArray JNICALL Java_dev_androidcad_brep_NativeBrep_distance(JNIEnv* env, jclass, jlong h, jint aKind, jint aId, jint bKind, jint bId) {
+  return guarded(env, [&]() -> jdoubleArray {
+    TopoDS_Shape s = get(h);
+    BRepExtrema_DistShapeShape d(subShape(s, aKind, aId), subShape(s, bKind, bId));
+    if (!d.IsDone() || d.NbSolution() < 1) throw std::runtime_error("Abstand ließ sich nicht bestimmen");
+    gp_Pnt p = d.PointOnShape1(1), q = d.PointOnShape2(1);
+    return toJ(env, std::vector<double>{d.Value(), p.X(), p.Y(), p.Z(), q.X(), q.Y(), q.Z()});
+  });
+}
+
+// Flächeninhalt der Fläche [id] (mm²), exakt aus der Geometrie.
+JNIEXPORT jdouble JNICALL Java_dev_androidcad_brep_NativeBrep_faceArea(JNIEnv* env, jclass, jlong h, jint id) {
+  return guarded(env, [&]() -> jdouble {
+    GProp_GProps props;
+    BRepGProp::SurfaceProperties(subShape(get(h), 0, id), props);
+    return props.Mass();
   });
 }
 

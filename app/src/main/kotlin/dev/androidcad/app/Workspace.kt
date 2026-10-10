@@ -5,6 +5,8 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import dev.androidcad.brep.BrepMesh
+import dev.androidcad.brep.BrepShape
+import dev.androidcad.brep.EdgeInfo
 import dev.androidcad.geometry.Mesh
 import dev.androidcad.model.BodyOp
 import dev.androidcad.model.Document
@@ -88,7 +90,14 @@ class ModelOutput(
     val datumPlanes: Map<FeatureId, Workplane> = emptyMap(),
     /** Hüllbox des Netzes (kleinste, größte Ecke); `null` ohne Körper. Einmal beim Aufbau berechnet, nicht bei jeder Anzeige. */
     val bounds: Pair<Vec3, Vec3>? = null,
+    /** Geometrie je Kante (Index = ID − 1): Länge, Radius, Endpunkte – zum Messen. */
+    val edgeInfos: List<EdgeInfo> = emptyList(),
+    /** Der gebaute Körper zum Messen; gehört [WorkspaceState], der ihn schließt, sobald ein neuer Aufbau ihn ersetzt. */
+    val body: BrepShape? = null,
 )
+
+/** Messmodus: bis zu zwei angetippte Teile des Körpers ([picks]) und das Ergebnis als Textzeilen. */
+class MeasureMode(val picks: List<BrepShape.Part>, val lines: List<String> = emptyList(), val segment: FloatArray? = null)
 
 /** Standardansichten des 3D-Viewers. */
 enum class StdView(val label: String) { ISO("Iso"), TOP("Oben"), FRONT("Vorne"), RIGHT("Rechts") }
@@ -261,6 +270,18 @@ class WorkspaceState(private val scope: CoroutineScope, private val session: Mod
         private set
     var output by mutableStateOf<ModelOutput?>(null)
         private set
+
+    /** Ersetzt das Aufbau-Ergebnis und gibt den Körper des alten frei. Messungen beziehen sich auf den alten Körper und beginnen neu. */
+    private fun replaceOutput(new: ModelOutput?) {
+        val old = output
+        output = new
+        if (old?.body !== new?.body) old?.body?.close()
+        if (measureMode != null) measureMode = MeasureMode(emptyList())
+    }
+
+    /** Aktiver Messmodus (`null` = aus). */
+    var measureMode by mutableStateOf<MeasureMode?>(null)
+        private set
     var building by mutableStateOf(false)
         private set
     /** Anzahl geschlossener Flächen in der aktiven Skizze (Voraussetzung für die Extrusion). */
@@ -414,7 +435,7 @@ class WorkspaceState(private val scope: CoroutineScope, private val session: Mod
         doc = newDoc
         if (doc.features.none { it is SketchFeature }) doc.addSketch("Skizze 1")
         job?.cancel()
-        output = null
+        replaceOutput(null)
         building = false
         select(doc.features.last().id)
         mode = if (isPristine()) WorkMode.SKETCH else WorkMode.MODEL
@@ -449,13 +470,14 @@ class WorkspaceState(private val scope: CoroutineScope, private val session: Mod
 
     /** Ob die Einstellungskarte gebraucht wird: ein Feature ist gewählt oder ein Werkzeug läuft. */
     val panelVisible: Boolean
-        get() = selectedId != null || edgeMode != null || holeMode != null || shellMode != null || planePick || faceSketchPick
+        get() = selectedId != null || edgeMode != null || holeMode != null || shellMode != null || measureMode != null || planePick || faceSketchPick
 
     /** Schließt die Einstellungskarte: bricht ein laufendes Werkzeug ab, sonst hebt es die Auswahl auf. */
     fun closePanel() {
         when {
             edgeMode != null -> cancelEdgeMode()
             shellMode != null -> cancelShellMode()
+            measureMode != null -> cancelMeasure()
             holeMode != null -> cancelHoleMode()
             planePick -> cancelPlanePick()
             faceSketchPick -> cancelFaceSketchPick()
@@ -468,6 +490,7 @@ class WorkspaceState(private val scope: CoroutineScope, private val session: Mod
         edgeMode = null
         holeMode = null
         shellMode = null
+        measureMode = null
         faceSketchPick = false
         planePick = false
         refreshHighlight()
@@ -746,6 +769,7 @@ class WorkspaceState(private val scope: CoroutineScope, private val session: Mod
         holeMode = null
         faceSketchPick = false
         shellMode = null
+        measureMode = null
         edgeMode = EdgeMode(kind, emptyList())
         refreshHighlight()
     }
@@ -761,6 +785,7 @@ class WorkspaceState(private val scope: CoroutineScope, private val session: Mod
 
     /** Verarbeitet einen Tipp im 3D-Bild: [index] = Index der getroffenen Kante in [ModelOutput.edgeRefs] oder −1. */
     fun pickEdge(index: Int) {
+        if (measureMode != null) { if (index >= 0) addMeasure(BrepShape.Part.Edge(index + 1)); return } // Kanten-ID = Index + 1
         val mode = edgeMode ?: return
         if (index < 0) return
         val ref = output?.edgeRefs?.getOrNull(index)
@@ -926,6 +951,7 @@ class WorkspaceState(private val scope: CoroutineScope, private val session: Mod
         holeMode = null
         faceSketchPick = false
         shellMode = null
+        measureMode = null
         planePick = true
         refreshHighlight()
     }
@@ -984,6 +1010,7 @@ class WorkspaceState(private val scope: CoroutineScope, private val session: Mod
         edgeMode = null
         holeMode = null
         shellMode = null
+        measureMode = null
         faceSketchPick = true
         refreshHighlight()
     }
@@ -1090,6 +1117,7 @@ class WorkspaceState(private val scope: CoroutineScope, private val session: Mod
         edgeMode = null
         faceSketchPick = false
         shellMode = null
+        measureMode = null
         holeMode = HoleMode(null, null, null)
         refreshHighlight()
     }
@@ -1097,6 +1125,75 @@ class WorkspaceState(private val scope: CoroutineScope, private val session: Mod
     fun cancelHoleMode() {
         holeMode = null
         refreshHighlight()
+    }
+
+    // ---- Messen -------------------------------------------------------------------------------------
+
+    /** Schaltet den Messmodus ein: Kanten oder Flächen antippen (höchstens zwei). */
+    fun startMeasure() {
+        if (output?.body == null) return
+        planePick = false
+        edgeMode = null
+        holeMode = null
+        shellMode = null
+        faceSketchPick = false
+        selectedId = null
+        measureMode = MeasureMode(emptyList())
+        refresh()
+    }
+
+    fun cancelMeasure() {
+        measureMode = null
+        refreshHighlight()
+    }
+
+    /** Nimmt [p] zur Messung (erneut tippen hebt die Wahl auf; ein drittes Teil ersetzt das älteste) und rechnet neu. */
+    private fun addMeasure(p: BrepShape.Part) {
+        val m = measureMode ?: return
+        val picks = if (p in m.picks) m.picks - p else (m.picks + p).takeLast(2)
+        measureMode = try {
+            measure(picks)
+        } catch (e: dev.androidcad.brep.BrepException) {
+            MeasureMode(picks, listOf("Messung fehlgeschlagen: ${e.message}"))
+        }
+        refreshHighlight()
+    }
+
+    private fun measure(picks: List<BrepShape.Part>): MeasureMode {
+        val out = output ?: return MeasureMode(picks)
+        val body = out.body ?: return MeasureMode(picks)
+        fun mm(v: Double) = "%.2f mm".format(v)
+        fun v(t: Triple<Double, Double, Double>) = Vec3(t.first, t.second, t.third)
+        fun line(p: BrepShape.Part) = (p as? BrepShape.Part.Edge)?.let { out.edgeInfos.getOrNull(it.id - 1) }?.takeIf { it.isLine }
+            ?.let { v(it.end) + v(it.start) * -1.0 }
+        fun normal(p: BrepShape.Part) = (p as? BrepShape.Part.Face)?.let { out.facePlanes.getOrNull(it.id - 1) }?.let { v(it.normal) }
+        val lines = picks.map { p ->
+            when (p) {
+                is BrepShape.Part.Edge -> out.edgeInfos.getOrNull(p.id - 1)?.let { e ->
+                    "Kante: Länge ${mm(e.length)}" + if (e.isCircle) " · Radius ${mm(e.radius)} · Ø ${mm(2 * e.radius)}" else ""
+                } ?: "Kante"
+                is BrepShape.Part.Face -> "Fläche: %.2f mm²".format(body.faceArea(p.id)) + if (normal(p) == null) " (gekrümmt)" else ""
+            }
+        }.toMutableList()
+        var segment: FloatArray? = null
+        if (picks.size == 2) {
+            val (a, b) = picks
+            val d = body.distance(a, b)
+            lines += "Abstand: ${mm(d.value)}"
+            if (d.value > 1e-9) segment = floatArrayOf(
+                d.onA.first.toFloat(), d.onA.second.toFloat(), d.onA.third.toFloat(), d.onB.first.toFloat(), d.onB.second.toFloat(), d.onB.third.toFloat(),
+            )
+            val la = line(a); val lb = line(b); val na = normal(a); val nb = normal(b)
+            val angle = when {
+                la != null && lb != null -> MeasureMath.angle(la, lb)
+                na != null && nb != null -> MeasureMath.angle(na, nb)
+                la != null && nb != null -> MeasureMath.lineToPlane(la, nb)
+                na != null && lb != null -> MeasureMath.lineToPlane(lb, na)
+                else -> null // gekrümmte Fläche oder Bogen: kein eindeutiger Winkel
+            }
+            angle?.let { lines += "Winkel: %.2f°".format(it) }
+        }
+        return MeasureMode(picks, lines, segment)
     }
 
     // ---- Schale --------------------------------------------------------------------------------------
@@ -1115,6 +1212,7 @@ class WorkspaceState(private val scope: CoroutineScope, private val session: Mod
 
     fun cancelShellMode() {
         shellMode = null
+        measureMode = null
         refreshHighlight()
     }
 
@@ -1139,6 +1237,7 @@ class WorkspaceState(private val scope: CoroutineScope, private val session: Mod
 
     /** Verarbeitet einen Tipp im 3D-Bild in den Flächenmodi (Bohrung, Skizze/Ebene auf Fläche, Schale). */
     fun pickFace(hit: FaceHit?) {
+        if (measureMode != null) { hit?.let { addMeasure(BrepShape.Part.Face(it.faceId)) }; return }
         if ((holeMode == null && !faceSketchPick && !planePick && shellMode == null) || hit == null) return
         val out = output ?: return
         val ref = out.faceRefs.getOrNull(hit.faceId - 1)
@@ -1246,6 +1345,24 @@ class WorkspaceState(private val scope: CoroutineScope, private val session: Mod
         // gewählte Kanten (Kantenmodus) und die Referenzkanten der Bohrung (Bohrungsmodus bzw. gewählte Bohrung)
         val selected = edgeMode?.selected.orEmpty() + (holeMode?.anchors ?: hole?.anchors)?.toList().orEmpty().map { it.edge } +
             listOfNotNull((datum?.def as? PlaneDef.AtEdge)?.edge)
+        // Messen: gewählte Kanten, die Kanten gewählter Flächen und die Abstandslinie
+        val measure = measureMode
+        if (out != null && measure != null) {
+            val edgeIds = measure.picks.filterIsInstance<BrepShape.Part.Edge>().map { it.id - 1 }.toSet()
+            val faceRefs = measure.picks.filterIsInstance<BrepShape.Part.Face>().mapNotNull { out.faceRefs.getOrNull(it.id - 1) }.toSet()
+            var offset = 0
+            for ((i, n) in out.edgeCounts.withIndex()) {
+                val r = out.edgeRefs.getOrNull(i)
+                if (i in edgeIds || (r != null && (r.a in faceRefs || r.b in faceRefs))) {
+                    for (k in 0 until n - 1) {
+                        for (d in 0..2) segs += out.polylines[3 * (offset + k) + d]
+                        for (d in 0..2) segs += out.polylines[3 * (offset + k + 1) + d]
+                    }
+                }
+                offset += n
+            }
+            measure.segment?.let { for (f in it) segs += f }
+        }
         // Öffnungen der Schale (Modus bzw. gewählte Schale): ihre Randkanten
         val openFaces = (shellMode?.selected ?: shell?.openFaces).orEmpty()
         if (out != null && (selected.isNotEmpty() || openFaces.isNotEmpty())) {
@@ -1305,7 +1422,7 @@ class WorkspaceState(private val scope: CoroutineScope, private val session: Mod
         val next = sketchOf?.takeIf { s -> doc.features.any { it.id == s } }
         select(next ?: doc.features.last().id)
         markDirty()
-        if (hasExtrusions()) scheduleBuild(0) else { job?.cancel(); output = null; building = false }
+        if (hasExtrusions()) scheduleBuild(0) else { job?.cancel(); replaceOutput(null); building = false }
     }
 
     private fun scheduleBuild(delayMs: Long = 30) {
@@ -1314,7 +1431,7 @@ class WorkspaceState(private val scope: CoroutineScope, private val session: Mod
         job = scope.launch {
             delay(delayMs)
             building = true
-            output = withContext(buildDispatcher) {
+            val built = withContext(buildDispatcher) {
                 // Fehler einzelner Features sammelt build(); was darüber hinaus scheitert (Tessellierung, Stacküberlauf), darf die App
                 // nicht beenden, sondern wird als Meldung gezeigt
                 try {
@@ -1325,6 +1442,7 @@ class WorkspaceState(private val scope: CoroutineScope, private val session: Mod
                     ModelOutput(null, null, 0.0, 0, listOf("Das Modell ist zu tief verschachtelt, um es aufzubauen"), 0)
                 }
             }
+            replaceOutput(built)
             syncSketchPlanes()
             syncProjections()
             refreshOverlay() // Rahmen der Arbeitsebenen richten sich nach dem Körper
@@ -1336,11 +1454,13 @@ class WorkspaceState(private val scope: CoroutineScope, private val session: Mod
 
     private fun compute(d: Document): ModelOutput {
         val t0 = System.nanoTime()
-        d.build().use { r ->
-            val errors = r.errors.values.toList()
-            val body = r.body ?: return ModelOutput(
-                null, null, 0.0, 0, errors, (System.nanoTime() - t0) / 1_000_000, sketchPlanes = r.sketchPlanes, errorIds = r.errors.keys,
-            )
+        val r = d.build()
+        val errors = r.errors.values.toList()
+        val body = r.body ?: return ModelOutput(
+            null, null, 0.0, 0, errors, (System.nanoTime() - t0) / 1_000_000, sketchPlanes = r.sketchPlanes, errorIds = r.errors.keys,
+        )
+        // der Körper bleibt offen (Messen) und wird mit dem nächsten Aufbau freigegeben; scheitert dieser hier, sofort
+        try {
             val bm = body.tessellate(linearDeflection = 0.05, angularDeflection = 0.3)
             val pairs = body.edgeFaceTags()
             val refs = bm.edgeIds.map { id ->
@@ -1377,7 +1497,12 @@ class WorkspaceState(private val scope: CoroutineScope, private val session: Mod
                 errorIds = r.errors.keys,
                 datumPlanes = r.datumPlanes,
                 bounds = bounds(bm.positions),
+                edgeInfos = edgeInfos,
+                body = body,
             )
+        } catch (e: Throwable) {
+            body.close()
+            throw e
         }
     }
 

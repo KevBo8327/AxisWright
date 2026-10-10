@@ -54,6 +54,8 @@ enum class CadIcon(private vararg val parts: Part) {
     REVOLVE(Part("M7 3 V21", dashed = true), Part("M10 11 H16 V19 H10 Z"), Part("M3 7 A9 3.2 0 0 0 17 8.2"), Part("M14.2 5.6 L17 8.2 L13.6 9.4")),
     // Schale: offener Kasten mit innerer Wand
     SHELL(Part("M3 8 V20 H21 V8"), Part("M6.5 8 V16.5 H17.5 V8", dashed = true), Part("M3 8 H6.5 M17.5 8 H21")),
+    // Messen: Lineal mit Teilstrichen
+    MEASURE(Part("M3 15 L15 3 L21 9 L9 21 Z"), Part("M7 11 L9 13 M10 8 L12 10 M13 5 L15 7")),
     HOLE(Part("M4 4 H20 V20 H4 Z"), Part("M8 12 a4 4 0 1 0 8 0 a4 4 0 1 0 -8 0")),
     ROUND(Part("M5 20 V13 A8 8 0 0 1 13 5 H20"), Part("M9 20 V14 A5 5 0 0 1 14 9 H20", dashed = true)),
     CHAMFER(Part("M5 20 V11 L11 5 H20"), Part("M9 20 V13 L13 9 H20", dashed = true)),
