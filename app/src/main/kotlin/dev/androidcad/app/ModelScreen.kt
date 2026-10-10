@@ -223,6 +223,7 @@ private fun toolGroups(state: WorkspaceState, onNewSketch: () -> Unit): List<Too
         ToolGroup("Körper", CadIcon.EXTRUDE, listOf(
             ToolDef("Extrudieren", CadIcon.EXTRUDE, false, canExtrude) { state.createExtrusion(BodyOp.ADD) },
             ToolDef("Abtragen", CadIcon.CUT, false, canExtrude && state.canCut) { state.createExtrusion(BodyOp.CUT) },
+            ToolDef("Drehen", CadIcon.REVOLVE, false, canExtrude) { state.createRevolve() },
             ToolDef("Bohrung", CadIcon.HOLE, state.holeMode != null, hasBody) { if (state.holeMode != null) state.cancelHoleMode() else state.startHoleMode() },
         )),
         ToolGroup("Kanten", CadIcon.ROUND, listOf(
@@ -416,7 +417,8 @@ private fun ModelViewport(state: WorkspaceState, modifier: Modifier) {
         }
         if (mesh == null) {
             Text(
-                if (state.features.none { it is dev.androidcad.model.ExtrudeFeature }) "Noch kein Körper – wähle eine Skizze, dann Körper › Extrudieren." else "Kein Körper.",
+                if (state.features.none { it is dev.androidcad.model.ExtrudeFeature || it is dev.androidcad.model.RevolveFeature }) "Noch kein Körper – wähle eine Skizze, dann Körper › Extrudieren oder Drehen."
+                else "Kein Körper – siehe die Meldung oben.",
                 // mit Skizzenlinien im Bild unten, damit der Hinweis sie nicht überdeckt
                 Modifier.align(if (state.sketchOverlay != null) Alignment.BottomCenter else Alignment.Center).padding(24.dp),
                 color = colors.onSurfaceVariant, textAlign = TextAlign.Center,

@@ -69,6 +69,16 @@ object DocumentCodec {
             "distance" to f.distance, "op" to f.op.name, "symmetric" to f.symmetric,
             "regionPoints" to f.regionPoints.map { listOf(it.x, it.y) },
         )
+        is RevolveFeature -> linkedMapOf(
+            "kind" to "revolve", "id" to f.id.value, "name" to f.name, "sketch" to f.sketch.value,
+            "axis" to when (val a = f.axis) {
+                RevolveAxis.SketchX -> linkedMapOf("type" to "x")
+                RevolveAxis.SketchY -> linkedMapOf("type" to "y")
+                is RevolveAxis.Line -> linkedMapOf("type" to "line", "line" to a.line.value)
+            },
+            "angle" to f.angle, "op" to f.op.name, "symmetric" to f.symmetric,
+            "regionPoints" to f.regionPoints.map { listOf(it.x, it.y) },
+        )
         is HoleFeature -> encodeHole(f)
         is PlaneFeature -> linkedMapOf<String, Any?>(
             "kind" to "datum", "id" to f.id.value, "name" to f.name, "plane" to encodePlane(f.plane),
@@ -151,12 +161,20 @@ object DocumentCodec {
             val d = o.double("distance")
             if (!d.isFinite()) throw JsonException("Extrusion: Länge ungültig")
             val op = BodyOp.entries.firstOrNull { it.name == o.string("op") } ?: throw JsonException("Extrusion: unbekannte Operation '${o["op"]}'")
-            val pts = o.list("regionPoints").map {
-                val t = it.asList("Auswahlpunkt")
-                if (t.size != 2 || t.any { v -> v !is Number }) throw JsonException("Auswahlpunkt: [x, y] erwartet")
-                Vec2((t[0] as Number).toDouble(), (t[1] as Number).toDouble())
+            ExtrudeFeature(FeatureId(o.int("id")), o.string("name"), FeatureId(o.int("sketch")), d, op, regionPoints(o), o.bool("symmetric", false))
+        }
+        "revolve" -> {
+            val angle = o.double("angle")
+            if (!angle.isFinite() || angle == 0.0 || kotlin.math.abs(angle) > 360.0) throw JsonException("Drehung: Winkel ungültig")
+            val op = BodyOp.entries.firstOrNull { it.name == o.string("op") } ?: throw JsonException("Drehung: unbekannte Operation '${o["op"]}'")
+            val a = o.obj("axis")
+            val axis = when (val type = a.string("type")) {
+                "x" -> RevolveAxis.SketchX
+                "y" -> RevolveAxis.SketchY
+                "line" -> RevolveAxis.Line(LineId(a.int("line")))
+                else -> throw JsonException("Drehung: unbekannte Achse '$type'")
             }
-            ExtrudeFeature(FeatureId(o.int("id")), o.string("name"), FeatureId(o.int("sketch")), d, op, pts, o.bool("symmetric", false))
+            RevolveFeature(FeatureId(o.int("id")), o.string("name"), FeatureId(o.int("sketch")), axis, angle, op, regionPoints(o), o.bool("symmetric", false))
         }
         "fillet" -> {
             val size = o.double("size")
@@ -206,6 +224,12 @@ object DocumentCodec {
         )
         "pattern" -> PatternFeature(FeatureId(o.int("id")), o.string("name"), FeatureId(o.int("source")), decodePattern(o), o.bool("withFillets", false))
         else -> throw JsonException("Unbekannter Feature-Typ '$kind'")
+    }
+
+    private fun regionPoints(o: JsonObject): List<Vec2> = o.list("regionPoints").map {
+        val t = it.asList("Auswahlpunkt")
+        if (t.size != 2 || t.any { v -> v !is Number }) throw JsonException("Auswahlpunkt: [x, y] erwartet")
+        Vec2((t[0] as Number).toDouble(), (t[1] as Number).toDouble())
     }
 
     // ---- Ebene ------------------------------------------------------------------------------------

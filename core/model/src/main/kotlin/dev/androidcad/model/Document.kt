@@ -70,6 +70,7 @@ class Document {
         for (f in features) when (f) {
             is SketchFeature -> seenSketches += f.id
             is ExtrudeFeature -> require(f.sketch in seenSketches) { "Extrusion „${f.name}“ verweist auf keine vorangehende Skizze" }
+            is RevolveFeature -> require(f.sketch in seenSketches) { "Drehung „${f.name}“ verweist auf keine vorangehende Skizze" }
             is FilletFeature, is HoleFeature, is PatternFeature, is PlaneFeature, is MirrorBodyFeature -> {}
         }
         val before = HashSet<FeatureId>()
@@ -143,6 +144,20 @@ class Document {
         return ExtrudeFeature(FeatureId(nextId++), name, sketch.id, distance, op, regionPoints, symmetric).also { items += it }
     }
 
+    /** Dreht Flächen der Skizze um [axis] (siehe [RevolveFeature]); [angle] in Grad. */
+    fun addRevolve(
+        name: String,
+        sketch: SketchFeature,
+        axis: RevolveAxis,
+        angle: Double = 360.0,
+        op: BodyOp = BodyOp.ADD,
+        regionPoints: List<dev.androidcad.sketch.Vec2> = emptyList(),
+        symmetric: Boolean = false,
+    ): RevolveFeature {
+        require(items.any { it === sketch }) { "Skizze gehört nicht zu diesem Dokument" }
+        return RevolveFeature(FeatureId(nextId++), name, sketch.id, axis, angle, op, regionPoints, symmetric).also { items += it }
+    }
+
     /** Ersetzt ein Feature gleicher ID (z. B. [ExtrudeFeature.copy] mit neuer Länge). */
     fun update(feature: Feature) {
         val i = items.indexOfFirst { it.id == feature.id }
@@ -157,6 +172,7 @@ class Document {
         when (val f = feature(id)) {
             is SketchFeature -> update(f.copy(name = name))
             is ExtrudeFeature -> update(f.copy(name = name))
+            is RevolveFeature -> update(f.copy(name = name))
             is FilletFeature -> update(f.copy(name = name))
             is HoleFeature -> update(f.copy(name = name))
             is PatternFeature -> update(f.copy(name = name))
@@ -303,6 +319,7 @@ class Document {
             val before = gone.size
             for (f in items) when (f) {
                 is ExtrudeFeature -> if (f.sketch in gone) gone += f.id
+                is RevolveFeature -> if (f.sketch in gone) gone += f.id
                 is FilletFeature -> if (f.references.any { it in gone }) gone += f.id
                 is HoleFeature -> if (f.references.any { it in gone }) gone += f.id
                 is PatternFeature -> if (f.source in gone) gone += f.id
@@ -358,6 +375,13 @@ class Document {
                 is ExtrudeFeature -> try {
                     val tool = extrudeTool(f, planes)
                     body = combine(body, tool, f.op)
+                } catch (e: BrepException) {
+                    errors[f.id] = "„${f.name}“: ${e.message}"
+                } catch (e: IllegalArgumentException) {
+                    errors[f.id] = "„${f.name}“: ${e.message}"
+                }
+                is RevolveFeature -> try {
+                    body = combine(body, revolveTool(f, planes), f.op)
                 } catch (e: BrepException) {
                     errors[f.id] = "„${f.name}“: ${e.message}"
                 } catch (e: IllegalArgumentException) {
@@ -486,6 +510,7 @@ class Document {
         val nested = src is PatternFeature
         val original = when (src) {
             is ExtrudeFeature -> extrudeTool(src, planes)
+            is RevolveFeature -> revolveTool(src, planes)
             is HoleFeature -> holeTool(body, src)
             is PatternFeature -> patternResultTool(body, src, planes)
             else -> throw BrepException("das vervielfältigte Feature existiert nicht mehr")
@@ -539,6 +564,7 @@ class Document {
     private fun patternResultTool(body: BrepShape, p: PatternFeature, planes: Map<FeatureId, Workplane>): BrepShape {
         val base = when (val src = items.firstOrNull { it.id == p.source }) {
             is ExtrudeFeature -> extrudeTool(src, planes)
+            is RevolveFeature -> revolveTool(src, planes)
             is HoleFeature -> holeTool(body, src)
             is PatternFeature -> throw BrepException("Muster lassen sich nur eine Ebene tief verschachteln")
             else -> throw BrepException("das vervielfältigte Feature existiert nicht mehr")
@@ -550,6 +576,7 @@ class Document {
     /** Operation eines Musters: die des ursprünglichen Features, auch über ein inneres Muster hinweg (Bohrungen tragen ab). */
     private fun patternOp(f: PatternFeature): BodyOp = when (val src = items.firstOrNull { it.id == f.source }) {
         is ExtrudeFeature -> src.op
+        is RevolveFeature -> src.op
         is PatternFeature -> patternOp(src)
         else -> BodyOp.CUT
     }
@@ -568,6 +595,32 @@ class Document {
                 val piece = BrepShape.extrude(
                     region.toProfile(f.id), f.distance, f.symmetric,
                     bottomTag = faceTag(f.id, FaceRole.BOTTOM), topTag = faceTag(f.id, FaceRole.TOP),
+                ).use { it.transform(plane.matrix3x4()) }
+                tool = tool?.let { prev -> prev.use { p -> piece.use { p.union(it) } } } ?: piece
+            }
+            return tool!!
+        } catch (e: Throwable) {
+            tool?.close()
+            throw e
+        }
+    }
+
+    /** Ausgewählte Flächen der Skizze, um die Achse gedreht und in den Raum gestellt, vereinigt zu einem Werkzeugkörper. */
+    private fun revolveTool(f: RevolveFeature, planes: Map<FeatureId, Workplane>): BrepShape {
+        val sk = sketch(f.sketch)
+        val plane = planes[f.sketch] ?: sk.plane
+        val regions: List<Region> =
+            if (f.regionPoints.isEmpty()) sk.sketch.regions().regions
+            else f.regionPoints.mapNotNull { sk.sketch.regionAt(it.x, it.y) }.distinct()
+        require(regions.isNotEmpty()) { "keine geschlossene Fläche in „${sk.name}“ gefunden" }
+        val axis = RevolveGeometry.resolve(sk.sketch, f.axis) ?: throw IllegalArgumentException("die Drehachse (Linie in „${sk.name}“) existiert nicht mehr")
+        RevolveGeometry.problem(regions, axis)?.let { throw IllegalArgumentException(it) }
+        var tool: BrepShape? = null
+        try {
+            for (region in regions) {
+                val piece = BrepShape.revolve(
+                    region.toProfile(f.id), axis.point.x, axis.point.y, axis.direction.x, axis.direction.y, f.angle, f.symmetric,
+                    startTag = faceTag(f.id, FaceRole.BOTTOM), endTag = faceTag(f.id, FaceRole.TOP),
                 ).use { it.transform(plane.matrix3x4()) }
                 tool = tool?.let { prev -> prev.use { p -> piece.use { p.union(it) } } } ?: piece
             }
@@ -681,14 +734,14 @@ class Document {
          * (deren Quelle selbst kein Muster ist – eine Verschachtelungsebene, siehe [PatternGeometry.nestedCopyTag]).
          */
         fun patternSourceProblem(src: Feature, all: List<Feature>, kind: PatternKind? = null): String? = when (src) {
-            is ExtrudeFeature, is HoleFeature -> null
+            is ExtrudeFeature, is RevolveFeature, is HoleFeature -> null
             is PatternFeature -> when {
                 all.firstOrNull { it.id == src.source } is PatternFeature -> "Muster lassen sich nur eine Ebene tief verschachteln"
                 PatternGeometry.isTwoWay(src.kind) -> "Ein Raster (Muster mit zwei Richtungen) lässt sich nicht weiter vervielfältigen"
                 kind != null && PatternGeometry.isTwoWay(kind) -> "Ein Muster von Mustern hat nur eine Richtung"
                 else -> null
             }
-            else -> "Nur Extrusionen, Bohrungen und Muster lassen sich vervielfältigen"
+            else -> "Nur Extrusionen, Drehungen, Bohrungen und Muster lassen sich vervielfältigen"
         }
 
         /** Länge des Bohrwerkzeugs für „durchgehend“ (mm) – länger als jedes Bauteil. */

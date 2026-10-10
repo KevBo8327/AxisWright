@@ -112,6 +112,39 @@ data class ExtrudeFeature(
     val symmetric: Boolean = false,
 ) : Feature
 
+/** Drehachse eines [RevolveFeature], in der Ebene seiner Skizze. */
+sealed interface RevolveAxis {
+    /** Waagrechte Achse der Skizze (durch den Ursprung, Richtung +x). */
+    data object SketchX : RevolveAxis
+
+    /** Senkrechte Achse der Skizze (durch den Ursprung, Richtung +y). */
+    data object SketchY : RevolveAxis
+
+    /** Eine Linie der Skizze – meist eine Hilfslinie, auch eine Profilkante auf der Achse; Richtung vom ersten zum zweiten Punkt. */
+    data class Line(val line: dev.androidcad.sketch.LineId) : RevolveAxis
+}
+
+/**
+ * Drehung von Skizzenflächen um eine Achse in der Skizzenebene (Wellen, Knöpfe, Rotationsteile).
+ *
+ * @param angle Winkel in Grad, 0 < |angle| ≤ 360; positiv = gegen den Uhrzeigersinn um die Achsrichtung, 360 = volle Drehung.
+ * @param regionPoints wie bei [ExtrudeFeature]: Auswahlpunkte der zu drehenden Flächen; leer = alle Flächen der Skizze.
+ * @param symmetric verteilt den Winkel zu gleichen Teilen auf beide Seiten der Skizzenebene.
+ *
+ * Flächennamen: Mantelflächen wie bei der Extrusion `FaceRef(id, SIDE, Skizzenelement)`; bei einer Teildrehung die Stirnfläche in
+ * der Skizzenebene `FaceRef(id, BOTTOM)` (bei [symmetric] die auf der negativen Seite) und die gedrehte `FaceRef(id, TOP)`.
+ */
+data class RevolveFeature(
+    override val id: FeatureId,
+    override val name: String,
+    val sketch: FeatureId,
+    val axis: RevolveAxis,
+    val angle: Double = 360.0,
+    val op: BodyOp = BodyOp.ADD,
+    val regionPoints: List<Vec2> = emptyList(),
+    val symmetric: Boolean = false,
+) : Feature
+
 /**
  * Eine Körperkante, bezeichnet durch die Namen ihrer **beiden Nachbarflächen** ([FaceRef]). Das ist stabil über Neuaufbauten:
  * Die Kante wird jedes Mal dort gefunden, wo diese beiden Flächen aufeinandertreffen.

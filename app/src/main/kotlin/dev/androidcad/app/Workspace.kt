@@ -21,6 +21,9 @@ import dev.androidcad.model.PatternKind
 import dev.androidcad.model.ProjectedEdge
 import dev.androidcad.model.EdgeRef
 import dev.androidcad.model.ExtrudeFeature
+import dev.androidcad.model.RevolveAxis
+import dev.androidcad.model.RevolveFeature
+import dev.androidcad.model.RevolveGeometry
 import dev.androidcad.model.FaceRef
 import dev.androidcad.model.FilletFeature
 import dev.androidcad.model.EdgeDistance
@@ -167,6 +170,9 @@ class WorkspaceState(private val scope: CoroutineScope, private val session: Mod
     /** Die gewählte Extrusion (`null`, wenn eine Skizze gewählt ist). */
     var extrusion by mutableStateOf<ExtrudeFeature?>(null)
         private set
+    /** Die gewählte Drehung (`null`, wenn ein anderes Feature gewählt ist). */
+    var revolve by mutableStateOf<RevolveFeature?>(null)
+        private set
     /** Die gewählte Verrundung/Fase (`null`, wenn ein anderes Feature gewählt ist). */
     var fillet by mutableStateOf<FilletFeature?>(null)
         private set
@@ -268,7 +274,7 @@ class WorkspaceState(private val scope: CoroutineScope, private val session: Mod
     }
 
     /** Gibt es schon Material, von dem man abtragen könnte (eine „Hinzufügen“-Extrusion)? */
-    val canCut: Boolean get() = features.any { it is ExtrudeFeature && it.op == BodyOp.ADD }
+    val canCut: Boolean get() = features.any { (it is ExtrudeFeature && it.op == BodyOp.ADD) || (it is RevolveFeature && it.op == BodyOp.ADD) }
 
     /** Name des aktuellen Modells und die Liste aller gespeicherten (für das Projektmenü). */
     var projectName by mutableStateOf(session.name)
@@ -305,7 +311,8 @@ class WorkspaceState(private val scope: CoroutineScope, private val session: Mod
         if (hasExtrusions()) scheduleBuild()
     }
 
-    private fun hasExtrusions() = doc.features.any { it is ExtrudeFeature }
+    /** Gibt es Features, die Körper erzeugen (dann lohnt ein Aufbau)? */
+    private fun hasExtrusions() = doc.features.any { it is ExtrudeFeature || it is RevolveFeature }
 
     private fun updateRegions() {
         regionCount = handle.editor.sketch.regions().regions.size
@@ -361,6 +368,7 @@ class WorkspaceState(private val scope: CoroutineScope, private val session: Mod
         features = doc.features
         val sel = selectedId?.let { id -> features.firstOrNull { it.id == id } }
         extrusion = sel as? ExtrudeFeature
+        revolve = sel as? RevolveFeature
         fillet = sel as? FilletFeature
         hole = sel as? HoleFeature
         pattern = sel as? PatternFeature
@@ -369,6 +377,7 @@ class WorkspaceState(private val scope: CoroutineScope, private val session: Mod
         sketch = when (sel) {
             is SketchFeature -> sel
             is ExtrudeFeature -> doc.sketch(sel.sketch)
+            is RevolveFeature -> doc.sketch(sel.sketch)
             is FilletFeature, is HoleFeature, is PatternFeature, is PlaneFeature, is MirrorBodyFeature, null -> activeSketch
         }
         refreshOverlay()
@@ -401,6 +410,7 @@ class WorkspaceState(private val scope: CoroutineScope, private val session: Mod
         val sel = doc.feature(id)
         val target = when (sel) {
             is ExtrudeFeature -> doc.sketch(sel.sketch)
+            is RevolveFeature -> doc.sketch(sel.sketch)
             is SketchFeature -> sel
             // Verrundungen haben keine eigene Skizze: die bisher aktive behalten – sofern sie zum Dokument gehört (nach dem Laden
             // ist es noch der Platzhalter), sonst die letzte Skizze des Dokuments
@@ -522,9 +532,41 @@ class WorkspaceState(private val scope: CoroutineScope, private val session: Mod
         scheduleBuild()
     }
 
+    /**
+     * Dreht alle geschlossenen Flächen der aktiven Skizze voll um eine Achse: die erste Hilfslinie der Skizze, sonst die senkrechte bzw.
+     * waagrechte Skizzenachse – die, die das Profil nicht schneidet. Achse und Winkel lassen sich danach einstellen.
+     */
+    fun createRevolve(op: BodyOp = BodyOp.ADD) {
+        if (regionCount == 0) return
+        val sk = activeSketch.sketch
+        val regions = sk.regions().regions
+        val candidates = revolveAxisOptions(activeSketch.id) + listOf(RevolveAxis.SketchY, RevolveAxis.SketchX)
+        val axis = candidates.firstOrNull { a -> RevolveGeometry.resolve(sk, a)?.let { RevolveGeometry.problem(regions, it) } == null }
+            ?: candidates.first()
+        val f = doc.addRevolve(nextName(if (op == BodyOp.ADD) "Drehung" else "Drehabtrag"), activeSketch, axis, 360.0, op)
+        select(f.id)
+        markDirty()
+        scheduleBuild(0)
+    }
+
+    /** Ändert die gewählte Drehung (Achse, Winkel, Operation …); unbrauchbare Winkel werden ignoriert. */
+    fun updateRevolve(f: RevolveFeature) {
+        if (revolve?.id != f.id || f.angle == 0.0 || !f.angle.isFinite() || kotlin.math.abs(f.angle) > 360.0) return
+        doc.update(f)
+        refresh()
+        markDirty()
+        scheduleBuild()
+    }
+
+    /** Hilfslinien der Skizze [sketch] – mögliche Drehachsen neben den beiden Skizzenachsen. */
+    fun revolveAxisOptions(sketch: FeatureId): List<RevolveAxis> {
+        val sk = doc.sketch(sketch).sketch
+        return sk.lineIds.filter { sk.line(it).construction }.map { RevolveAxis.Line(it) }
+    }
+
     // ---- Skizzen- und Modellmodus -----------------------------------------------------------------
 
-    private fun isPristine() = doc.features.none { it is ExtrudeFeature || it is FilletFeature } &&
+    private fun isPristine() = doc.features.none { it is ExtrudeFeature || it is RevolveFeature || it is FilletFeature } &&
         doc.features.filterIsInstance<SketchFeature>().all { it.sketch.lineIds.isEmpty() && it.sketch.circleIds.isEmpty() && it.sketch.arcIds.isEmpty() }
 
     /** Öffnet die aktive Skizze zum Zeichnen (2D, ganzer Bildschirm). */
@@ -551,19 +593,35 @@ class WorkspaceState(private val scope: CoroutineScope, private val session: Mod
     }
 
     private fun refreshOverlay() {
-        val extruded = doc.features.filterIsInstance<ExtrudeFeature>().map { it.sketch }.toSet()
+        val extruded = doc.features.mapNotNull { (it as? ExtrudeFeature)?.sketch ?: (it as? RevolveFeature)?.sketch }.toSet()
         val parts = doc.features.filterIsInstance<SketchFeature>()
             .filter { it.id == selectedId || it.id !in extruded } // gewählte Skizze oder noch nicht extrudierte
             .map { it.worldSegments() }
         val planes = doc.features.filterIsInstance<PlaneFeature>().map { datumFrame(it.plane, it.id == selectedId) }
         // Spiegelebene der gewählten Körperspiegelung (bei einer Arbeitsebene ist deren Rahmen schon da)
         val mirror = mirrorBody?.takeIf { it.datum == null }?.let { listOf(datumFrame(mirrorPlane(it), true)) } ?: emptyList()
-        val all = parts + planes + mirror
+        val axis = revolve?.let { revolveAxisLine(it) }?.let(::listOf) ?: emptyList()
+        val all = parts + planes + mirror + axis
         val total = all.sumOf { it.size }
         sketchOverlay = if (total == 0) null else FloatArray(total).also { out ->
             var offset = 0
             for (part in all) { part.copyInto(out, offset); offset += part.size }
         }
+    }
+
+    /** Drehachse der gewählten Drehung als Linie im Raum (über die Größe des Körpers hinaus verlängert); `null`, wenn sie fehlt. */
+    private fun revolveAxisLine(f: RevolveFeature): FloatArray? {
+        val sk = doc.features.firstOrNull { it.id == f.sketch } as? SketchFeature ?: return null
+        val a = RevolveGeometry.resolve(sk.sketch, f.axis) ?: return null
+        val plane = output?.sketchPlanes?.get(sk.id) ?: sk.plane
+        // Fußpunkt der Körpermitte auf der Achse, von dort in beide Richtungen
+        val c = bodyCenter()
+        val p0 = plane.toWorld(a.point.x, a.point.y)
+        val dir = plane.xDir * a.direction.x + plane.yDir * a.direction.y
+        val t = Vec3(c.x - p0.x, c.y - p0.y, c.z - p0.z).dot(dir)
+        val s = bodyExtent() * 0.8
+        val from = p0 + dir * (t - s); val to = p0 + dir * (t + s)
+        return floatArrayOf(from.x.toFloat(), from.y.toFloat(), from.z.toFloat(), to.x.toFloat(), to.y.toFloat(), to.z.toFloat())
     }
 
     /**
@@ -652,7 +710,7 @@ class WorkspaceState(private val scope: CoroutineScope, private val session: Mod
 
     /** Kann das gewählte Feature vervielfältigt werden (Extrusion oder Bohrung)? */
     val canPattern: Boolean
-        get() = extrusion != null || hole != null ||
+        get() = extrusion != null || revolve != null || hole != null ||
             // Muster von Mustern: nur ein einfaches Muster (dessen Quelle selbst kein Muster ist)
             pattern?.let { p -> doc.features.firstOrNull { it.id == p.source } !is PatternFeature && !PatternGeometry.isTwoWay(p.kind) } == true ||
             // Verrundung/Fase gewählt: Muster ihres Features samt Rundung
@@ -665,7 +723,7 @@ class WorkspaceState(private val scope: CoroutineScope, private val session: Mod
     private fun filletOwner(fl: FilletFeature): FeatureId? {
         val touched = fl.edges.flatMap { listOf(it.a.feature, it.b.feature) }.toSet()
         return doc.features.takeWhile { it.id != fl.id }
-            .lastOrNull { f -> (f is ExtrudeFeature || f is HoleFeature) && f.id in touched && fl.edges.all { it.a.feature == f.id || it.b.feature == f.id } }?.id
+            .lastOrNull { f -> (f is ExtrudeFeature || f is RevolveFeature || f is HoleFeature) && f.id in touched && fl.edges.all { it.a.feature == f.id || it.b.feature == f.id } }?.id
     }
 
     /** Wie viele Verrundungen/Fasen das gewählte Muster von seiner Quelle mitnehmen kann. */
@@ -753,7 +811,7 @@ class WorkspaceState(private val scope: CoroutineScope, private val session: Mod
         val selected = selectedId?.let { id -> doc.features.firstOrNull { it.id == id } } ?: return
         // Verrundung gewählt: vervielfältigt wird ihr Feature, die Rundung kommt über „mitnehmen“ dazu
         val src = if (selected is FilletFeature) filletOwner(selected)?.let(doc::feature) ?: return else selected
-        if (src !is ExtrudeFeature && src !is HoleFeature && src !is PatternFeature) return
+        if (src !is ExtrudeFeature && src !is RevolveFeature && src !is HoleFeature && src !is PatternFeature) return
         val c = bodyCenter()
         val kind = when (type) {
             PatternType.LINEAR -> PatternKind.Linear(Vec3(1.0, 0.0, 0.0), 3, 20.0)
@@ -1117,7 +1175,8 @@ class WorkspaceState(private val scope: CoroutineScope, private val session: Mod
         val f = doc.feature(id)
         doc.remove(id)
         if (doc.features.none { it is SketchFeature }) doc.addSketch("Skizze 1")
-        val next = if (f is ExtrudeFeature) f.sketch.takeIf { s -> doc.features.any { it.id == s } } else null
+        val sketchOf = (f as? ExtrudeFeature)?.sketch ?: (f as? RevolveFeature)?.sketch
+        val next = sketchOf?.takeIf { s -> doc.features.any { it.id == s } }
         select(next ?: doc.features.last().id)
         markDirty()
         if (hasExtrusions()) scheduleBuild(0) else { job?.cancel(); output = null; building = false }
@@ -1130,6 +1189,7 @@ class WorkspaceState(private val scope: CoroutineScope, private val session: Mod
             delay(delayMs)
             building = true
             output = withContext(Dispatchers.Default) { compute(snapshot) }
+            }
             syncSketchPlanes()
             syncProjections()
             refreshOverlay() // Rahmen der Arbeitsebenen richten sich nach dem Körper

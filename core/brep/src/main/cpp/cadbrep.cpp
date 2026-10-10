@@ -20,6 +20,8 @@
 #include <BRepAlgoAPI_Cut.hxx>
 #include <BRepAlgoAPI_Fuse.hxx>
 #include <BRepBuilderAPI_MakeEdge.hxx>
+#include <BRepBuilderAPI_MakeVertex.hxx>
+#include <BRepExtrema_DistShapeShape.hxx>
 #include <BRepBuilderAPI_MakeFace.hxx>
 #include <BRepBuilderAPI_MakeWire.hxx>
 #include <BRepBuilderAPI_Transform.hxx>
@@ -28,6 +30,8 @@
 #include <BRepGProp.hxx>
 #include <BRepMesh_IncrementalMesh.hxx>
 #include <BRepPrimAPI_MakePrism.hxx>
+#include <BRepPrimAPI_MakeRevol.hxx>
+#include <gp_Ax1.hxx>
 #include <BRep_Tool.hxx>
 #include <GCPnts_AbscissaPoint.hxx>
 #include <GeomAbs_SurfaceType.hxx>
@@ -57,6 +61,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
+#include <memory>
 #include <mutex>
 #include <stdexcept>
 #include <string>
@@ -66,6 +71,8 @@
 namespace {
 
 using Aliases = std::vector<std::vector<jlong>>;
+
+constexpr double kPi = 3.14159265358979323846;
 
 struct Entry {
   TopoDS_Shape shape;
@@ -290,6 +297,74 @@ jlong transformed(jlong h, const gp_Trsf& t) {
   return store(result, std::move(tags), std::move(aliases));
 }
 
+// Liest Profil und Segmentnamen aus den Java-Feldern.
+struct ProfileInput {
+  TopoDS_Face face;
+  std::vector<gp_Pnt> mids;  // Mittelpunkt je Profilsegment (Zuordnung der Seitenflächen)
+  std::vector<jlong> segTags;
+};
+
+ProfileInput readProfileInput(JNIEnv* env, jdoubleArray profile, jlongArray segmentTags) {
+  jsize n = env->GetArrayLength(profile);
+  std::vector<double> prog(static_cast<size_t>(n));
+  env->GetDoubleArrayRegion(profile, 0, n, prog.data());
+  ProfileInput in;
+  jsize nt = env->GetArrayLength(segmentTags);
+  in.segTags.resize(static_cast<size_t>(nt));
+  if (nt > 0) env->GetLongArrayRegion(segmentTags, 0, nt, in.segTags.data());
+  in.face = readProfile(prog.data(), prog.size(), in.mids);
+  if (!in.segTags.empty() && in.segTags.size() != in.mids.size()) throw std::runtime_error("Anzahl der Segmentnamen passt nicht zum Profil");
+  return in;
+}
+
+// Benennt die Flächen eines Zugkörpers (Extrusion, Drehung): Anfangs- und Endfläche sowie die Seitenflächen, die aus den
+// Profilsegmenten entstehen. Jede Kante der (ggf. reparierten) Grundfläche wird über ihren Mittelpunkt dem Segment zugeordnet.
+template <typename Sweep>
+jlong storeSweep(Sweep& sweep, const ProfileInput& in, jlong firstTag, jlong lastTag) {
+  TopoDS_Shape result = sweep.Shape();
+  TopTools_IndexedMapOfShape faces = facesOf(result);
+  std::vector<jlong> tags(static_cast<size_t>(faces.Extent()), 0);
+  auto tagFace = [&](const TopoDS_Shape& f, jlong tag) {
+    if (f.IsNull() || tag == 0) return;
+    int idx = faces.FindIndex(f);
+    if (idx > 0) tags[static_cast<size_t>(idx - 1)] = tag;
+  };
+  tagFace(sweep.FirstShape(), firstTag);
+  tagFace(sweep.LastShape(), lastTag);
+  if (!in.segTags.empty()) {
+    TopTools_IndexedMapOfShape baseEdges;
+    TopExp::MapShapes(in.face, TopAbs_EDGE, baseEdges);
+    for (int i = 1; i <= baseEdges.Extent(); ++i) {
+      const TopoDS_Edge& e = TopoDS::Edge(baseEdges(i));
+      BRepAdaptor_Curve c(e);
+      gp_Pnt m = c.Value(0.5 * (c.FirstParameter() + c.LastParameter()));
+      size_t best = 0;
+      double bestD = 1e300;
+      for (size_t j = 0; j < in.mids.size(); ++j) {
+        double d = m.Distance(in.mids[j]);
+        if (d < bestD) { bestD = d; best = j; }
+      }
+      if (bestD > 1e-5) continue;
+      for (TopTools_ListIteratorOfListOfShape it(sweep.Generated(e)); it.More(); it.Next()) tagFace(it.Value(), in.segTags[best]);
+    }
+    // Rückfall: Manche Flächen liefert Generated() nicht als Teil des Ergebnisses (beim Drehen die ebenen Ringflächen aus Kanten
+    // quer zur Achse). Eine solche Fläche enthält den Mittelpunkt genau eines Profilsegments – das, aus dem sie entstanden ist
+    // (Nachbarflächen berühren nur dessen Endpunkte; Anfangs- und Endfläche sind schon benannt).
+    for (int fi = 1; fi <= faces.Extent(); ++fi) {
+      if (tags[static_cast<size_t>(fi - 1)] != 0) continue;
+      int found = -1;
+      for (size_t j = 0; j < in.mids.size(); ++j) {
+        BRepExtrema_DistShapeShape dist(BRepBuilderAPI_MakeVertex(in.mids[j]).Vertex(), faces(fi));
+        if (!dist.IsDone() || dist.Value() > 1e-6) continue;
+        if (found >= 0) { found = -2; break; }
+        found = static_cast<int>(j);
+      }
+      if (found >= 0) tags[static_cast<size_t>(fi - 1)] = in.segTags[static_cast<size_t>(found)];
+    }
+  }
+  return store(result, std::move(tags));
+}
+
 }  // namespace
 
 extern "C" {
@@ -297,47 +372,31 @@ extern "C" {
 JNIEXPORT jlong JNICALL Java_dev_androidcad_brep_NativeBrep_extrude(JNIEnv* env, jclass, jdoubleArray profile, jdouble height,
                                                                     jlongArray segmentTags, jlong bottomTag, jlong topTag) {
   return guarded(env, [&]() -> jlong {
-    jsize n = env->GetArrayLength(profile);
-    std::vector<double> prog(static_cast<size_t>(n));
-    env->GetDoubleArrayRegion(profile, 0, n, prog.data());
-    jsize nt = env->GetArrayLength(segmentTags);
-    std::vector<jlong> segTags(static_cast<size_t>(nt));
-    if (nt > 0) env->GetLongArrayRegion(segmentTags, 0, nt, segTags.data());
-
-    std::vector<gp_Pnt> mids;
-    TopoDS_Face face = readProfile(prog.data(), prog.size(), mids);
-    if (!segTags.empty() && segTags.size() != mids.size()) throw std::runtime_error("Anzahl der Segmentnamen passt nicht zum Profil");
-
-    BRepPrimAPI_MakePrism prism(face, gp_Vec(0, 0, height));
+    ProfileInput in = readProfileInput(env, profile, segmentTags);
+    BRepPrimAPI_MakePrism prism(in.face, gp_Vec(0, 0, height));
     if (!prism.IsDone()) throw std::runtime_error("Extrusion fehlgeschlagen");
-    TopoDS_Shape result = prism.Shape();
-    TopTools_IndexedMapOfShape faces = facesOf(result);
-    std::vector<jlong> tags(static_cast<size_t>(faces.Extent()), 0);
-    auto tagFace = [&](const TopoDS_Shape& f, jlong tag) {
-      int idx = faces.FindIndex(f);
-      if (idx > 0 && tag != 0) tags[static_cast<size_t>(idx - 1)] = tag;
-    };
-    tagFace(prism.FirstShape(), bottomTag);
-    tagFace(prism.LastShape(), topTag);
-    if (!segTags.empty()) {
-      // Seitenflächen: Jede Kante der (ggf. reparierten) Grundfläche wird über ihren Mittelpunkt dem Profilsegment zugeordnet.
-      TopTools_IndexedMapOfShape baseEdges;
-      TopExp::MapShapes(face, TopAbs_EDGE, baseEdges);
-      for (int i = 1; i <= baseEdges.Extent(); ++i) {
-        const TopoDS_Edge& e = TopoDS::Edge(baseEdges(i));
-        BRepAdaptor_Curve c(e);
-        gp_Pnt m = c.Value(0.5 * (c.FirstParameter() + c.LastParameter()));
-        size_t best = 0;
-        double bestD = 1e300;
-        for (size_t j = 0; j < mids.size(); ++j) {
-          double d = m.Distance(mids[j]);
-          if (d < bestD) { bestD = d; best = j; }
-        }
-        if (bestD > 1e-5) continue;
-        for (TopTools_ListIteratorOfListOfShape it(prism.Generated(e)); it.More(); it.Next()) tagFace(it.Value(), segTags[best]);
-      }
-    }
-    return store(result, std::move(tags));
+    return storeSweep(prism, in, bottomTag, topTag);
+  });
+}
+
+// Drehen: Profil um die Achse durch (axis[0], axis[1]) mit der Richtung (axis[2], axis[3]) – beides in der Profilebene – um
+// [angle] Grad (0 < angle ≤ 360, gegen den Uhrzeigersinn um die Achsrichtung). [startTag] benennt die Fläche in der Profilebene,
+// [endTag] die gedrehte; bei 360° gibt es beide nicht.
+JNIEXPORT jlong JNICALL Java_dev_androidcad_brep_NativeBrep_revolve(JNIEnv* env, jclass, jdoubleArray profile, jdoubleArray axis, jdouble angle,
+                                                                    jlongArray segmentTags, jlong startTag, jlong endTag) {
+  return guarded(env, [&]() -> jlong {
+    if (env->GetArrayLength(axis) != 4) throw std::runtime_error("Drehachse braucht 4 Werte (Punkt, Richtung)");
+    double a[4];
+    env->GetDoubleArrayRegion(axis, 0, 4, a);
+    if (std::hypot(a[2], a[3]) < 1e-12) throw std::runtime_error("Drehachse ohne Richtung");
+    if (!(angle > 0.0 && angle <= 360.0)) throw std::runtime_error("Drehwinkel muss zwischen 0 und 360 Grad liegen");
+    ProfileInput in = readProfileInput(env, profile, segmentTags);
+    gp_Ax1 ax(gp_Pnt(a[0], a[1], 0), gp_Dir(a[2], a[3], 0));
+    const bool full = angle >= 360.0 - 1e-9;
+    std::unique_ptr<BRepPrimAPI_MakeRevol> revol = full ? std::make_unique<BRepPrimAPI_MakeRevol>(in.face, ax)
+                                                        : std::make_unique<BRepPrimAPI_MakeRevol>(in.face, ax, angle * kPi / 180.0);
+    if (!revol->IsDone()) throw std::runtime_error("Drehen fehlgeschlagen");
+    return storeSweep(*revol, in, full ? 0 : startTag, full ? 0 : endTag);
   });
 }
 

@@ -8,6 +8,7 @@ internal object NativeBrep {
     }
 
     @JvmStatic external fun extrude(profile: DoubleArray, height: Double, segmentTags: LongArray, bottomTag: Long, topTag: Long): Long
+    @JvmStatic external fun revolve(profile: DoubleArray, axis: DoubleArray, angle: Double, segmentTags: LongArray, startTag: Long, endTag: Long): Long
     @JvmStatic external fun boolean(a: Long, b: Long, op: Int): Long
     @JvmStatic external fun fillet(h: Long, edgeIds: IntArray, edgeTags: LongArray, radius: Double, kind: Int): Long
     @JvmStatic external fun translate(h: Long, x: Double, y: Double, z: Double): Long
@@ -282,6 +283,53 @@ class BrepShape private constructor(private val handle: Long) : AutoCloseable {
                 else -> 0.0
             }
             return if (dz == 0.0) up else up.use { it.translate(0.0, 0.0, dz) }
+        }
+
+        /**
+         * Dreht [profile] (in der XY-Ebene) um die Achse durch ([ax], [ay]) mit der Richtung ([dx], [dy]) – beides in der Profilebene –
+         * um [angle] Grad, gegen den Uhrzeigersinn um die Achsrichtung; negativ = andersherum. Mit [symmetric] wird [angle] zu gleichen
+         * Teilen auf beide Seiten der Profilebene verteilt. Bei 360° entsteht ein geschlossener Drehkörper ohne Stirnflächen.
+         *
+         * Das Profil darf die Achse berühren (eine Kante auf der Achse), aber nicht schneiden – das prüft der Aufrufer
+         * (sonst entstünde ein sich selbst durchdringender Körper).
+         * [startTag] benennt die Stirnfläche, die in der Profilebene liegt (bei [symmetric] die auf der negativen Seite), [endTag] die
+         * andere; die [ProfileSegment.tag]s benennen die Mantelflächen.
+         */
+        fun revolve(
+            profile: Profile, ax: Double, ay: Double, dx: Double, dy: Double, angle: Double, symmetric: Boolean = false,
+            startTag: Long = 0, endTag: Long = 0,
+        ): BrepShape {
+            val len = kotlin.math.hypot(dx, dy)
+            if (len < 1e-12) throw BrepException("Drehachse braucht eine Richtung")
+            if (angle == 0.0 || !angle.isFinite() || kotlin.math.abs(angle) > 360.0 + 1e-9) throw BrepException("Drehwinkel muss zwischen 0 und 360 Grad liegen")
+            val a = kotlin.math.abs(angle).coerceAtMost(360.0)
+            // andersherum = um die umgekehrte Achse; dabei tauschen Anfangs- und Endfläche nicht (Anfang bleibt in der Profilebene)
+            val s = if (angle < 0) -1.0 else 1.0
+            val ux = s * dx / len; val uy = s * dy / len
+            val turned = try {
+                BrepShape(NativeBrep.revolve(profile.encode(), doubleArrayOf(ax, ay, ux, uy), a, profile.segmentTags(), startTag, endTag))
+            } catch (e: IllegalStateException) {
+                throw BrepException(e.message ?: "B-Rep-Fehler", e)
+            }
+            if (!symmetric || a >= 360.0) return turned
+            return turned.use { it.transform(rotationAbout(ax, ay, ux, uy, -a / 2)) }
+        }
+
+        /** 3×4-Matrix der Drehung um [deg] Grad um die Achse durch (px, py, 0) mit der Richtung (ux, uy, 0) (Einheitsvektor). */
+        internal fun rotationAbout(px: Double, py: Double, ux: Double, uy: Double, deg: Double): DoubleArray {
+            val t = Math.toRadians(deg)
+            val c = kotlin.math.cos(t); val sn = kotlin.math.sin(t); val k = 1 - c
+            // Rodrigues mit u = (ux, uy, 0)
+            val r = doubleArrayOf(
+                c + ux * ux * k, ux * uy * k, uy * sn,
+                uy * ux * k, c + uy * uy * k, -ux * sn,
+                -uy * sn, ux * sn, c,
+            )
+            // t = p − R·p
+            val tx = px - (r[0] * px + r[1] * py)
+            val ty = py - (r[3] * px + r[4] * py)
+            val tz = -(r[6] * px + r[7] * py)
+            return doubleArrayOf(r[0], r[1], r[2], tx, r[3], r[4], r[5], ty, r[6], r[7], r[8], tz)
         }
     }
 }

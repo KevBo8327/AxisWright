@@ -45,6 +45,8 @@ import dev.androidcad.model.BasePlane
 import dev.androidcad.model.BodyOp
 import dev.androidcad.model.EdgeKind
 import dev.androidcad.model.ExtrudeFeature
+import dev.androidcad.model.RevolveAxis
+import dev.androidcad.model.RevolveFeature
 import dev.androidcad.model.FilletFeature
 import dev.androidcad.model.HoleFeature
 import dev.androidcad.model.MirrorBodyFeature
@@ -63,6 +65,7 @@ import dev.androidcad.sketchedit.formatValue
 internal fun Feature.icon(): CadIcon = when (this) {
     is SketchFeature -> if (onFace != null) CadIcon.SKETCH_ON_FACE else CadIcon.SKETCH
     is ExtrudeFeature -> if (op == BodyOp.ADD) CadIcon.EXTRUDE else CadIcon.CUT
+    is RevolveFeature -> CadIcon.REVOLVE
     is FilletFeature -> if (kind == EdgeKind.ROUND) CadIcon.ROUND else CadIcon.CHAMFER
     is HoleFeature -> CadIcon.HOLE
     is PlaneFeature -> CadIcon.PLANE
@@ -84,6 +87,7 @@ internal fun planeLabel(s: SketchFeature): String = when {
 internal fun Feature.label(): String = when (this) {
     is SketchFeature -> "$name · ${planeLabel(this)}"
     is ExtrudeFeature -> "$name · ${formatValue(kotlin.math.abs(distance))} mm"
+    is RevolveFeature -> "$name · ${formatValue(kotlin.math.abs(angle))}°"
     is FilletFeature -> "$name · ${formatValue(size)} mm"
     is HoleFeature -> "$name · Ø${formatValue(diameter)}"
     is PlaneFeature -> when (val d = def) {
@@ -167,11 +171,11 @@ private fun FeatureMenu(state: WorkspaceState, f: Feature) {
         )
     }
     if (deleting) {
-        val dependents = if (f is SketchFeature) state.features.count { it is ExtrudeFeature && it.sketch == f.id } else 0
+        val dependents = if (f is SketchFeature) state.features.count { (it is ExtrudeFeature && it.sketch == f.id) || (it is RevolveFeature && it.sketch == f.id) } else 0
         AlertDialog(
             onDismissRequest = { deleting = false },
             title = { Text("„${f.name}“ löschen?") },
-            text = { Text(if (dependents > 0) "Die Skizze und ihre $dependents davon abhängigen Extrusionen werden entfernt." else "Das Feature und alles, was darauf aufbaut, wird entfernt.") },
+            text = { Text(if (dependents > 0) "Die Skizze und die $dependents Körper-Features, die auf ihr aufbauen, werden entfernt." else "Das Feature und alles, was darauf aufbaut, wird entfernt.") },
             confirmButton = { TextButton(onClick = { deleting = false; state.select(f.id); state.deleteSelected() }) { Text("Löschen") } },
             dismissButton = { TextButton(onClick = { deleting = false }) { Text("Abbrechen") } },
         )
@@ -220,6 +224,7 @@ internal fun PlaneDialog(title: String, initial: PlaneSpec, onConfirm: (PlaneSpe
 @Composable
 fun FeatureControls(state: WorkspaceState) {
     val ex = state.extrusion
+    val revolve = state.revolve
     val fillet = state.fillet
     val mode = state.edgeMode
     val holeMode = state.holeMode
@@ -288,14 +293,16 @@ fun FeatureControls(state: WorkspaceState) {
             NumberField(if (fillet.kind == EdgeKind.ROUND) "Radius (mm)" else "Abstand (mm)", fillet.size) { if (it > 0) state.updateFillet(it, fillet.kind) }
             Slider(value = fillet.size.toFloat().coerceIn(0.5f, 20f), onValueChange = { state.updateFillet(Math.round(it * 2) / 2.0, fillet.kind) }, valueRange = 0.5f..20f)
             Text("${fillet.edges.size} ${if (fillet.edges.size == 1) "Kante" else "Kanten"}; zum Ändern der Kanten löschen und neu wählen.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        } else if (revolve != null) {
+            RevolveControls(state, revolve)
         } else if (ex == null) {
             val n = state.regionCount
             Text("Ebene: ${planeLabel(state.sketch)}", style = MaterialTheme.typography.labelLarge)
             Text(
                 when {
                     n == 0 -> "Noch keine geschlossene Fläche – öffne die Skizze und zeichne eine Kontur."
-                    n == 1 -> "1 geschlossene Fläche – bereit für Körper › „Extrudieren“ oder „Abtragen“."
-                    else -> "$n geschlossene Flächen – bereit für Körper › „Extrudieren“ oder „Abtragen“."
+                    n == 1 -> "1 geschlossene Fläche – bereit für Körper › „Extrudieren“, „Abtragen“ oder „Drehen“."
+                    else -> "$n geschlossene Flächen – bereit für Körper › „Extrudieren“, „Abtragen“ oder „Drehen“."
                 },
                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -317,6 +324,40 @@ fun FeatureControls(state: WorkspaceState) {
             OutlinedButton(onClick = state::editSketch, modifier = Modifier.fillMaxWidth()) { Text("Skizze bearbeiten") }
         }
     }
+}
+
+/** Einstellungen der gewählten Drehung: Hinzufügen/Abtragen, Drehachse, Winkel, symmetrisch, Richtung. */
+@Composable
+private fun RevolveControls(state: WorkspaceState, f: RevolveFeature) {
+    val reversed = f.angle < 0
+    val angle = kotlin.math.abs(f.angle)
+    fun withAngle(a: Double) = f.copy(angle = if (reversed) -a else a)
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+        FilterChip(selected = f.op == BodyOp.ADD, onClick = { state.updateRevolve(f.copy(op = BodyOp.ADD)) }, label = { Text("▲ Hinzufügen") })
+        FilterChip(selected = f.op == BodyOp.CUT, onClick = { state.updateRevolve(f.copy(op = BodyOp.CUT)) }, label = { Text("▼ Abtragen") }, enabled = f.op == BodyOp.CUT || state.canCut)
+    }
+    Text("Drehachse", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    val lines = state.revolveAxisOptions(f.sketch)
+    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        FilterChip(selected = f.axis == RevolveAxis.SketchY, onClick = { state.updateRevolve(f.copy(axis = RevolveAxis.SketchY)) }, label = { Text("Senkrecht (y)") })
+        FilterChip(selected = f.axis == RevolveAxis.SketchX, onClick = { state.updateRevolve(f.copy(axis = RevolveAxis.SketchX)) }, label = { Text("Waagrecht (x)") })
+        lines.forEachIndexed { i, a ->
+            FilterChip(selected = f.axis == a, onClick = { state.updateRevolve(f.copy(axis = a)) }, label = { Text("Hilfslinie ${i + 1}") })
+        }
+        // Achse ist eine Linie, die keine Hilfslinie (mehr) ist – trotzdem als gewählt anzeigen
+        if (f.axis is RevolveAxis.Line && f.axis !in lines) FilterChip(selected = true, onClick = {}, label = { Text("Linie") })
+    }
+    NumberField("Winkel (°) – 360 = volle Drehung", angle) { v -> if (v > 0 && v <= 360) state.updateRevolve(withAngle(v)) }
+    Slider(value = angle.toFloat().coerceIn(5f, 360f), onValueChange = { v -> state.updateRevolve(withAngle((Math.round(v / 5) * 5.0).coerceAtLeast(5.0))) }, valueRange = 5f..360f)
+    if (angle < 360) {
+        SwitchRow("Symmetrisch zur Skizzenebene", f.symmetric) { state.updateRevolve(f.copy(symmetric = it)) }
+        SwitchRow("Umgekehrte Richtung", reversed) { state.updateRevolve(f.copy(angle = if (it) -angle else angle)) }
+    }
+    Text(
+        "Die Fläche darf die Achse berühren, aber nicht schneiden. Eine andere Achse: in der Skizze eine Hilfslinie zeichnen.",
+        style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+    OutlinedButton(onClick = state::editSketch, modifier = Modifier.fillMaxWidth()) { Text("Skizze bearbeiten") }
 }
 
 /** Einstellungen der gewählten Arbeitsebene: Art (Abstand / gedreht an Kante), Wert, Drehachse, „Skizze auf dieser Ebene“. */
