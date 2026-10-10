@@ -8,6 +8,7 @@ import dev.androidcad.brep.BrepMesh
 import dev.androidcad.geometry.Mesh
 import dev.androidcad.model.BodyOp
 import dev.androidcad.model.Document
+import dev.androidcad.model.DocumentCodec
 import dev.androidcad.model.EdgeKind
 import dev.androidcad.model.EdgeProjection
 import dev.androidcad.model.MirrorBodyFeature
@@ -289,7 +290,23 @@ class WorkspaceState(private val scope: CoroutineScope, private val session: Mod
     private var job: Job? = null
     private var cameraJob: Job? = null
     private var saveJob: Job? = null
-    private var dirty = false
+
+    /**
+     * Stand der Bearbeitung: [editVersion] zählt jede Änderung, [savedVersion] ist der zuletzt gesicherte Stand. Beide werden nur unter
+     * [saveLock] verglichen und gesichert, damit ein verspäteter Schreibvorgang im Hintergrund nie einen neueren Stand überschreibt.
+     */
+    @Volatile private var editVersion = 0L
+    @Volatile private var savedVersion = 0L
+    private val saveLock = Any()
+    private val dirty: Boolean get() = editVersion != savedVersion
+
+    /** Ein Thread für Neuaufbauten: Ein laufender nativer Aufbau lässt sich nicht abbrechen; neue warten statt parallel zu rechnen. */
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    private val buildDispatcher = Dispatchers.Default.limitedParallelism(1)
+
+    /** Ein Thread für das Schreiben der Modelldatei (Autosave). */
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    private val saveDispatcher = Dispatchers.IO.limitedParallelism(1)
 
     init {
         val restored = session.restoreLast()
@@ -321,32 +338,63 @@ class WorkspaceState(private val scope: CoroutineScope, private val session: Mod
     // ---- Speichern / Projekte ---------------------------------------------------------------------
 
     private fun markDirty() {
-        dirty = true
+        editVersion++
         saveJob?.cancel()
         saveJob = scope.launch {
             delay(AUTOSAVE_DELAY_MS)
-            flush()
+            // Das erste Speichern legt das Modell an (einmalig, ändert den Sitzungszustand) – das bleibt auf dem UI-Thread
+            val id = session.currentId ?: return@launch flush()
+            val version = editVersion
+            val text = DocumentCodec.encode(doc) // auf dem UI-Thread: das Dokument ändert sich nur hier
+            val result = withContext(saveDispatcher) {
+                runCatching {
+                    synchronized(saveLock) {
+                        // inzwischen hat flush() einen neueren Stand gesichert: dieser hier ist veraltet
+                        if (version > savedVersion) {
+                            session.write(id, text)
+                            savedVersion = version
+                        }
+                    }
+                }
+            }
+            result.onFailure { notice = "Speichern fehlgeschlagen: ${it.message}" }
         }
     }
 
-    /** Sichert ausstehende Änderungen sofort (Aufruf aus `onStop`, bevor Android den Prozess beenden darf). */
+    /**
+     * Sichert ausstehende Änderungen sofort und synchron (Aufruf aus `onStop`, bevor Android den Prozess beenden darf, und vor einem
+     * Projektwechsel). Ein gerade laufendes Autosave wird abgewartet.
+     */
     fun flush() {
         saveJob?.cancel()
         if (!dirty) return
         try {
-            session.save(doc)
-            dirty = false
+            synchronized(saveLock) {
+                val version = editVersion
+                session.save(doc)
+                savedVersion = version
+            }
             syncProject()
         } catch (e: Exception) {
             notice = "Speichern fehlgeschlagen: ${e.message}"
         }
     }
 
-    private fun syncProject() {
+    /** Verwirft ausstehende Änderungen als „gesichert“ (anderes Modell geöffnet, Modell gelöscht); ein laufendes Autosave entfällt. */
+    private fun markClean() {
+        saveJob?.cancel()
+        synchronized(saveLock) { savedVersion = editVersion }
+    }
+
+    /** Name und ID des aktuellen Modells; mit [list] auch die Liste aller Modelle (liest jeden Projektordner – nicht bei jedem Speichern). */
+    private fun syncProject(list: Boolean = true) {
         projectName = session.name
         currentProjectId = session.currentId
-        projects = session.list()
+        if (list) projects = session.list()
     }
+
+    /** Liest die Liste aller Modelle neu (z. B. beim Öffnen des Projektmenüs: das Autosave aktualisiert sie nicht). */
+    fun refreshProjects() = syncProject()
 
     /** Übernimmt ein Dokument: das letzte Feature wird gewählt, der Körper wird neu gebaut. */
     private fun adopt(newDoc: Document) {
@@ -432,7 +480,7 @@ class WorkspaceState(private val scope: CoroutineScope, private val session: Mod
         val r = session.open(id)
         r.document?.let { adopt(it) }
         notice = r.notice
-        dirty = false
+        markClean()
         syncProject()
     }
 
@@ -447,13 +495,12 @@ class WorkspaceState(private val scope: CoroutineScope, private val session: Mod
         val r = session.duplicate()
         r.document?.let { adopt(it) }
         notice = r.notice
-        dirty = false
+        markClean()
         syncProject()
     }
 
     fun deleteProject() {
-        saveJob?.cancel()
-        dirty = false
+        markClean()
         session.deleteCurrent()
         adopt(Document())
         notice = null
@@ -1188,7 +1235,7 @@ class WorkspaceState(private val scope: CoroutineScope, private val session: Mod
         job = scope.launch {
             delay(delayMs)
             building = true
-            output = withContext(Dispatchers.Default) {
+            output = withContext(buildDispatcher) {
                 // Fehler einzelner Features sammelt build(); was darüber hinaus scheitert (Tessellierung, Stacküberlauf), darf die App
                 // nicht beenden, sondern wird als Meldung gezeigt
                 try {

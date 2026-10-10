@@ -70,7 +70,7 @@ internal fun ProjectMenu(hub: ProjectHub) {
     val current = entries.firstOrNull { hub.isCurrent(it) }
 
     Box {
-        TextButton(onClick = { open = true }) {
+        TextButton(onClick = { hub.refreshProjects(); open = true }) {
             CadIconView(hub.active.icon(), colors.primary, 20.dp)
             Spacer(Modifier.width(8.dp))
             Text("${hub.currentName} ▾", maxLines = 1, style = MaterialTheme.typography.titleMedium, color = colors.onSurface)

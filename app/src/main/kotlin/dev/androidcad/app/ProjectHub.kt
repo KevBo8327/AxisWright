@@ -92,6 +92,9 @@ class ProjectHub(val workspace: WorkspaceState, val script: CadState, private va
         }
     }
 
+    /** Liest die Projektlisten neu (beim Öffnen des Projektmenüs; das Autosave hält sie nicht laufend aktuell). */
+    fun refreshProjects() = workspace.refreshProjects()
+
     /** Sichert beide Editoren (z. B. in `onStop`). */
     fun flush() {
         workspace.flush()

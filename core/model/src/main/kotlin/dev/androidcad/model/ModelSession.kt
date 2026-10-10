@@ -64,6 +64,14 @@ class ModelSession(private val repo: ModelRepository) {
         }
     }
 
+    /**
+     * Schreibt den schon kodierten Stand [text] in das bereits angelegte Modell [id]. Ändert den Sitzungszustand nicht und darf deshalb
+     * auf einem Hintergrund-Thread laufen (Autosave); das erste Speichern eines neuen Modells geht über [save].
+     */
+    fun write(id: String, text: String) {
+        repo.save(id, text)
+    }
+
     fun rename(newName: String) {
         val clean = newName.trim().ifBlank { return }
         name = clean
