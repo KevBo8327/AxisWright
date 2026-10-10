@@ -22,7 +22,13 @@ import dev.androidcad.sketch.Vec2
  * Extrusionsparametern. Versioniert, damit spätere Features (Bohrung, Verrundung …) alte Dateien nicht entwerten.
  */
 object DocumentCodec {
-    const val FORMAT = "androidcad-model"
+    const val FORMAT = "partwright-model"
+
+    /** Name des Formats vor der Umbenennung der App; solche Dateien bleiben lesbar und werden beim Speichern umgeschrieben. */
+    private const val LEGACY_FORMAT = "androidcad-model"
+
+    /** Sieht [text] wie eine Modelldatei aus (Import: Modell oder OpenSCAD-Skript)? Ob sie gültig ist, prüft erst [decode]. */
+    fun looksLikeModel(text: String): Boolean = text.contains("\"format\"") && (text.contains(FORMAT) || text.contains(LEGACY_FORMAT))
     const val VERSION = 1
 
     fun encode(doc: Document): String = Json.write(toJson(doc), pretty = true)
@@ -47,7 +53,7 @@ object DocumentCodec {
     }
 
     fun fromJson(json: JsonObject): Document {
-        if (json["format"] != FORMAT) throw JsonException("Keine Modelldatei (Feld 'format')")
+        if (json["format"] != FORMAT && json["format"] != LEGACY_FORMAT) throw JsonException("Keine Modelldatei (Feld 'format')")
         val version = json.int("version")
         if (version > VERSION) throw JsonException("Modelldatei stammt aus einer neueren App-Version ($version > $VERSION)")
         val features = json.list("features").map { decodeFeature(it.asObject("Feature")) }
