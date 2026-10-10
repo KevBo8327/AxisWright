@@ -458,6 +458,9 @@ private fun ModelViewport(state: WorkspaceState, modifier: Modifier) {
             MeshViewport(
                 mesh, state.camera, base = cad.model, background = cad.viewportTop, backgroundBottom = cad.viewportBottom,
                 lineColor = cad.modelEdge, highlightColor = cad.selection, sketchColor = cad.sketchInSpace,
+                // Gitter aus Hintergrund und Hilfslinienfarbe gemischt: sichtbar über den ganzen Verlauf, aber zurückhaltend
+                grid = state.grid, gridColor = androidx.compose.ui.graphics.lerp(cad.viewportBottom, cad.construction, 0.3f),
+                gridMajorColor = androidx.compose.ui.graphics.lerp(cad.viewportBottom, cad.construction, 0.55f),
                 edges = out?.edges, highlight = state.highlight, sketchLines = state.sketchOverlay,
                 pickEdges = if ((state.edgeMode != null || state.measureMode != null) && out != null) EdgePickData(out.polylines, out.edgeCounts) else null,
                 onPickEdge = state::pickEdge,
@@ -503,6 +506,7 @@ private fun ViewMenu(state: WorkspaceState, modifier: Modifier) {
         DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
             StdView.entries.forEach { v -> DropdownMenuItem(text = { Text(v.label) }, onClick = { open = false; state.showView(v) }) }
             DropdownMenuItem(text = { Text("Alles einpassen") }, onClick = { open = false; state.fitView() })
+            DropdownMenuItem(text = { Text("Gitter" + if (state.gridOn) "  ✓" else "") }, onClick = { open = false; state.gridOn = !state.gridOn })
         }
     }
 }

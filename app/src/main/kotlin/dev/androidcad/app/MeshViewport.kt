@@ -47,6 +47,8 @@ internal class MeshRenderer : GLSurfaceView.Renderer {
     @Volatile var lineColor = floatArrayOf(0.1f, 0.1f, 0.15f)
     @Volatile var highlightColor = floatArrayOf(1f, 0.55f, 0f)
     @Volatile var sketchColor = floatArrayOf(0.1f, 0.4f, 0.95f)
+    @Volatile var gridColor = floatArrayOf(0.8f, 0.83f, 0.88f)
+    @Volatile var gridMajorColor = floatArrayOf(0.7f, 0.74f, 0.8f)
 
     private class Lines {
         @Volatile var pending: FloatArray? = null
@@ -61,6 +63,9 @@ internal class MeshRenderer : GLSurfaceView.Renderer {
     private val edges = Lines()
     private val highlight = Lines()
     private val sketch = Lines()
+    // Bodengitter: zählt nicht zum Bildausschnitt (sonst zöge es die Einpassung auf)
+    private val grid = Lines()
+    private val gridMajor = Lines()
 
     private var program = 0
     private var gradientProgram = 0
@@ -90,6 +95,9 @@ internal class MeshRenderer : GLSurfaceView.Renderer {
         set(sketch, segments)
     }
 
+    /** Feine und kräftige Linien des Gitters; `null` = kein Gitter. */
+    fun setGrid(g: GridLines?) { set(grid, g?.minor); set(gridMajor, g?.major) }
+
     private fun set(l: Lines, segments: FloatArray?) {
         if (segments === l.pending) return
         l.pending = segments
@@ -100,12 +108,12 @@ internal class MeshRenderer : GLSurfaceView.Renderer {
         GLES30.glEnable(GLES30.GL_DEPTH_TEST)
         program = link(VERTEX, FRAGMENT)
         gradientProgram = link(GRADIENT_VERTEX, GRADIENT_FRAGMENT)
-        val ids = IntArray(5)
-        GLES30.glGenBuffers(5, ids, 0)
-        vbo = ids[0]; ibo = ids[1]; edges.vbo = ids[2]; highlight.vbo = ids[3]; sketch.vbo = ids[4]
+        val ids = IntArray(7)
+        GLES30.glGenBuffers(7, ids, 0)
+        vbo = ids[0]; ibo = ids[1]; edges.vbo = ids[2]; highlight.vbo = ids[3]; sketch.vbo = ids[4]; grid.vbo = ids[5]; gridMajor.vbo = ids[6]
         // Kontext neu erzeugt (z. B. nach Pause): alles erneut hochladen
         hasPendingMesh = pendingMesh != null
-        for (l in listOf(edges, highlight, sketch)) { l.dirty = l.pending != null; l.vertices = 0 }
+        for (l in listOf(edges, highlight, sketch, grid, gridMajor)) { l.dirty = l.pending != null; l.vertices = 0 }
         indexCount = 0
         frameDirty = true
     }
@@ -121,7 +129,7 @@ internal class MeshRenderer : GLSurfaceView.Renderer {
             upload(pendingMesh)
             frameDirty = true
         }
-        for (l in listOf(edges, highlight, sketch)) if (l.dirty) { l.dirty = false; l.vertices = uploadLines(l.vbo, l.pending) }
+        for (l in listOf(edges, highlight, sketch, grid, gridMajor)) if (l.dirty) { l.dirty = false; l.vertices = uploadLines(l.vbo, l.pending) }
         if (frameDirty) {
             frameDirty = false
             frame = SceneFrame.of(meshPositions ?: FloatArray(0), sketch.pending)
@@ -168,6 +176,9 @@ internal class MeshRenderer : GLSurfaceView.Renderer {
             GLES30.glDisable(GLES30.GL_POLYGON_OFFSET_FILL)
             lines(edges, lineColor, 2f)
         }
+        // Gitter nach dem Körper, mit Tiefentest: der Körper verdeckt es
+        lines(grid, gridColor, 1f)
+        lines(gridMajor, gridMajorColor, 1.5f)
         GLES30.glDepthFunc(GLES30.GL_LEQUAL)
         lines(highlight, highlightColor, 6f)
         GLES30.glDepthFunc(GLES30.GL_LESS)
@@ -292,6 +303,7 @@ internal fun MeshViewport(
     mesh: Mesh?, camera: ViewCamera, base: Color, background: Color, modifier: Modifier = Modifier, edges: FloatArray? = null,
     lineColor: Color = Color(0xFF1B1B25), highlight: FloatArray? = null, sketchLines: FloatArray? = null, sketchColor: Color = Color(0xFF1A66F2),
     backgroundBottom: Color = background, highlightColor: Color = Color(0xFFFF8C00),
+    grid: GridLines? = null, gridColor: Color = Color(0xFFD0D6E0), gridMajorColor: Color = Color(0xFFB4BDCC),
     pickEdges: EdgePickData? = null, onPickEdge: ((Int) -> Unit)? = null,
     pickFaces: FacePickData? = null, onPickFace: ((FaceHit?) -> Unit)? = null,
 ) {
@@ -354,6 +366,9 @@ internal fun MeshViewport(
             renderer.setEdges(edges)
             renderer.setHighlight(highlight)
             renderer.setSketchLines(sketchLines)
+            renderer.gridColor = floatArrayOf(gridColor.red, gridColor.green, gridColor.blue)
+            renderer.gridMajorColor = floatArrayOf(gridMajorColor.red, gridMajorColor.green, gridMajorColor.blue)
+            renderer.setGrid(grid)
             v.requestRender()
         },
     )

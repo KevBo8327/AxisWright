@@ -206,6 +206,18 @@ class WorkspaceState(private val scope: CoroutineScope, private val session: Mod
         private set
     /** Blickrichtung des 3D-Viewers; beim Wechsel Skizze → Modell schwenkt sie von der Skizzenebene in die isometrische Ansicht. */
     val camera = ViewCamera()
+    /** Bodengitter der 3D-Ansicht: auf der Ebene der gewählten Skizze, sonst auf XY (siehe [gridLines]); `null` = aus. */
+    var grid by mutableStateOf<GridLines?>(null)
+        private set
+
+    /** Gitter ein/aus (gemerkt in [UiPrefs]). */
+    var gridOn: Boolean
+        get() = prefs.text(GRID_OFF) == null
+        set(on) {
+            if (on) prefs.removeText(GRID_OFF) else prefs.putText(GRID_OFF, "1")
+            refreshOverlay()
+        }
+
     /** Linienpaare der Skizzen im Raum (aktive und noch nicht extrudierte) für die 3D-Ansicht. */
     var sketchOverlay by mutableStateOf<FloatArray?>(null)
         private set
@@ -762,6 +774,10 @@ class WorkspaceState(private val scope: CoroutineScope, private val session: Mod
         // Spiegelebene der gewählten Körperspiegelung (bei einer Arbeitsebene ist deren Rahmen schon da)
         val mirror = mirrorBody?.takeIf { it.datum == null }?.let { listOf(datumFrame(mirrorPlane(it), true)) } ?: emptyList()
         val axis = revolve?.let { revolveAxisLine(it) }?.let(::listOf) ?: emptyList()
+        grid = if (gridOn) gridLines(
+            (features.firstOrNull { it.id == selectedId } as? SketchFeature)?.let { output?.sketchPlanes?.get(it.id) ?: it.plane } ?: Workplane.XY,
+            bodyCenter(), bodyExtent(),
+        ) else null
         val all = parts + planes + mirror + axis
         val total = all.sumOf { it.size }
         sketchOverlay = if (total == 0) null else FloatArray(total).also { out ->
@@ -1611,6 +1627,7 @@ class WorkspaceState(private val scope: CoroutineScope, private val session: Mod
 }
 
 private const val AUTOSAVE_DELAY_MS = 700L
+private const val GRID_OFF = "view.grid.off"
 
 /** Polylinien der Kanten → einzelne Liniensegmente für `GL_LINES`. */
 internal fun BrepMesh.edgeSegments(): FloatArray {

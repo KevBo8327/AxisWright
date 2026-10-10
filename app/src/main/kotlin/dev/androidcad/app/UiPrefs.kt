@@ -48,6 +48,10 @@ class UiPrefs(private val file: File? = null) {
         save()
     }
 
+    fun removeText(key: String) {
+        if (props.remove(key) != null) save()
+    }
+
     private fun save() {
         val f = file ?: return
         try { f.outputStream().use { props.store(it, "Bedienvorlieben") } } catch (_: Exception) { }
