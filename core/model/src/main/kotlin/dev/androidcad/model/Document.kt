@@ -71,7 +71,7 @@ class Document {
             is SketchFeature -> seenSketches += f.id
             is ExtrudeFeature -> require(f.sketch in seenSketches) { "Extrusion „${f.name}“ verweist auf keine vorangehende Skizze" }
             is RevolveFeature -> require(f.sketch in seenSketches) { "Drehung „${f.name}“ verweist auf keine vorangehende Skizze" }
-            is FilletFeature, is HoleFeature, is PatternFeature, is PlaneFeature, is MirrorBodyFeature -> {}
+            is FilletFeature, is HoleFeature, is ShellFeature, is PatternFeature, is PlaneFeature, is MirrorBodyFeature -> {}
         }
         val before = HashSet<FeatureId>()
         for (f in features) {
@@ -89,6 +89,10 @@ class Document {
                     require(before.containsAll(f.references)) { "„${f.name}“ verweist auf ein Feature, das nicht davor liegt" }
                 }
                 is HoleFeature -> require(before.containsAll(f.references)) { "„${f.name}“ verweist auf ein Feature, das nicht davor liegt" }
+                is ShellFeature -> {
+                    require(f.openFaces.isNotEmpty()) { "„${f.name}“ hat keine Öffnung" }
+                    require(before.containsAll(f.references)) { "„${f.name}“ verweist auf ein Feature, das nicht davor liegt" }
+                }
                 is PatternFeature -> {
                     require(f.source in before) { "Muster „${f.name}“ verweist auf ein Feature, das nicht davor liegt" }
                     patternSourceProblem(features.first { it.id == f.source }, features, f.kind)?.let { throw IllegalArgumentException("Muster „${f.name}“: $it") }
@@ -175,6 +179,7 @@ class Document {
             is RevolveFeature -> update(f.copy(name = name))
             is FilletFeature -> update(f.copy(name = name))
             is HoleFeature -> update(f.copy(name = name))
+            is ShellFeature -> update(f.copy(name = name))
             is PatternFeature -> update(f.copy(name = name))
             is PlaneFeature -> update(f.copy(name = name))
             is MirrorBodyFeature -> update(f.copy(name = name))
@@ -298,6 +303,14 @@ class Document {
         return FilletFeature(FeatureId(nextId++), name, edges, size, kind).also { items += it }
     }
 
+    /** Höhlt den Körper aus: [openFaces] werden zu Öffnungen, die Wand ist [thickness] mm stark (siehe [ShellFeature]). */
+    fun addShell(name: String, openFaces: List<FaceRef>, thickness: Double): ShellFeature {
+        require(openFaces.isNotEmpty()) { "Mindestens eine Fläche als Öffnung nötig" }
+        val known = items.map { it.id }.toSet()
+        require(openFaces.all { it.feature in known }) { "Fläche verweist auf ein unbekanntes Feature" }
+        return ShellFeature(FeatureId(nextId++), name, openFaces, thickness).also { items += it }
+    }
+
     /** Bohrung in die Fläche [face]; die Position wird beim Bauen auf die Ebene der Fläche projiziert. [depth] `null` = durchgehend. */
     fun addHole(
         name: String, face: FaceRef, x: Double, y: Double, z: Double, diameter: Double, depth: Double? = null,
@@ -322,6 +335,7 @@ class Document {
                 is RevolveFeature -> if (f.sketch in gone) gone += f.id
                 is FilletFeature -> if (f.references.any { it in gone }) gone += f.id
                 is HoleFeature -> if (f.references.any { it in gone }) gone += f.id
+                is ShellFeature -> if (f.references.any { it in gone }) gone += f.id
                 is PatternFeature -> if (f.source in gone) gone += f.id
                 is PlaneFeature -> if (f.references.any { it in gone }) gone += f.id
                 is MirrorBodyFeature -> if (f.references.any { it in gone }) gone += f.id
@@ -380,6 +394,9 @@ class Document {
                 }
                 is FilletFeature -> attempt(f, errors) {
                     body = applyEdges(body, f)
+                }
+                is ShellFeature -> attempt(f, errors) {
+                    body = applyShell(body, f)
                 }
                 is HoleFeature -> attempt(f, errors) {
                     body = combine(body, holeTool(body, f), BodyOp.CUT)
@@ -695,6 +712,18 @@ class Document {
         }
         return HolePlacement.solve(v(plane.origin), n, line(anchors.first), anchors.first.distance, line(anchors.second), anchors.second.distance)
             ?: throw BrepException("die beiden Referenzkanten der Bohrung sind parallel")
+    }
+
+    /** Findet die Öffnungen über ihre Namen und höhlt den Körper aus. Bei Fehler bleibt [body] unverändert. */
+    private fun applyShell(body: BrepShape?, f: ShellFeature): BrepShape {
+        if (body == null) throw BrepException("es gibt noch keinen Körper")
+        require(f.thickness > 0.0 && f.thickness.isFinite()) { "Wandstärke muss größer als 0 sein" }
+        val ids = f.openFaces.flatMap { ref ->
+            body.facesWithTag(ref.tag).ifEmpty { throw BrepException("eine gewählte Fläche existiert nicht mehr (verändert oder entfernt)") }
+        }.distinct()
+        val result = body.shell(ids, f.thickness) { tag -> faceTag(f.id, FaceRole.SIDE, ShellFeature.innerElement(tag)) }
+        body.close()
+        return result
     }
 
     /** Findet die Kanten über ihre Nachbarflächen und rundet/fast sie. Bei Fehler bleibt [body] unverändert. */

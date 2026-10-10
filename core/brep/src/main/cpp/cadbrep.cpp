@@ -28,6 +28,8 @@
 #include <BRepFilletAPI_MakeChamfer.hxx>
 #include <BRepFilletAPI_MakeFillet.hxx>
 #include <BRepGProp.hxx>
+#include <BRepCheck_Analyzer.hxx>
+#include <BRepOffsetAPI_MakeThickSolid.hxx>
 #include <BRepMesh_IncrementalMesh.hxx>
 #include <BRepPrimAPI_MakePrism.hxx>
 #include <BRepPrimAPI_MakeRevol.hxx>
@@ -442,6 +444,75 @@ JNIEXPORT jlong JNICALL Java_dev_androidcad_brep_NativeBrep_fillet(JNIEnv* env, 
     };
     if (kind == 1) return run(BRepFilletAPI_MakeChamfer(e.shape));
     return run(BRepFilletAPI_MakeFillet(e.shape));
+  });
+}
+
+// Schale: entfernt die Flächen [faceIds] (Öffnungen) und macht den Körper zu einer Wand der Stärke [thickness] nach innen.
+// Flächen, die bleiben, behalten ihre Namen; die Innenfläche, die aus einer Fläche entsteht, heißt nach [innerTags]
+// (Paare: alter Hauptname, neuer Name).
+JNIEXPORT jlong JNICALL Java_dev_androidcad_brep_NativeBrep_shell(JNIEnv* env, jclass, jlong h, jintArray faceIds, jdouble thickness,
+                                                                  jlongArray innerTags) {
+  return guarded(env, [&]() -> jlong {
+    if (!(thickness > 0)) throw std::runtime_error("Wandstärke muss größer als 0 sein");
+    Entry e = getEntry(h);
+    TopTools_IndexedMapOfShape oldFaces = facesOf(e.shape);
+    jsize n = env->GetArrayLength(faceIds);
+    std::vector<jint> ids(static_cast<size_t>(n));
+    if (n > 0) env->GetIntArrayRegion(faceIds, 0, n, ids.data());
+    TopTools_ListOfShape closing;
+    for (jint id : ids) {
+      if (id < 1 || id > oldFaces.Extent()) throw std::runtime_error("Flächen-ID außerhalb des gültigen Bereichs");
+      closing.Append(oldFaces(id));
+    }
+    jsize np = env->GetArrayLength(innerTags);
+    std::vector<jlong> pairs(static_cast<size_t>(np));
+    if (np > 0) env->GetLongArrayRegion(innerTags, 0, np, pairs.data());
+    std::unordered_map<jlong, jlong> inner;
+    for (size_t i = 0; i + 1 < pairs.size(); i += 2) inner[pairs[i]] = pairs[i + 1];
+
+    BRepOffsetAPI_MakeThickSolid mk;
+    // Schnitt statt Bogen an den Kanten: innen entstehen scharfe Ecken wie bei der Außenform
+    mk.MakeThickSolidByJoin(e.shape, closing, -thickness, 1e-4, BRepOffset_Skin, Standard_False, Standard_False, GeomAbs_Intersection);
+    if (!mk.IsDone()) throw std::runtime_error("Schale fehlgeschlagen (Wand zu dick für eine Stelle des Körpers?)");
+    TopoDS_Shape result = mk.Shape();
+    TopTools_IndexedMapOfShape faces = facesOf(result);
+    std::vector<jlong> tags(static_cast<size_t>(faces.Extent()), 0);
+    Aliases aliases(tags.size());
+    for (int i = 1; i <= oldFaces.Extent(); ++i) {
+      jlong tag = e.faceTags[static_cast<size_t>(i - 1)];
+      int kept = faces.FindIndex(oldFaces(i));
+      if (kept > 0) addNames(tags[static_cast<size_t>(kept - 1)], aliases[static_cast<size_t>(kept - 1)], tag, e.faceAliases[static_cast<size_t>(i - 1)]);
+    }
+    // Gültig und kleiner als vorher? Bei zu dicker Wand liefert OCCT sonst ein unbrauchbares Ergebnis, ohne zu scheitern.
+    GProp_GProps before, after;
+    BRepGProp::VolumeProperties(e.shape, before);
+    BRepGProp::VolumeProperties(result, after);
+    if (!BRepCheck_Analyzer(result).IsValid() || !(after.Mass() > 0) || after.Mass() >= before.Mass())
+      throw std::runtime_error("Schale fehlgeschlagen (Wand zu dick für eine Stelle des Körpers?)");
+    // Innenflächen: Modified() meldet sie nicht. Eine Innenfläche liegt im Abstand der Wandstärke vor der Außenfläche, aus der sie
+    // entstand – ihr Mittelpunkt hat zu dieser Fläche den kleinsten Abstand.
+    // shortcut: Zuordnung über den Flächenmittelpunkt, bei sehr verwinkelten Körpern mit dünnen Wänden ggf. falsch; dann über
+    // die Offset-Historie (BRepOffset_MakeOffset) gehen.
+    for (int fi = 1; fi <= faces.Extent(); ++fi) {
+      if (tags[static_cast<size_t>(fi - 1)] != 0) continue;
+      BRepAdaptor_Surface surf(TopoDS::Face(faces(fi)));
+      gp_Pnt mid = surf.Value(0.5 * (surf.FirstUParameter() + surf.LastUParameter()), 0.5 * (surf.FirstVParameter() + surf.LastVParameter()));
+      TopoDS_Vertex v = BRepBuilderAPI_MakeVertex(mid).Vertex();
+      int best = 0;
+      double bestD = 1e300;
+      for (int i = 1; i <= oldFaces.Extent(); ++i) {
+        BRepExtrema_DistShapeShape dist(v, oldFaces(i));
+        if (dist.IsDone() && dist.Value() < bestD) { bestD = dist.Value(); best = i; }
+      }
+      if (best == 0) continue;
+      const bool opened = std::find(ids.begin(), ids.end(), best) != ids.end();
+      // Rand an der Öffnung: liegt in der Ebene der entfernten Fläche und heißt wie sie (Kante außen verrunden …)
+      if (opened && bestD < 1e-6) { tags[static_cast<size_t>(fi - 1)] = e.faceTags[static_cast<size_t>(best - 1)]; continue; }
+      if (std::abs(bestD - thickness) > 1e-4 * std::max(1.0, thickness)) continue;
+      auto it = inner.find(e.faceTags[static_cast<size_t>(best - 1)]);
+      if (it != inner.end()) tags[static_cast<size_t>(fi - 1)] = it->second;
+    }
+    return store(result, std::move(tags), std::move(aliases));
   });
 }
 

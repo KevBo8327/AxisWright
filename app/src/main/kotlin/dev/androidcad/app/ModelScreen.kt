@@ -224,6 +224,7 @@ private fun toolGroups(state: WorkspaceState, onNewSketch: () -> Unit): List<Too
             ToolDef("Extrudieren", CadIcon.EXTRUDE, false, canExtrude) { state.createExtrusion(BodyOp.ADD) },
             ToolDef("Abtragen", CadIcon.CUT, false, canExtrude && state.canCut) { state.createExtrusion(BodyOp.CUT) },
             ToolDef("Drehen", CadIcon.REVOLVE, false, canExtrude) { state.createRevolve() },
+            ToolDef("Schale", CadIcon.SHELL, state.shellMode != null, hasBody) { if (state.shellMode != null) state.cancelShellMode() else state.startShellMode() },
             ToolDef("Bohrung", CadIcon.HOLE, state.holeMode != null, hasBody) { if (state.holeMode != null) state.cancelHoleMode() else state.startHoleMode() },
         )),
         ToolGroup("Kanten", CadIcon.ROUND, listOf(
@@ -349,6 +350,7 @@ private fun SettingsCard(state: WorkspaceState, modifier: Modifier) {
         state.faceSketchPick -> "Skizze auf Fläche" to CadIcon.SKETCH_ON_FACE
         state.planePick -> "Neue Arbeitsebene" to CadIcon.PLANE
         state.holeMode != null -> "Bohrung setzen" to CadIcon.HOLE
+        state.shellMode != null -> "Aushöhlen" to CadIcon.SHELL
         state.edgeMode != null -> if (state.edgeMode?.kind == EdgeKind.ROUND) "Verrunden" to CadIcon.ROUND else "Fase" to CadIcon.CHAMFER
         selected != null -> selected.name to selected.icon()
         else -> "Eigenschaften" to null
@@ -411,7 +413,7 @@ private fun ModelViewport(state: WorkspaceState, modifier: Modifier) {
                 edges = out?.edges, highlight = state.highlight, sketchLines = state.sketchOverlay,
                 pickEdges = if (state.edgeMode != null && out != null) EdgePickData(out.polylines, out.edgeCounts) else null,
                 onPickEdge = state::pickEdge,
-                pickFaces = if ((state.holeMode != null || state.faceSketchPick || state.planePick) && out != null) FacePickData(out.triangleFace) else null,
+                pickFaces = if ((state.holeMode != null || state.shellMode != null || state.faceSketchPick || state.planePick) && out != null) FacePickData(out.triangleFace) else null,
                 onPickFace = state::pickFace,
             )
         }

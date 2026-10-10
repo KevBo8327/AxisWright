@@ -47,6 +47,7 @@ import dev.androidcad.model.EdgeKind
 import dev.androidcad.model.ExtrudeFeature
 import dev.androidcad.model.RevolveAxis
 import dev.androidcad.model.RevolveFeature
+import dev.androidcad.model.ShellFeature
 import dev.androidcad.model.FilletFeature
 import dev.androidcad.model.HoleFeature
 import dev.androidcad.model.MirrorBodyFeature
@@ -66,6 +67,7 @@ internal fun Feature.icon(): CadIcon = when (this) {
     is SketchFeature -> if (onFace != null) CadIcon.SKETCH_ON_FACE else CadIcon.SKETCH
     is ExtrudeFeature -> if (op == BodyOp.ADD) CadIcon.EXTRUDE else CadIcon.CUT
     is RevolveFeature -> CadIcon.REVOLVE
+    is ShellFeature -> CadIcon.SHELL
     is FilletFeature -> if (kind == EdgeKind.ROUND) CadIcon.ROUND else CadIcon.CHAMFER
     is HoleFeature -> CadIcon.HOLE
     is PlaneFeature -> CadIcon.PLANE
@@ -88,6 +90,7 @@ internal fun Feature.label(): String = when (this) {
     is SketchFeature -> "$name · ${planeLabel(this)}"
     is ExtrudeFeature -> "$name · ${formatValue(kotlin.math.abs(distance))} mm"
     is RevolveFeature -> "$name · ${formatValue(kotlin.math.abs(angle))}°"
+    is ShellFeature -> "$name · ${formatValue(thickness)} mm"
     is FilletFeature -> "$name · ${formatValue(size)} mm"
     is HoleFeature -> "$name · Ø${formatValue(diameter)}"
     is PlaneFeature -> when (val d = def) {
@@ -225,6 +228,8 @@ internal fun PlaneDialog(title: String, initial: PlaneSpec, onConfirm: (PlaneSpe
 fun FeatureControls(state: WorkspaceState) {
     val ex = state.extrusion
     val revolve = state.revolve
+    val shellMode = state.shellMode
+    val shell = state.shell
     val fillet = state.fillet
     val mode = state.edgeMode
     val holeMode = state.holeMode
@@ -267,6 +272,24 @@ fun FeatureControls(state: WorkspaceState) {
             )
             Text(
                 if (hole.anchors != null) "Die Bohrung hängt an den beiden hervorgehobenen Kanten und wandert mit ihnen." else "Position und Fläche bleiben fest; zum Verschieben löschen und neu setzen.",
+                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        } else if (shellMode != null) {
+            val n = shellMode.selected.size
+            Text(
+                if (n == 0) "Tippe im 3D-Bild die Flächen an, die offen bleiben sollen (z. B. die Oberseite)." else "$n ${if (n == 1) "Öffnung" else "Öffnungen"} gewählt – erneut tippen hebt die Wahl auf.",
+                style = MaterialTheme.typography.labelLarge,
+            )
+            NumberField("Wandstärke (mm)", state.shellThickness) { if (it > 0) state.shellThickness = it }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(onClick = state::cancelShellMode) { Text("Abbrechen") }
+                Button(onClick = state::applyShellMode, enabled = n > 0, modifier = Modifier.weight(1f)) { Text("Anwenden") }
+            }
+        } else if (shell != null) {
+            NumberField("Wandstärke (mm)", shell.thickness) { if (it > 0) state.updateShell(it) }
+            Slider(value = shell.thickness.toFloat().coerceIn(0.5f, 10f), onValueChange = { state.updateShell(Math.round(it * 2) / 2.0) }, valueRange = 0.5f..10f)
+            Text(
+                "${shell.openFaces.size} ${if (shell.openFaces.size == 1) "Öffnung" else "Öffnungen"} (hervorgehoben); zum Ändern löschen und neu wählen.",
                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         } else if (mode != null) {

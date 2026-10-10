@@ -59,7 +59,8 @@ Entscheidungen: Vertrieb über **Google Play**, **Freemium** (Pro als einmaliger
   Haze 1.6.10 (neuere Versionen verlangen compileSdk 37), über dem 3D-Bild nachgebildete Glas-Optik (OpenGL-Fläche ist für Compose nicht lesbar).
   Vorschau: `docs/design/farbkonzept-*.png` (`scripts/theme-mockup.py`)
 - [ ] **Phase 1 – Umfang 1.0:** ~~**Drehen**~~ ✅ (Revolve, `BRepPrimAPI_MakeRevol`: Achse = Skizzenachse oder Hilfslinie, Teil-/Volldrehung,
-  symmetrisch, Hinzufügen/Abtragen, als Muster-Quelle; Prüfung „Profil schneidet die Achse“) und **Schale/Aushöhlen** (`BRepOffsetAPI_MakeThickSolid`) –
+  symmetrisch, Hinzufügen/Abtragen, als Muster-Quelle; Prüfung „Profil schneidet die Achse“) und ~~**Schale/Aushöhlen**~~ ✅ (`BRepOffsetAPI_MakeThickSolid`: Öffnungen antippen, Wandstärke; Außen-, Innen- und Randflächen
+  benannt, Innenkanten verrundbar) –
   beschlossen am 08.10.2026, Grundwerkzeuge für Wellen/Knöpfe bzw. Gehäuse; **Projekt teilen/importieren** mit Formatversion (vor der Beta);
   STEP-Export (OCCT `STEPControl_Writer`), 3MF-Export, Messen, Parameter-Tabelle (darf notfalls in das erste Update rutschen);
   kleine Lücken (Mittelebene, gedrehte Grundebene, Körperumriss direkt antippbar, zwei Layout-Punkte).

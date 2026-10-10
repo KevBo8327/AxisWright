@@ -80,6 +80,10 @@ object DocumentCodec {
             "regionPoints" to f.regionPoints.map { listOf(it.x, it.y) },
         )
         is HoleFeature -> encodeHole(f)
+        is ShellFeature -> linkedMapOf(
+            "kind" to "shell", "id" to f.id.value, "name" to f.name, "thickness" to f.thickness,
+            "openFaces" to f.openFaces.map(::encodeFace),
+        )
         is PlaneFeature -> linkedMapOf<String, Any?>(
             "kind" to "datum", "id" to f.id.value, "name" to f.name, "plane" to encodePlane(f.plane),
         ).also { m ->
@@ -175,6 +179,11 @@ object DocumentCodec {
                 else -> throw JsonException("Drehung: unbekannte Achse '$type'")
             }
             RevolveFeature(FeatureId(o.int("id")), o.string("name"), FeatureId(o.int("sketch")), axis, angle, op, regionPoints(o), o.bool("symmetric", false))
+        }
+        "shell" -> {
+            val t = o.double("thickness")
+            if (!t.isFinite()) throw JsonException("Schale: Wandstärke ungültig")
+            ShellFeature(FeatureId(o.int("id")), o.string("name"), o.list("openFaces").map(::decodeFace), t)
         }
         "fillet" -> {
             val size = o.double("size")

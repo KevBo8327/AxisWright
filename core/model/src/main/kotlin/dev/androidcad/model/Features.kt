@@ -179,6 +179,29 @@ data class FilletFeature(
     val references: Set<FeatureId> get() = edges.flatMap { listOf(it.a.feature, it.b.feature) }.toSet()
 }
 
+/**
+ * Aushöhlen: entfernt die Flächen [openFaces] (Öffnungen) und lässt vom Körper eine Wand der Stärke [thickness] mm nach innen stehen.
+ *
+ * Flächennamen: Außenflächen behalten ihre Namen, der Rand an einer Öffnung heißt wie die entfernte Fläche; die Innenfläche zu einer
+ * Außenfläche mit Namen `t` heißt `FaceRef(id, SIDE, innerElement(t))` (siehe [ShellFeature.innerElement]).
+ */
+data class ShellFeature(
+    override val id: FeatureId,
+    override val name: String,
+    val openFaces: List<FaceRef>,
+    val thickness: Double,
+) : Feature {
+    val references: Set<FeatureId> get() = openFaces.map { it.feature }.toSet()
+
+    companion object {
+        /**
+         * Element des Namens der Innenfläche zur Außenfläche mit dem Namen [outerTag]: stabil, solange die Außenfläche ihren Namen behält.
+         * shortcut: 40-Bit-Streuwert des 64-Bit-Namens, Kollisionen sind bei Tausenden Flächen praktisch ausgeschlossen, aber nicht unmöglich.
+         */
+        fun innerElement(outerTag: Long): Long = (outerTag * -0x61c8864680b583ebL) ushr 24
+    }
+}
+
 /** Wie ein Feature vervielfältigt wird (siehe [PatternFeature]). */
 sealed interface PatternKind {
     /** Anzahl der Kopien **außer** dem Original. */

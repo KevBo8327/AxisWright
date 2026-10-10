@@ -28,7 +28,7 @@ class DocumentCodecTest {
         for ((x, y) in a.features.zip(b.features)) {
             assertEquals(x.id, y.id); assertEquals(x.name, y.name)
             when (x) {
-                is ExtrudeFeature, is RevolveFeature, is FilletFeature, is HoleFeature, is PatternFeature, is PlaneFeature, is MirrorBodyFeature -> assertEquals(x, y)
+                is ExtrudeFeature, is RevolveFeature, is ShellFeature, is FilletFeature, is HoleFeature, is PatternFeature, is PlaneFeature, is MirrorBodyFeature -> assertEquals(x, y)
                 is SketchFeature -> {
                     y as SketchFeature
                     assertEquals(x.plane.origin, y.plane.origin)

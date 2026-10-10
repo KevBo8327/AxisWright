@@ -11,6 +11,7 @@ internal object NativeBrep {
     @JvmStatic external fun revolve(profile: DoubleArray, axis: DoubleArray, angle: Double, segmentTags: LongArray, startTag: Long, endTag: Long): Long
     @JvmStatic external fun boolean(a: Long, b: Long, op: Int): Long
     @JvmStatic external fun fillet(h: Long, edgeIds: IntArray, edgeTags: LongArray, radius: Double, kind: Int): Long
+    @JvmStatic external fun shell(h: Long, faceIds: IntArray, thickness: Double, innerTags: LongArray): Long
     @JvmStatic external fun translate(h: Long, x: Double, y: Double, z: Double): Long
     @JvmStatic external fun transform(h: Long, m: DoubleArray): Long
     @JvmStatic external fun mirror(h: Long, plane: DoubleArray): Long
@@ -154,6 +155,15 @@ class BrepShape private constructor(private val handle: Long) : AutoCloseable {
             c[1][0] * (c[0][1] * c[2][2] - c[0][2] * c[2][1]) +
             c[2][0] * (c[0][1] * c[1][2] - c[0][2] * c[1][1])
         return det > 0
+    }
+
+    /**
+     * Aushöhlen: entfernt die Flächen [openFaces] (IDs) und lässt eine Wand der Stärke [thickness] mm nach innen stehen. Verbleibende
+     * Flächen behalten ihre Namen; die Innenfläche zu einer Fläche mit Hauptnamen `t` heißt [innerTag]`(t)` (0 = unbenannt).
+     */
+    fun shell(openFaces: Collection<Int>, thickness: Double, innerTag: (Long) -> Long = { 0L }): BrepShape {
+        val pairs = faceTags().filter { it != 0L }.distinct().flatMap { listOf(it, innerTag(it)) }.toLongArray()
+        return wrap { NativeBrep.shell(handle, openFaces.toIntArray(), thickness, pairs) }
     }
 
     infix fun union(other: BrepShape): BrepShape = wrap { NativeBrep.boolean(handle, other.handle, 0) }

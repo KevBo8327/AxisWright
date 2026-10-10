@@ -24,6 +24,7 @@ import dev.androidcad.model.EdgeRef
 import dev.androidcad.model.ExtrudeFeature
 import dev.androidcad.model.RevolveAxis
 import dev.androidcad.model.RevolveFeature
+import dev.androidcad.model.ShellFeature
 import dev.androidcad.model.RevolveGeometry
 import dev.androidcad.model.FaceRef
 import dev.androidcad.model.FilletFeature
@@ -109,6 +110,9 @@ class HoleMode(
     val lines: Pair<HolePlacement.Line, HolePlacement.Line>? = null,
 )
 
+/** Schalenmodus: Der Nutzer tippt die Flächen an, die offen bleiben sollen ([selected]). */
+class ShellMode(val selected: List<FaceRef>)
+
 /** Kantenmodus: Der Nutzer tippt Kanten im 3D-Bild an, um sie zu verrunden oder anzufasen. */
 class EdgeMode(val kind: EdgeKind, val selected: List<EdgeRef>)
 
@@ -176,6 +180,13 @@ class WorkspaceState(private val scope: CoroutineScope, private val session: Mod
     /** Die gewählte Drehung (`null`, wenn ein anderes Feature gewählt ist). */
     var revolve by mutableStateOf<RevolveFeature?>(null)
         private set
+    /** Die gewählte Schale (`null`, wenn ein anderes Feature gewählt ist). */
+    var shell by mutableStateOf<ShellFeature?>(null)
+        private set
+    /** Aktiver Schalenmodus (`null` = aus) und die eingestellte Wandstärke (mm). */
+    var shellMode by mutableStateOf<ShellMode?>(null)
+        private set
+    var shellThickness by mutableStateOf(2.0)
     /** Die gewählte Verrundung/Fase (`null`, wenn ein anderes Feature gewählt ist). */
     var fillet by mutableStateOf<FilletFeature?>(null)
         private set
@@ -419,6 +430,7 @@ class WorkspaceState(private val scope: CoroutineScope, private val session: Mod
         val sel = selectedId?.let { id -> features.firstOrNull { it.id == id } }
         extrusion = sel as? ExtrudeFeature
         revolve = sel as? RevolveFeature
+        shell = sel as? ShellFeature
         fillet = sel as? FilletFeature
         hole = sel as? HoleFeature
         pattern = sel as? PatternFeature
@@ -428,7 +440,7 @@ class WorkspaceState(private val scope: CoroutineScope, private val session: Mod
             is SketchFeature -> sel
             is ExtrudeFeature -> doc.sketch(sel.sketch)
             is RevolveFeature -> doc.sketch(sel.sketch)
-            is FilletFeature, is HoleFeature, is PatternFeature, is PlaneFeature, is MirrorBodyFeature, null -> activeSketch
+            is FilletFeature, is HoleFeature, is ShellFeature, is PatternFeature, is PlaneFeature, is MirrorBodyFeature, null -> activeSketch
         }
         refreshOverlay()
         refreshHighlight()
@@ -437,12 +449,13 @@ class WorkspaceState(private val scope: CoroutineScope, private val session: Mod
 
     /** Ob die Einstellungskarte gebraucht wird: ein Feature ist gewählt oder ein Werkzeug läuft. */
     val panelVisible: Boolean
-        get() = selectedId != null || edgeMode != null || holeMode != null || planePick || faceSketchPick
+        get() = selectedId != null || edgeMode != null || holeMode != null || shellMode != null || planePick || faceSketchPick
 
     /** Schließt die Einstellungskarte: bricht ein laufendes Werkzeug ab, sonst hebt es die Auswahl auf. */
     fun closePanel() {
         when {
             edgeMode != null -> cancelEdgeMode()
+            shellMode != null -> cancelShellMode()
             holeMode != null -> cancelHoleMode()
             planePick -> cancelPlanePick()
             faceSketchPick -> cancelFaceSketchPick()
@@ -454,6 +467,7 @@ class WorkspaceState(private val scope: CoroutineScope, private val session: Mod
         selectedId = id
         edgeMode = null
         holeMode = null
+        shellMode = null
         faceSketchPick = false
         planePick = false
         refreshHighlight()
@@ -464,7 +478,7 @@ class WorkspaceState(private val scope: CoroutineScope, private val session: Mod
             is SketchFeature -> sel
             // Verrundungen haben keine eigene Skizze: die bisher aktive behalten – sofern sie zum Dokument gehört (nach dem Laden
             // ist es noch der Platzhalter), sonst die letzte Skizze des Dokuments
-            is FilletFeature, is HoleFeature, is PatternFeature, is PlaneFeature, is MirrorBodyFeature -> {
+            is FilletFeature, is HoleFeature, is ShellFeature, is PatternFeature, is PlaneFeature, is MirrorBodyFeature -> {
                 val sketches = doc.features.filterIsInstance<SketchFeature>()
                 sketches.firstOrNull { it.sketch === activeSketch.sketch } ?: sketches.last()
             }
@@ -708,6 +722,7 @@ class WorkspaceState(private val scope: CoroutineScope, private val session: Mod
         planePick = false
         holeMode = null
         faceSketchPick = false
+        shellMode = null
         edgeMode = EdgeMode(kind, emptyList())
         refreshHighlight()
     }
@@ -887,6 +902,7 @@ class WorkspaceState(private val scope: CoroutineScope, private val session: Mod
         edgeMode = null
         holeMode = null
         faceSketchPick = false
+        shellMode = null
         planePick = true
         refreshHighlight()
     }
@@ -944,6 +960,7 @@ class WorkspaceState(private val scope: CoroutineScope, private val session: Mod
         planePick = false
         edgeMode = null
         holeMode = null
+        shellMode = null
         faceSketchPick = true
         refreshHighlight()
     }
@@ -1049,6 +1066,7 @@ class WorkspaceState(private val scope: CoroutineScope, private val session: Mod
         planePick = false
         edgeMode = null
         faceSketchPick = false
+        shellMode = null
         holeMode = HoleMode(null, null, null)
         refreshHighlight()
     }
@@ -1058,11 +1076,56 @@ class WorkspaceState(private val scope: CoroutineScope, private val session: Mod
         refreshHighlight()
     }
 
-    /** Verarbeitet einen Tipp im 3D-Bild im Bohrungsmodus: setzt Fläche und Position der Bohrung. */
+    // ---- Schale --------------------------------------------------------------------------------------
+
+    /** Schaltet den Schalenmodus ein: die Flächen antippen, die offen bleiben sollen, dann „Anwenden“. */
+    fun startShellMode() {
+        if (output?.mesh == null) return
+        planePick = false
+        edgeMode = null
+        holeMode = null
+        faceSketchPick = false
+        selectedId = null // die Schale wirkt auf den ganzen Körper; sonst zeigte die Karte das gewählte Feature
+        shellMode = ShellMode(emptyList())
+        refresh()
+    }
+
+    fun cancelShellMode() {
+        shellMode = null
+        refreshHighlight()
+    }
+
+    /** Legt die Schale mit den gewählten Öffnungen und [shellThickness] an und wählt sie. */
+    fun applyShellMode() {
+        val mode = shellMode ?: return
+        if (mode.selected.isEmpty()) return
+        val f = doc.addShell(nextName("Schale"), mode.selected, shellThickness)
+        select(f.id) // beendet den Schalenmodus
+        markDirty()
+        scheduleBuild(0)
+    }
+
+    fun updateShell(thickness: Double) {
+        val f = shell ?: return
+        if (!(thickness > 0) || !thickness.isFinite()) return
+        doc.update(f.copy(thickness = thickness))
+        refresh()
+        markDirty()
+        scheduleBuild()
+    }
+
+    /** Verarbeitet einen Tipp im 3D-Bild in den Flächenmodi (Bohrung, Skizze/Ebene auf Fläche, Schale). */
     fun pickFace(hit: FaceHit?) {
-        if ((holeMode == null && !faceSketchPick && !planePick) || hit == null) return
+        if ((holeMode == null && !faceSketchPick && !planePick && shellMode == null) || hit == null) return
         val out = output ?: return
         val ref = out.faceRefs.getOrNull(hit.faceId - 1)
+        shellMode?.let { mode ->
+            // Öffnungen dürfen auch gekrümmt sein; erneut tippen hebt die Wahl auf
+            if (ref == null) { notice = "Diese Fläche hat noch keinen Namen und lässt sich nicht referenzieren."; return }
+            shellMode = ShellMode(if (ref in mode.selected) mode.selected - ref else mode.selected + ref)
+            refreshHighlight()
+            return
+        }
         val plane = out.facePlanes.getOrNull(hit.faceId - 1)
         if (plane == null) {
             notice = "Das geht nur mit ebenen Flächen."
@@ -1160,10 +1223,13 @@ class WorkspaceState(private val scope: CoroutineScope, private val session: Mod
         // gewählte Kanten (Kantenmodus) und die Referenzkanten der Bohrung (Bohrungsmodus bzw. gewählte Bohrung)
         val selected = edgeMode?.selected.orEmpty() + (holeMode?.anchors ?: hole?.anchors)?.toList().orEmpty().map { it.edge } +
             listOfNotNull((datum?.def as? PlaneDef.AtEdge)?.edge)
-        if (out != null && !selected.isNullOrEmpty()) {
+        // Öffnungen der Schale (Modus bzw. gewählte Schale): ihre Randkanten
+        val openFaces = (shellMode?.selected ?: shell?.openFaces).orEmpty()
+        if (out != null && (selected.isNotEmpty() || openFaces.isNotEmpty())) {
             var offset = 0
             for ((i, n) in out.edgeCounts.withIndex()) {
-                if (out.edgeRefs.getOrNull(i) in selected) {
+                val r = out.edgeRefs.getOrNull(i)
+                if (r in selected || (r != null && (r.a in openFaces || r.b in openFaces))) {
                     for (k in 0 until n - 1) {
                         val a = 3 * (offset + k); val b = 3 * (offset + k + 1)
                         for (d in 0..2) segs += out.polylines[a + d]
