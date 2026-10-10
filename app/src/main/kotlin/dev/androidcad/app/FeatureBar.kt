@@ -48,6 +48,7 @@ import dev.androidcad.model.ExtrudeFeature
 import dev.androidcad.model.RevolveAxis
 import dev.androidcad.model.RevolveFeature
 import dev.androidcad.model.ShellFeature
+import dev.androidcad.model.ValueRef
 import dev.androidcad.model.FilletFeature
 import dev.androidcad.model.HoleFeature
 import dev.androidcad.model.MirrorBodyFeature
@@ -294,8 +295,8 @@ fun FeatureControls(state: WorkspaceState) {
                 Button(onClick = state::applyShellMode, enabled = n > 0, modifier = Modifier.weight(1f)) { Text("Anwenden") }
             }
         } else if (shell != null) {
-            NumberField("Wandstärke (mm)", shell.thickness) { if (it > 0) state.updateShell(it) }
-            Slider(value = shell.thickness.toFloat().coerceIn(0.5f, 10f), onValueChange = { state.updateShell(Math.round(it * 2) / 2.0) }, valueRange = 0.5f..10f)
+            val bound = ExprField(state, "Wandstärke (mm)", shell.thickness, ValueRef.FeatureValue(shell.id)) { if (it > 0) state.updateShell(it) }
+            if (!bound) Slider(value = shell.thickness.toFloat().coerceIn(0.5f, 10f), onValueChange = { state.updateShell(Math.round(it * 2) / 2.0) }, valueRange = 0.5f..10f)
             Text(
                 "${shell.openFaces.size} ${if (shell.openFaces.size == 1) "Öffnung" else "Öffnungen"} (hervorgehoben); zum Ändern löschen und neu wählen.",
                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -321,8 +322,8 @@ fun FeatureControls(state: WorkspaceState) {
                 FilterChip(selected = fillet.kind == EdgeKind.ROUND, onClick = { state.updateFillet(fillet.size, EdgeKind.ROUND) }, label = { Text("◜ Verrundung") })
                 FilterChip(selected = fillet.kind == EdgeKind.CHAMFER, onClick = { state.updateFillet(fillet.size, EdgeKind.CHAMFER) }, label = { Text("◸ Fase") })
             }
-            NumberField(if (fillet.kind == EdgeKind.ROUND) "Radius (mm)" else "Abstand (mm)", fillet.size) { if (it > 0) state.updateFillet(it, fillet.kind) }
-            Slider(value = fillet.size.toFloat().coerceIn(0.5f, 20f), onValueChange = { state.updateFillet(Math.round(it * 2) / 2.0, fillet.kind) }, valueRange = 0.5f..20f)
+            val bound = ExprField(state, if (fillet.kind == EdgeKind.ROUND) "Radius (mm)" else "Abstand (mm)", fillet.size, ValueRef.FeatureValue(fillet.id)) { if (it > 0) state.updateFillet(it, fillet.kind) }
+            if (!bound) Slider(value = fillet.size.toFloat().coerceIn(0.5f, 20f), onValueChange = { state.updateFillet(Math.round(it * 2) / 2.0, fillet.kind) }, valueRange = 0.5f..20f)
             Text("${fillet.edges.size} ${if (fillet.edges.size == 1) "Kante" else "Kanten"}; zum Ändern der Kanten löschen und neu wählen.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         } else if (revolve != null) {
             RevolveControls(state, revolve)
@@ -345,8 +346,8 @@ fun FeatureControls(state: WorkspaceState) {
                 FilterChip(selected = ex.op == BodyOp.ADD, onClick = { state.updateExtrusion(ex.distance, ex.symmetric, BodyOp.ADD) }, label = { Text("▲ Hinzufügen") })
                 FilterChip(selected = ex.op == BodyOp.CUT, onClick = { state.updateExtrusion(ex.distance, ex.symmetric, BodyOp.CUT) }, label = { Text("▼ Abtragen") })
             }
-            NumberField("Länge (mm)", length) { v -> if (v > 0) state.updateExtrusion(if (reversed) -v else v, ex.symmetric) }
-            Slider(value = length.toFloat().coerceIn(1f, 100f), onValueChange = { v ->
+            val bound = ExprField(state, "Länge (mm)", length, ValueRef.FeatureValue(ex.id)) { v -> if (v > 0) state.updateExtrusion(if (reversed) -v else v, ex.symmetric) }
+            if (!bound) Slider(value = length.toFloat().coerceIn(1f, 100f), onValueChange = { v ->
                 val d = Math.round(v).toDouble().coerceAtLeast(1.0)
                 state.updateExtrusion(if (reversed) -d else d, ex.symmetric)
             }, valueRange = 1f..100f)
@@ -378,8 +379,8 @@ private fun RevolveControls(state: WorkspaceState, f: RevolveFeature) {
         // Achse ist eine Linie, die keine Hilfslinie (mehr) ist – trotzdem als gewählt anzeigen
         if (f.axis is RevolveAxis.Line && f.axis !in lines) FilterChip(selected = true, onClick = {}, label = { Text("Linie") })
     }
-    NumberField("Winkel (°) – 360 = volle Drehung", angle) { v -> if (v > 0 && v <= 360) state.updateRevolve(withAngle(v)) }
-    Slider(value = angle.toFloat().coerceIn(5f, 360f), onValueChange = { v -> state.updateRevolve(withAngle((Math.round(v / 5) * 5.0).coerceAtLeast(5.0))) }, valueRange = 5f..360f)
+    val bound = ExprField(state, "Winkel (°) – 360 = volle Drehung", angle, ValueRef.FeatureValue(f.id)) { v -> if (v > 0 && v <= 360) state.updateRevolve(withAngle(v)) }
+    if (!bound) Slider(value = angle.toFloat().coerceIn(5f, 360f), onValueChange = { v -> state.updateRevolve(withAngle((Math.round(v / 5) * 5.0).coerceAtLeast(5.0))) }, valueRange = 5f..360f)
     if (angle < 360) {
         SwitchRow("Symmetrisch zur Skizzenebene", f.symmetric) { state.updateRevolve(f.copy(symmetric = it)) }
         SwitchRow("Umgekehrte Richtung", reversed) { state.updateRevolve(f.copy(angle = if (it) -angle else angle)) }
@@ -561,6 +562,85 @@ private fun NumberField(label: String, value: Double, modifier: Modifier = Modif
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
         isError = parsed == null, label = { Text(label) },
     )
+}
+
+/**
+ * Wie [NumberField], nimmt aber auch Ausdrücke der Parameter-Tabelle an (z. B. `wand * 2`): eine Zahl macht den Wert fest, ein
+ * Ausdruck bindet ihn an [ref]. Liefert, ob der Wert gerade aus einem Ausdruck kommt (dann ist ein Schieberegler fehl am Platz).
+ */
+@Composable
+private fun ExprField(state: WorkspaceState, label: String, value: Double, ref: ValueRef, onValue: (Double) -> Unit): Boolean {
+    val expr = state.bindings[ref]
+    var text by remember(ref) { mutableStateOf(expr ?: formatValue(value)) }
+    // Wert von außen geändert (Schieberegler, Neuaufbau)? Anzeige angleichen – außer bei einem Ausdruck, der bleibt stehen
+    LaunchedEffect(value, expr) { if (expr == null && text.replace(',', '.').toDoubleOrNull() != value) text = formatValue(value) }
+    val number = text.replace(',', '.').toDoubleOrNull()?.takeIf { it.isFinite() }
+    val evaluated = number ?: state.evaluate(text)
+    OutlinedTextField(
+        value = text,
+        onValueChange = {
+            text = it
+            val n = it.replace(',', '.').toDoubleOrNull()?.takeIf { v -> v.isFinite() }
+            when {
+                n != null -> { state.setBinding(ref, null); onValue(n) }
+                state.evaluate(it) != null -> state.setBinding(ref, it)
+            }
+        },
+        singleLine = true, modifier = Modifier.fillMaxWidth(),
+        isError = evaluated == null, label = { Text(label) },
+        supportingText = if (number == null && evaluated != null) ({ Text("= ${formatValue(evaluated)} (folgt den Parametern)") }) else null,
+    )
+    return expr != null
+}
+
+/** Parameter-Tabelle: Name = Ausdruck, darunter der Wert; spätere Parameter dürfen frühere verwenden. */
+@Composable
+fun ParameterTable(state: WorkspaceState) {
+    val list = state.parameters
+    Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        if (list.isEmpty()) Text(
+            "Noch keine Parameter. Lege z. B. „wand = 2“ an und schreibe dann in ein Maß oder eine Länge „wand * 3“ – " +
+                "ändert sich der Parameter, folgt das Modell.",
+            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        list.forEachIndexed { i, p ->
+            androidx.compose.runtime.key(i) {
+                ParameterRow(state, p, state.parameterValues[p.name], onChange = { q -> state.updateParameters(list.toMutableList().also { it[i] = q }) }) {
+                    state.updateParameters(list.filterIndexed { k, _ -> k != i })
+                }
+            }
+        }
+        OutlinedButton(onClick = {
+            var n = list.size + 1
+            while (list.any { it.name == "p$n" }) n++
+            state.updateParameters(list + dev.androidcad.model.Parameter("p$n", "10"))
+        }, modifier = Modifier.fillMaxWidth()) { Text("+ Parameter") }
+        val used = state.bindings.size
+        if (used > 0) Text("$used ${if (used == 1) "Wert folgt" else "Werte folgen"} den Parametern.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}
+
+@Composable
+private fun ParameterRow(state: WorkspaceState, p: dev.androidcad.model.Parameter, value: Double?, onChange: (dev.androidcad.model.Parameter) -> Unit, onDelete: () -> Unit) {
+    // Der Name wird erst übernommen, wenn er gültig ist; das Feld behält dazwischen seinen eigenen Stand (Zwischenstände wie „“).
+    // Von außen geändert (Zeile darüber gelöscht): angleichen, aber nie mitten in eine ungültige Eingabe hinein.
+    var name by remember { mutableStateOf(p.name) }
+    var expr by remember { mutableStateOf(p.expression) }
+    LaunchedEffect(p.name) { if (p.name != name && dev.androidcad.model.Parameter.nameProblem(name) == null) name = p.name }
+    LaunchedEffect(p.expression) { if (p.expression != expr) expr = p.expression }
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+        OutlinedTextField(
+            value = name, onValueChange = { name = it; if (dev.androidcad.model.Parameter.nameProblem(it) == null && state.parameters.none { o -> o !== p && o.name == it }) onChange(p.copy(name = it)) },
+            singleLine = true, modifier = Modifier.weight(1f), label = { Text("Name") },
+            isError = dev.androidcad.model.Parameter.nameProblem(name) != null,
+        )
+        OutlinedTextField(
+            value = expr, onValueChange = { expr = it; onChange(p.copy(expression = it)) },
+            singleLine = true, modifier = Modifier.weight(1.4f), label = { Text("= Ausdruck") },
+            isError = value == null, supportingText = { Text(value?.let { formatValue(it) } ?: "ungültig") },
+        )
+        TextButton(onClick = onDelete) { Text("✕") }
+    }
 }
 
 /** Abstände einer Bohrung zu ihren beiden Referenzkanten (mm); nichts, wenn die Position ein fester Punkt ist. */

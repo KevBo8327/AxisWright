@@ -104,12 +104,13 @@ internal fun ModelScreen(hub: ProjectHub) {
                             }
                         }
                         val sheet = Modifier.fillMaxWidth().heightIn(max = areaHeight * 0.5f).padding(horizontal = 6.dp, vertical = 4.dp)
-                        if (state.prefs.historyOpen) HistoryCard(state, sheet) else if (state.panelVisible) SettingsCard(state, sheet)
+                        if (state.parametersOpen) ParameterCard(state, sheet)
+                        else if (state.prefs.historyOpen) HistoryCard(state, sheet) else if (state.panelVisible) SettingsCard(state, sheet)
                     }
                 } else {
                     // das Modell zentriert sich im freien Bereich neben der Werkzeugleiste und den offenen Karten
                     val cad = CadTheme.colors
-                    val left = if (state.prefs.historyOpen) 372.dp else 76.dp
+                    val left = if (state.prefs.historyOpen || state.parametersOpen) 372.dp else 76.dp
                     val right = if (state.panelVisible) CARD_WIDTH + 16.dp else 0.dp
                     Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(cad.viewportTop, cad.viewportBottom)))) {
                         ModelViewport(state, Modifier.fillMaxSize().padding(start = left, end = right))
@@ -119,9 +120,10 @@ internal fun ModelScreen(hub: ProjectHub) {
                         Box(Modifier.weight(1f).fillMaxWidth().padding(8.dp)) {
                             StepChip(state, Modifier.align(Alignment.TopStart).padding(start = 76.dp))
                             ViewMenu(state, Modifier.align(Alignment.BottomEnd))
-                            if (state.prefs.historyOpen) {
-                                HistoryCard(state, Modifier.align(Alignment.TopStart).padding(start = 76.dp, top = 48.dp).width(280.dp).heightIn(max = areaHeight - 72.dp))
-                            }
+                            // links: Parameter-Tabelle oder Modellaufbau (die Tabelle hat Vorrang)
+                            val leftCard = Modifier.align(Alignment.TopStart).padding(start = 76.dp, top = 48.dp).width(280.dp).heightIn(max = areaHeight - 72.dp)
+                            if (state.parametersOpen) ParameterCard(state, leftCard)
+                            else if (state.prefs.historyOpen) HistoryCard(state, leftCard)
                             if (state.panelVisible) SettingsCard(state, Modifier.align(Alignment.TopEnd).width(CARD_WIDTH).heightIn(max = areaHeight - 80.dp))
                             // zuletzt: die aufgeklappte Werkzeugleiste liegt über allen Karten
                             GroupBar(toolGroups(state) { newSketch = true }, vertical = true, openGroup, { openGroup = it }, Modifier.align(Alignment.TopStart))
@@ -185,6 +187,7 @@ private fun ModelTopBar(hub: ProjectHub, compact: Boolean) {
                 style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
+        TextButton(onClick = { state.parametersOpen = !state.parametersOpen }) { Text(if (state.parametersOpen) "Parameter ✕" else "Parameter") }
         TextButton(onClick = { state.prefs.historyOpen = !state.prefs.historyOpen }) {
             Text(if (state.prefs.historyOpen) "Verlauf ✕" else "Verlauf")
         }
@@ -354,6 +357,14 @@ private fun StepChip(state: WorkspaceState, modifier: Modifier) {
 private fun HistoryCard(state: WorkspaceState, modifier: Modifier) {
     FloatingCard(modifier, title = "Modellaufbau · ${state.features.size} Schritte", icon = null, onClose = { state.prefs.historyOpen = false }) {
         FeatureList(state)
+    }
+}
+
+/** Die Parameter-Tabelle als Karte (nur auf Wunsch). */
+@Composable
+private fun ParameterCard(state: WorkspaceState, modifier: Modifier) {
+    FloatingCard(modifier, title = "Parameter · ${state.parameters.size}", icon = null, onClose = { state.parametersOpen = false }) {
+        ParameterTable(state)
     }
 }
 

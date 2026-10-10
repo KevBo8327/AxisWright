@@ -63,7 +63,7 @@ Entscheidungen: Vertrieb über **Google Play**, **Freemium** (Pro als einmaliger
   benannt, Innenkanten verrundbar) –
   beschlossen am 08.10.2026, Grundwerkzeuge für Wellen/Knöpfe bzw. Gehäuse; ~~**Projekt teilen/importieren**~~ ✅ (⋮ › Projekt exportieren als `.partwright.json`; Projektmenü › Projekt importieren erkennt
   Modell oder `.scad`; Formatversion wird geprüft, Dateien neuerer App-Versionen werden abgelehnt) (vor der Beta);
-  STEP-Export (OCCT `STEPControl_Writer`), ~~3MF-Export~~ ✅ (⋮ › 3MF exportieren, Modell und Skript; geschlossenes Netz in mm), ~~Messen~~ ✅ (Länge/Radius, Flächeninhalt, kürzester Abstand mit Linie, Winkel), Parameter-Tabelle (darf notfalls in das erste Update rutschen);
+  STEP-Export (OCCT `STEPControl_Writer`), ~~3MF-Export~~ ✅ (⋮ › 3MF exportieren, Modell und Skript; geschlossenes Netz in mm), ~~Messen~~ ✅ (Länge/Radius, Flächeninhalt, kürzester Abstand mit Linie, Winkel), ~~Parameter-Tabelle~~ ✅ (benannte Parameter mit Ausdrücken; Skizzenmaße, Extrusionslänge, Drehwinkel, Wandstärke, Verrundung binden);
   kleine Lücken (Mittelebene, gedrehte Grundebene, Körperumriss direkt antippbar, zwei Layout-Punkte).
   Nach 1.0: Sweep/Loft, Schnittansicht, Ellipse/Spline, Baugruppen
 - [ ] **Phase 2 – Qualität:** verständliche Fehler statt Abbruch, Autosave/Wiederherstellen, Grenzen bei großen Modellen,

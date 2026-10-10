@@ -48,6 +48,54 @@ class Document {
 
     val features: List<Feature> get() = items.toList()
 
+    /** Parameter-Tabelle (Reihenfolge zählt: ein Ausdruck darf frühere Parameter verwenden). */
+    var parameters: List<Parameter> = emptyList()
+        private set
+
+    /** Welche Werte aus Ausdrücken kommen (Ausdruck je Wert); [applyParameters] überträgt sie. */
+    var bindings: Map<ValueRef, String> = emptyMap()
+        private set
+
+    /** Ersetzt die Parameter-Tabelle; ungültige oder doppelte Namen werfen [IllegalArgumentException]. */
+    fun setParameters(list: List<Parameter>) {
+        list.forEach { p -> Parameter.nameProblem(p.name)?.let { throw IllegalArgumentException(it) } }
+        require(list.map { it.name }.toSet().size == list.size) { "Parameternamen müssen eindeutig sein" }
+        parameters = list
+    }
+
+    /** Lässt den Wert [ref] aus [expression] kommen (`null` = wieder fester Wert). Wirkt mit dem nächsten [applyParameters]. */
+    fun bind(ref: ValueRef, expression: String?) {
+        bindings = if (expression.isNullOrBlank()) bindings - ref else bindings + (ref to expression.trim())
+    }
+
+    /** Werte der Parameter (für die Anzeige und das Prüfen eines neuen Ausdrucks). */
+    fun parameterValues(): ParameterResult = evaluateParameters(parameters)
+
+    /**
+     * Rechnet die Parameter aus und überträgt jeden gebundenen Ausdruck in seinen Wert (Skizzenmaß bzw. Feature). Bindungen an Maße
+     * oder Features, die es nicht mehr gibt, fallen weg. Fehlerhafte Ausdrücke lassen den bisherigen Wert stehen und werden gemeldet.
+     */
+    fun applyParameters(): ParameterResult {
+        val result = evaluateParameters(parameters)
+        val errors = ArrayList(result.errors)
+        val live = LinkedHashMap<ValueRef, String>()
+        for ((ref, expr) in bindings) {
+            val exists = when (ref) {
+                is ValueRef.Dim -> (items.firstOrNull { it.id == ref.sketch } as? SketchFeature)?.sketch?.constraintEntries?.any { it.id == ref.constraint } == true
+                is ValueRef.FeatureValue -> items.any { it.id == ref.feature }
+            }
+            if (!exists) continue
+            live[ref] = expr
+            try {
+                applyValue(ref, dev.androidcad.lang.CadLang.evalNumber(expr, result.values))?.let { errors += "„$expr“: $it" }
+            } catch (e: dev.androidcad.lang.CadLangException) {
+                errors += "Ausdruck ${e.message}"
+            }
+        }
+        bindings = live
+        return ParameterResult(result.values, errors)
+    }
+
     /**
      * Unabhängige Kopie (Skizzen werden kopiert, IDs bleiben gleich). Damit kann [build] auf einem Hintergrund-Thread
      * laufen, während das Original weiter bearbeitet wird.
@@ -55,6 +103,8 @@ class Document {
     fun snapshot(): Document {
         val copy = Document()
         copy.nextId = nextId
+        copy.parameters = parameters
+        copy.bindings = bindings
         copy.items.addAll(items.map { if (it is SketchFeature) it.copy(sketch = it.sketch.copy()) else it })
         return copy
     }
@@ -62,7 +112,7 @@ class Document {
     internal val nextIdValue: Int get() = nextId
 
     /** Ersetzt den Inhalt (Laden aus einer Datei); prüft die Konsistenz, bei Fehler bleibt das Dokument unverändert. */
-    internal fun load(nextId: Int, features: List<Feature>) {
+    internal fun load(nextId: Int, features: List<Feature>, parameters: List<Parameter> = emptyList(), bindings: Map<ValueRef, String> = emptyMap()) {
         val ids = features.map { it.id.value }
         require(ids.size == ids.toSet().size) { "Feature-IDs sind nicht eindeutig" }
         require(ids.all { it >= 1 && it < nextId }) { "Feature-ID außerhalb des gültigen Bereichs" }
@@ -106,9 +156,11 @@ class Document {
             }
             before += f.id
         }
+        setParameters(parameters)
         this.nextId = nextId
         items.clear()
         items.addAll(features)
+        this.bindings = bindings
     }
 
     fun addSketch(name: String, plane: Workplane = Workplane.XY, sketch: Sketch = Sketch()): SketchFeature =
@@ -343,6 +395,7 @@ class Document {
             }
         } while (gone.size != before)
         items.removeAll { it.id in gone }
+        bindings = bindings.filterKeys { r -> (if (r is ValueRef.Dim) r.sketch else (r as ValueRef.FeatureValue).feature) !in gone }
         // Projizierte Kanten entfernter Features: die Skizze bleibt, die Elemente darin bleiben als feste Konstruktionsgeometrie
         for (f in items.filterIsInstance<SketchFeature>()) {
             val kept = f.projections.filter { it.edge.a.feature !in gone && it.edge.b.feature !in gone }

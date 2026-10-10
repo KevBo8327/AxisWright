@@ -27,6 +27,8 @@ import dev.androidcad.model.ExtrudeFeature
 import dev.androidcad.model.RevolveAxis
 import dev.androidcad.model.RevolveFeature
 import dev.androidcad.model.ShellFeature
+import dev.androidcad.model.Parameter
+import dev.androidcad.model.ValueRef
 import dev.androidcad.model.RevolveGeometry
 import dev.androidcad.model.FaceRef
 import dev.androidcad.model.FilletFeature
@@ -279,6 +281,17 @@ class WorkspaceState(private val scope: CoroutineScope, private val session: Mod
         if (measureMode != null) measureMode = MeasureMode(emptyList())
     }
 
+    /** Parameter-Tabelle des Modells und ihre aktuellen Werte (für die Anzeige). */
+    var parameters by mutableStateOf<List<Parameter>>(emptyList())
+        private set
+    var parameterValues by mutableStateOf<Map<String, Double>>(emptyMap())
+        private set
+    /** Ob die Parameter-Tabelle als Karte offen ist. */
+    var parametersOpen by mutableStateOf(false)
+    /** Ausdrücke je gebundenem Wert. */
+    var bindings by mutableStateOf<Map<ValueRef, String>>(emptyMap())
+        private set
+
     /** Aktiver Messmodus (`null` = aus). */
     var measureMode by mutableStateOf<MeasureMode?>(null)
         private set
@@ -448,6 +461,9 @@ class WorkspaceState(private val scope: CoroutineScope, private val session: Mod
 
     private fun refresh() {
         features = doc.features
+        parameters = doc.parameters
+        bindings = doc.bindings
+        parameterValues = doc.parameterValues().values
         val sel = selectedId?.let { id -> features.firstOrNull { it.id == id } }
         extrusion = sel as? ExtrudeFeature
         revolve = sel as? RevolveFeature
@@ -1125,6 +1141,49 @@ class WorkspaceState(private val scope: CoroutineScope, private val session: Mod
     fun cancelHoleMode() {
         holeMode = null
         refreshHighlight()
+    }
+
+    // ---- Parameter ----------------------------------------------------------------------------------
+
+    /** Ersetzt die Parameter-Tabelle und überträgt alle Ausdrücke; ungültige Namen werden gemeldet und nicht übernommen. */
+    fun updateParameters(list: List<Parameter>) {
+        try {
+            doc.setParameters(list)
+        } catch (e: IllegalArgumentException) {
+            notice = e.message
+            refresh()
+            return
+        }
+        applyParameters()
+    }
+
+    /** Lässt [ref] aus [expression] kommen (`null` = wieder fester Wert) und überträgt die Ausdrücke. */
+    fun setBinding(ref: ValueRef, expression: String?) {
+        if (doc.bindings[ref] == expression?.trim()) return
+        doc.bind(ref, expression)
+        applyParameters()
+    }
+
+    /** Wert eines Ausdrucks mit den aktuellen Parametern; `null` mit Meldung in [error], wenn er nicht aufgeht. */
+    fun evaluate(expression: String): Double? = try {
+        dev.androidcad.lang.CadLang.evalNumber(expression, doc.parameterValues().values)
+    } catch (_: dev.androidcad.lang.CadLangException) {
+        null
+    }
+
+    private var parameterNotice: String? = null
+
+    private fun applyParameters() {
+        val r = doc.applyParameters()
+        // Fehler in der Tabelle selbst zeigt ihre Zeile („ungültig“); oben nur Fehler an gebundenen Werten – und nur, solange sie bestehen
+        val text = r.errors.filterNot { it.startsWith("Parameter ") }.joinToString("\n").ifEmpty { null }
+        if (text != null) notice = text else if (notice == parameterNotice) notice = null
+        parameterNotice = text
+        activeSketch = doc.sketch(activeSketch.id)
+        handle.editor.refreshExternal() // Maße der offenen Skizze haben sich womöglich geändert
+        refresh()
+        markDirty()
+        if (hasExtrusions()) scheduleBuild()
     }
 
     // ---- Messen -------------------------------------------------------------------------------------

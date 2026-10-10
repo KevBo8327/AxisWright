@@ -21,6 +21,7 @@ dependencies {
     api(project(":core:sketch"))
     api(project(":core:brep"))
     api(project(":core:project"))
+    implementation(project(":core:lang"))
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlin.test)

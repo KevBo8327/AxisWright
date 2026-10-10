@@ -30,21 +30,37 @@ object DocumentCodec {
     /** Liest ein Dokument. Wirft [JsonException] bei ungültigem JSON, fehlenden Feldern oder inkonsistenten Referenzen. */
     fun decode(text: String): Document = fromJson(Json.parse(text).asObject("Modelldatei"))
 
-    fun toJson(doc: Document): JsonObject = linkedMapOf(
+    fun toJson(doc: Document): JsonObject = linkedMapOf<String, Any?>(
         "format" to FORMAT,
         "version" to VERSION,
         "nextId" to doc.nextIdValue,
         "features" to doc.features.map(::encodeFeature),
-    )
+    ).also { m ->
+        // nur wenn vorhanden: Dateien ohne Parameter bleiben wie bisher
+        if (doc.parameters.isNotEmpty()) m["parameters"] = doc.parameters.map { linkedMapOf("name" to it.name, "expression" to it.expression) }
+        if (doc.bindings.isNotEmpty()) m["bindings"] = doc.bindings.map { (ref, expr) ->
+            when (ref) {
+                is ValueRef.Dim -> linkedMapOf<String, Any?>("sketch" to ref.sketch.value, "constraint" to ref.constraint.value, "expression" to expr)
+                is ValueRef.FeatureValue -> linkedMapOf<String, Any?>("feature" to ref.feature.value, "expression" to expr)
+            }
+        }
+    }
 
     fun fromJson(json: JsonObject): Document {
         if (json["format"] != FORMAT) throw JsonException("Keine Modelldatei (Feld 'format')")
         val version = json.int("version")
         if (version > VERSION) throw JsonException("Modelldatei stammt aus einer neueren App-Version ($version > $VERSION)")
         val features = json.list("features").map { decodeFeature(it.asObject("Feature")) }
+        val parameters = json["parameters"]?.asList("Parameter")?.map { p -> p.asObject("Parameter").let { Parameter(it.string("name"), it.string("expression")) } } ?: emptyList()
+        val bindings = json["bindings"]?.asList("Bindungen")?.associate { b ->
+            val o = b.asObject("Bindung")
+            val ref = if (o["sketch"] != null) ValueRef.Dim(FeatureId(o.int("sketch")), dev.androidcad.sketch.ConstraintId(o.int("constraint")))
+            else ValueRef.FeatureValue(FeatureId(o.int("feature")))
+            ref to o.string("expression")
+        } ?: emptyMap()
         val doc = Document()
         try {
-            doc.load(json.int("nextId"), features)
+            doc.load(json.int("nextId"), features, parameters, bindings)
         } catch (e: IllegalArgumentException) {
             throw JsonException("Modell ungültig: ${e.message}")
         }

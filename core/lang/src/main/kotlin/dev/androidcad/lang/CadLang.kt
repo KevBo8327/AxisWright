@@ -37,6 +37,17 @@ public object CadLang {
         }
     }
 
+    /**
+     * Wertet einen Zahlenausdruck aus, z. B. `breite / 2 + wand` (Syntax wie OpenSCAD: + − * / %, Klammern, sin, sqrt …).
+     * [vars] sind die bekannten Namen.
+     * @throws CadLangException bei Syntaxfehlern oder wenn kein endlicher Zahlenwert herauskommt (z. B. unbekannter Name)
+     */
+    public fun evalNumber(expression: String, vars: Map<String, Double> = emptyMap()): Double {
+        val scope = Scope(null).also { s -> vars.forEach { (k, v) -> s.vars[k] = NumV(v) } }
+        val v = Evaluator(emptyMap(), null) { false }.eval(Parser(Lexer(expression).tokenize()).parseSingleExpr(), scope)
+        return (v as? NumV)?.v?.takeIf { it.isFinite() } ?: throw CadLangException("„$expression“ ergibt keine Zahl (unbekannter Name?)")
+    }
+
     /** Customizer-Parameter der Datei (siehe [Customizer]). */
     public fun parameters(source: String): List<ParamSpec> = Customizer.parse(source)
 }

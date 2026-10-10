@@ -169,7 +169,7 @@ private fun SketchPanel(state: WorkspaceState, modifier: Modifier) {
     }
     }
     handle.version // Beobachtung: bei jeder Änderung des Editors neu zusammensetzen
-    ValueDialogs(handle.editor, handle.editor.pendingAction, handle.editor.valueEdit)
+    ValueDialogs(state, handle.editor, handle.editor.pendingAction, handle.editor.valueEdit)
     if (planeDialog) {
         PlaneDialog(
             title = "Ebene der Skizze ändern",
@@ -588,30 +588,48 @@ private fun ToolNumberField(label: String, value: Double, onValue: (Double) -> U
 }
 
 @Composable
-private fun ValueDialogs(e: SketchEditor, pending: PendingAction?, edit: ValueEdit?) {
+private fun ValueDialogs(state: WorkspaceState, e: SketchEditor, pending: PendingAction?, edit: ValueEdit?) {
     pending?.let { p ->
-        ValueDialog(p.title, p.initial, onConfirm = { e.confirmPendingAction(it) }, onDismiss = { e.cancelPendingAction() })
+        ValueDialog(state, p.title, p.initial, null, onConfirm = { v, _ -> e.confirmPendingAction(v) }, onDismiss = { e.cancelPendingAction() })
     }
     edit?.let { v ->
-        ValueDialog(v.title, v.initial, onConfirm = { e.confirmValueEdit(it) }, onDismiss = { e.cancelValueEdit() })
+        // ein Maß darf aus einem Ausdruck der Parameter-Tabelle kommen; eine Zahl macht es wieder fest
+        val ref = dev.androidcad.model.ValueRef.Dim(state.sketch.id, v.constraint)
+        ValueDialog(state, v.title, v.initial, state.bindings[ref], onConfirm = { value, expr ->
+            if (e.confirmValueEdit(value)) state.setBinding(ref, expr)
+        }, onDismiss = { e.cancelValueEdit() })
     }
 }
 
+/**
+ * Zahl oder Ausdruck eingeben: eine Zahl (auch mit Komma) gilt fest; alles andere wird als Ausdruck mit den Parametern ausgewertet
+ * und [onConfirm] bekommt ihn mit (sonst `null`). Ohne [expression] (Vorgabe für neue Maße) nur der Wert.
+ */
 @Composable
-private fun ValueDialog(title: String, initial: Double, onConfirm: (Double) -> Unit, onDismiss: () -> Unit) {
-    var text by remember(title, initial) { mutableStateOf(formatValue(initial)) }
-    val parsed = text.replace(',', '.').toDoubleOrNull()
+private fun ValueDialog(state: WorkspaceState, title: String, initial: Double, expression: String?, onConfirm: (Double, String?) -> Unit, onDismiss: () -> Unit) {
+    var text by remember(title, initial) { mutableStateOf(expression ?: formatValue(initial)) }
+    val number = text.replace(',', '.').toDoubleOrNull()
+    val value = number ?: state.evaluate(text)
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(title) },
         text = {
             OutlinedTextField(
                 value = text, onValueChange = { text = it }, singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                isError = parsed == null, label = { Text("Wert") },
+                isError = value == null, label = { Text("Wert oder Ausdruck") },
+                supportingText = {
+                    Text(
+                        when {
+                            value == null -> "Kein gültiger Wert – Parameter-Namen prüfen"
+                            number == null -> "= ${formatValue(value)} (folgt den Parametern)"
+                            state.parameters.isNotEmpty() -> "Auch Ausdrücke wie „${state.parameters.first().name} / 2“"
+                            else -> ""
+                        },
+                    )
+                },
             )
         },
-        confirmButton = { TextButton(onClick = { parsed?.let(onConfirm) }, enabled = parsed != null) { Text("OK") } },
+        confirmButton = { TextButton(onClick = { value?.let { onConfirm(it, if (number == null) text else null) } }, enabled = value != null) { Text("OK") } },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Abbrechen") } },
     )
 }
