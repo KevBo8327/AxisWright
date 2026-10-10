@@ -539,6 +539,29 @@ class WorkspaceState(private val scope: CoroutineScope, private val session: Mod
         syncProject()
     }
 
+    /** Das aktuelle Modell als Datei-Inhalt (Projekt exportieren). */
+    fun exportText(): String = DocumentCodec.encode(doc)
+
+    /**
+     * Öffnet eine exportierte Modelldatei als neues Modell namens [name] (das aktuelle wird vorher gesichert). Unlesbare Dateien und
+     * Dateien aus einer neueren App-Version ändern nichts und werden gemeldet.
+     */
+    fun importModel(name: String, text: String) {
+        val imported = try {
+            DocumentCodec.decode(text)
+        } catch (e: dev.androidcad.json.JsonException) {
+            notice = "Import fehlgeschlagen: ${e.message}"
+            return
+        }
+        flush()
+        session.startNew()
+        session.rename(if (session.list().any { it.name == name }) "$name (Import)" else name)
+        adopt(imported)
+        notice = null
+        markDirty()
+        syncProject()
+    }
+
     /** Lädt das parametrische Beispiel (vollständig bemaßte Platte mit vier Bohrungen) als neues Modell. */
     fun loadPlateExample() {
         flush()

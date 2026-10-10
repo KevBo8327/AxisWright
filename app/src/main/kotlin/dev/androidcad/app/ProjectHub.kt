@@ -61,6 +61,17 @@ class ProjectHub(val workspace: WorkspaceState, val script: CadState, private va
         activate(ProjectKind.SCRIPT)
     }
 
+    /** Importiert eine Datei: eine Partwright-Modelldatei als neues Modell, alles andere als OpenSCAD-Skript. */
+    fun import(name: String, text: String) {
+        if (text.contains("\"format\"") && text.contains(dev.androidcad.model.DocumentCodec.FORMAT)) {
+            flushActive()
+            workspace.importModel(name, text)
+            activate(ProjectKind.MODEL)
+        } else {
+            newScript(name, text)
+        }
+    }
+
     fun loadModelExample() {
         flushActive()
         workspace.loadPlateExample()

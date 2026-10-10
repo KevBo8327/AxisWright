@@ -161,6 +161,12 @@ private fun ModelTopBar(hub: ProjectHub, compact: Boolean) {
         val mesh = state.output?.mesh
         if (uri != null && mesh != null) scope.launch(Dispatchers.IO) { context.contentResolver.openOutputStream(uri)?.use { it.write(mesh.toBinaryStl()) } }
     }
+    val projectExporter = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
+        if (uri != null) {
+            val text = state.exportText()
+            scope.launch(Dispatchers.IO) { context.contentResolver.openOutputStream(uri)?.use { it.write(text.toByteArray(Charsets.UTF_8)) } }
+        }
+    }
     var menu by remember { mutableStateOf(false) }
     Row(
         Modifier.fillMaxWidth().height(52.dp).padding(horizontal = 4.dp),
@@ -188,6 +194,7 @@ private fun ModelTopBar(hub: ProjectHub, compact: Boolean) {
                     }
                     DropdownMenuItem(text = { Text("STL exportieren") }, onClick = { menu = false; exporter.launch("${state.projectName}.stl") }, enabled = out?.mesh != null)
                 }
+                DropdownMenuItem(text = { Text("Projekt exportieren …") }, onClick = { menu = false; projectExporter.launch("${state.projectName}.partwright.json") })
                 DropdownMenuItem(text = { Text("Zum Skript-Editor (OpenSCAD)") }, onClick = { menu = false; hub.switchTo(ProjectKind.SCRIPT) })
             }
         }

@@ -61,7 +61,8 @@ Entscheidungen: Vertrieb über **Google Play**, **Freemium** (Pro als einmaliger
 - [ ] **Phase 1 – Umfang 1.0:** ~~**Drehen**~~ ✅ (Revolve, `BRepPrimAPI_MakeRevol`: Achse = Skizzenachse oder Hilfslinie, Teil-/Volldrehung,
   symmetrisch, Hinzufügen/Abtragen, als Muster-Quelle; Prüfung „Profil schneidet die Achse“) und ~~**Schale/Aushöhlen**~~ ✅ (`BRepOffsetAPI_MakeThickSolid`: Öffnungen antippen, Wandstärke; Außen-, Innen- und Randflächen
   benannt, Innenkanten verrundbar) –
-  beschlossen am 08.10.2026, Grundwerkzeuge für Wellen/Knöpfe bzw. Gehäuse; **Projekt teilen/importieren** mit Formatversion (vor der Beta);
+  beschlossen am 08.10.2026, Grundwerkzeuge für Wellen/Knöpfe bzw. Gehäuse; ~~**Projekt teilen/importieren**~~ ✅ (⋮ › Projekt exportieren als `.partwright.json`; Projektmenü › Projekt importieren erkennt
+  Modell oder `.scad`; Formatversion wird geprüft, Dateien neuerer App-Versionen werden abgelehnt) (vor der Beta);
   STEP-Export (OCCT `STEPControl_Writer`), 3MF-Export, Messen, Parameter-Tabelle (darf notfalls in das erste Update rutschen);
   kleine Lücken (Mittelebene, gedrehte Grundebene, Körperumriss direkt antippbar, zwei Layout-Punkte).
   Nach 1.0: Sweep/Loft, Schnittansicht, Ellipse/Spline, Baugruppen

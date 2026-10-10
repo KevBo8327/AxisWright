@@ -63,7 +63,7 @@ internal fun ProjectMenu(hub: ProjectHub) {
     val importer = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) scope.launch {
             val text = withContext(Dispatchers.IO) { context.contentResolver.openInputStream(uri)?.use { it.readBytes().toString(Charsets.UTF_8) } }
-            if (text != null) hub.newScript(displayName(context, uri) ?: "Import", text)
+            if (text != null) hub.import(displayName(context, uri)?.removeSuffix(".partwright") ?: "Import", text)
         }
     }
     val entries = hub.entries
@@ -79,7 +79,7 @@ internal fun ProjectMenu(hub: ProjectHub) {
             MenuItem("Neues Modell", CadIcon.SKETCH) { open = false; hub.newModel() }
             MenuItem("Neues Skript (OpenSCAD)", CadIcon.SCRIPT) { open = false; hub.newScript() }
             MenuItem("Beispiele …") { open = false; showExamples = true }
-            MenuItem("Skript importieren (.scad) …") { open = false; importer.launch(arrayOf("*/*")) }
+            MenuItem("Projekt importieren (Modell oder .scad) …") { open = false; importer.launch(arrayOf("*/*")) }
             HorizontalDivider()
             Text(
                 "Zuletzt bearbeitet", Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
