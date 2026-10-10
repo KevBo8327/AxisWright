@@ -60,6 +60,7 @@ internal fun ProjectMenu(hub: ProjectHub) {
     var showAll by remember { mutableStateOf(false) }
     var showExamples by remember { mutableStateOf(false) }
     var showLicenses by remember { mutableStateOf(false) }
+    var showHelp by remember { mutableStateOf(false) }
     val importer = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) scope.launch {
             val text = withContext(Dispatchers.IO) { context.contentResolver.openInputStream(uri)?.use { it.readBytes().toString(Charsets.UTF_8) } }
@@ -79,6 +80,7 @@ internal fun ProjectMenu(hub: ProjectHub) {
             MenuItem("Neues Modell", CadIcon.SKETCH) { open = false; hub.newModel() }
             MenuItem("Neues Skript (OpenSCAD)", CadIcon.SCRIPT) { open = false; hub.newScript() }
             MenuItem("Beispiele …") { open = false; showExamples = true }
+            MenuItem("Hilfe & Gesten …") { open = false; showHelp = true }
             MenuItem("Projekt importieren (Modell oder .scad) …") { open = false; importer.launch(arrayOf("*/*")) }
             HorizontalDivider()
             Text(
@@ -134,6 +136,7 @@ internal fun ProjectMenu(hub: ProjectHub) {
     }
     if (showAll) AllProjectsDialog(hub, onDelete = { deleting = it }, onDismiss = { showAll = false })
     if (showExamples) ExamplesDialog(hub, onDismiss = { showExamples = false })
+    if (showHelp) HelpDialog(hub, firstStart = false) { showHelp = false }
     if (showLicenses) LicensesDialog(onDismiss = { showLicenses = false })
 }
 

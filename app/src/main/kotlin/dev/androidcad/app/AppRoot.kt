@@ -9,6 +9,10 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 
 /**
@@ -21,6 +25,10 @@ import androidx.compose.ui.Modifier
  */
 @Composable
 fun AppRoot(hub: ProjectHub) {
+    val prefs = hub.workspace.prefs
+    // Einführung einmal beim ersten Start; danach über Projektmenü › Hilfe
+    var intro by remember { mutableStateOf(prefs.text(INTRO_SEEN) == null) }
+    if (intro) HelpDialog(hub, firstStart = true) { intro = false; prefs.putText(INTRO_SEEN, "1") }
     Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         Box(Modifier.fillMaxSize().safeDrawingPadding()) {
             when (hub.active) {
