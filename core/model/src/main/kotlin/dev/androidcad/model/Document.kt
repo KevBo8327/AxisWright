@@ -372,34 +372,17 @@ class Document {
                     val r = f.sketch.solve()
                     if (!r.isSolved) errors[f.id] = "Skizze „${f.name}“: Constraints widersprechen sich"
                 }
-                is ExtrudeFeature -> try {
-                    val tool = extrudeTool(f, planes)
-                    body = combine(body, tool, f.op)
-                } catch (e: BrepException) {
-                    errors[f.id] = "„${f.name}“: ${e.message}"
-                } catch (e: IllegalArgumentException) {
-                    errors[f.id] = "„${f.name}“: ${e.message}"
+                is ExtrudeFeature -> attempt(f, errors) {
+                    body = combine(body, extrudeTool(f, planes), f.op)
                 }
-                is RevolveFeature -> try {
+                is RevolveFeature -> attempt(f, errors) {
                     body = combine(body, revolveTool(f, planes), f.op)
-                } catch (e: BrepException) {
-                    errors[f.id] = "„${f.name}“: ${e.message}"
-                } catch (e: IllegalArgumentException) {
-                    errors[f.id] = "„${f.name}“: ${e.message}"
                 }
-                is FilletFeature -> try {
+                is FilletFeature -> attempt(f, errors) {
                     body = applyEdges(body, f)
-                } catch (e: BrepException) {
-                    errors[f.id] = "„${f.name}“: ${e.message}"
-                } catch (e: IllegalArgumentException) {
-                    errors[f.id] = "„${f.name}“: ${e.message}"
                 }
-                is HoleFeature -> try {
+                is HoleFeature -> attempt(f, errors) {
                     body = combine(body, holeTool(body, f), BodyOp.CUT)
-                } catch (e: BrepException) {
-                    errors[f.id] = "„${f.name}“: ${e.message}"
-                } catch (e: IllegalArgumentException) {
-                    errors[f.id] = "„${f.name}“: ${e.message}"
                 }
                 is PlaneFeature -> {
                     val resolved = body?.let { DatumPlane.resolve(it, f.def) }
@@ -407,15 +390,11 @@ class Document {
                     // Rückfall auf die zuletzt bekannte Lage, damit Skizzen darauf weiter gebaut werden
                     datum[f.id] = resolved ?: f.plane
                 }
-                is MirrorBodyFeature -> try {
+                is MirrorBodyFeature -> attempt(f, errors) {
                     // die Naht an der Spiegelebene entfernt combine (Flächen in einer Ebene werden eine)
                     body = combine(body, mirrorTool(body, f, datum), BodyOp.ADD)
-                } catch (e: BrepException) {
-                    errors[f.id] = "„${f.name}“: ${e.message}"
-                } catch (e: IllegalArgumentException) {
-                    errors[f.id] = "„${f.name}“: ${e.message}"
                 }
-                is PatternFeature -> try {
+                is PatternFeature -> attempt(f, errors) {
                     body = combine(body, patternTool(body, f, planes), patternOp(f))
                     if (f.withFillets) {
                         val withRounds = try {
@@ -426,10 +405,6 @@ class Document {
                         }
                         if (withRounds !== body) { body?.close(); body = withRounds }
                     }
-                } catch (e: BrepException) {
-                    errors[f.id] = "„${f.name}“: ${e.message}"
-                } catch (e: IllegalArgumentException) {
-                    errors[f.id] = "„${f.name}“: ${e.message}"
                 }
             }
         } catch (e: Throwable) {
@@ -437,6 +412,17 @@ class Document {
             throw e
         }
         return BuildResult(body, errors, planes, projectable, projected, datum)
+    }
+
+    /** Führt den Aufbauschritt von [f] aus; scheitert er, landet der Grund in [errors] und der Aufbau geht mit dem nächsten Feature weiter. */
+    private inline fun attempt(f: Feature, errors: MutableMap<FeatureId, String>, step: () -> Unit) {
+        try {
+            step()
+        } catch (e: BrepException) {
+            errors[f.id] = "„${f.name}“: ${e.message}"
+        } catch (e: IllegalArgumentException) {
+            errors[f.id] = "„${f.name}“: ${e.message}"
+        }
     }
 
     /**
@@ -582,47 +568,49 @@ class Document {
     }
 
     /** Alle ausgewählten Flächen der Skizze, extrudiert und in den Raum gestellt, vereinigt zu einem Werkzeugkörper. */
-    private fun extrudeTool(f: ExtrudeFeature, planes: Map<FeatureId, Workplane>): BrepShape {
-        val sk = sketch(f.sketch)
-        val plane = planes[f.sketch] ?: sk.plane
-        val regions: List<Region> =
-            if (f.regionPoints.isEmpty()) sk.sketch.regions().regions
-            else f.regionPoints.mapNotNull { sk.sketch.regionAt(it.x, it.y) }.distinct()
-        require(regions.isNotEmpty()) { "keine geschlossene Fläche in „${sk.name}“ gefunden" }
-        var tool: BrepShape? = null
-        try {
-            for (region in regions) {
-                val piece = BrepShape.extrude(
-                    region.toProfile(f.id), f.distance, f.symmetric,
-                    bottomTag = faceTag(f.id, FaceRole.BOTTOM), topTag = faceTag(f.id, FaceRole.TOP),
-                ).use { it.transform(plane.matrix3x4()) }
-                tool = tool?.let { prev -> prev.use { p -> piece.use { p.union(it) } } } ?: piece
-            }
-            return tool!!
-        } catch (e: Throwable) {
-            tool?.close()
-            throw e
+    private fun extrudeTool(f: ExtrudeFeature, planes: Map<FeatureId, Workplane>): BrepShape =
+        sketchTool(f.sketch, f.regionPoints, planes) { region ->
+            BrepShape.extrude(
+                region.toProfile(f.id), f.distance, f.symmetric,
+                bottomTag = faceTag(f.id, FaceRole.BOTTOM), topTag = faceTag(f.id, FaceRole.TOP),
+            )
         }
-    }
 
     /** Ausgewählte Flächen der Skizze, um die Achse gedreht und in den Raum gestellt, vereinigt zu einem Werkzeugkörper. */
     private fun revolveTool(f: RevolveFeature, planes: Map<FeatureId, Workplane>): BrepShape {
         val sk = sketch(f.sketch)
-        val plane = planes[f.sketch] ?: sk.plane
-        val regions: List<Region> =
-            if (f.regionPoints.isEmpty()) sk.sketch.regions().regions
-            else f.regionPoints.mapNotNull { sk.sketch.regionAt(it.x, it.y) }.distinct()
-        require(regions.isNotEmpty()) { "keine geschlossene Fläche in „${sk.name}“ gefunden" }
         val axis = RevolveGeometry.resolve(sk.sketch, f.axis) ?: throw IllegalArgumentException("die Drehachse (Linie in „${sk.name}“) existiert nicht mehr")
-        RevolveGeometry.problem(regions, axis)?.let { throw IllegalArgumentException(it) }
+        return sketchTool(f.sketch, f.regionPoints, planes, check = { regions ->
+            RevolveGeometry.problem(regions, axis)?.let { throw IllegalArgumentException(it) }
+        }) { region ->
+            BrepShape.revolve(
+                region.toProfile(f.id), axis.point.x, axis.point.y, axis.direction.x, axis.direction.y, f.angle, f.symmetric,
+                startTag = faceTag(f.id, FaceRole.BOTTOM), endTag = faceTag(f.id, FaceRole.TOP),
+            )
+        }
+    }
+
+    /**
+     * Werkzeug eines Skizzen-Features: die Flächen der Skizze [sketchId] an den [regionPoints] (leer = alle), je Fläche mit [piece] in der
+     * Skizzenebene gebaut ([check] prüft vorher), in den Raum gestellt und zu einem Körper vereinigt.
+     */
+    private fun sketchTool(
+        sketchId: FeatureId, regionPoints: List<dev.androidcad.sketch.Vec2>, planes: Map<FeatureId, Workplane>,
+        check: (List<Region>) -> Unit = {},
+        piece: (Region) -> BrepShape,
+    ): BrepShape {
+        val sk = sketch(sketchId)
+        val plane = planes[sketchId] ?: sk.plane
+        val regions: List<Region> =
+            if (regionPoints.isEmpty()) sk.sketch.regions().regions
+            else regionPoints.mapNotNull { sk.sketch.regionAt(it.x, it.y) }.distinct()
+        require(regions.isNotEmpty()) { "keine geschlossene Fläche in „${sk.name}“ gefunden" }
+        check(regions)
         var tool: BrepShape? = null
         try {
             for (region in regions) {
-                val piece = BrepShape.revolve(
-                    region.toProfile(f.id), axis.point.x, axis.point.y, axis.direction.x, axis.direction.y, f.angle, f.symmetric,
-                    startTag = faceTag(f.id, FaceRole.BOTTOM), endTag = faceTag(f.id, FaceRole.TOP),
-                ).use { it.transform(plane.matrix3x4()) }
-                tool = tool?.let { prev -> prev.use { p -> piece.use { p.union(it) } } } ?: piece
+                val placed = piece(region).use { it.transform(plane.matrix3x4()) }
+                tool = tool?.let { prev -> prev.use { p -> placed.use { p.union(it) } } } ?: placed
             }
             return tool!!
         } catch (e: Throwable) {
@@ -697,7 +685,7 @@ class Document {
         fun line(a: EdgeDistance): HolePlacement.Line {
             val ids = body.edgesBetween(a.edge.a.tag, a.edge.b.tag)
             if (ids.isEmpty()) throw BrepException("eine Referenzkante der Bohrung existiert nicht mehr (Fläche verändert oder entfernt)")
-            val inPlane = ids.mapNotNull { id -> infos.firstOrNull { it.id == id } }.filter {
+            val inPlane = ids.mapNotNull { id -> infos.getOrNull(id - 1) }.filter { // edges() in ID-Reihenfolge
                 it.start.let { s -> kotlin.math.abs(plane.distanceTo(s.first, s.second, s.third)) } < 1e-4 &&
                     it.end.let { e -> kotlin.math.abs(plane.distanceTo(e.first, e.second, e.third)) } < 1e-4
             }

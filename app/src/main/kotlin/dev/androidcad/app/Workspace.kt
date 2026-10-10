@@ -85,6 +85,8 @@ class ModelOutput(
     val errorIds: Set<FeatureId> = emptySet(),
     /** Die beim Aufbau berechnete Lage jeder Arbeitsebene. */
     val datumPlanes: Map<FeatureId, Workplane> = emptyMap(),
+    /** Hüllbox des Netzes (kleinste, größte Ecke); `null` ohne Körper. Einmal beim Aufbau berechnet, nicht bei jeder Anzeige. */
+    val bounds: Pair<Vec3, Vec3>? = null,
 )
 
 /** Standardansichten des 3D-Viewers. */
@@ -694,11 +696,8 @@ class WorkspaceState(private val scope: CoroutineScope, private val session: Mod
 
     /** Größte Ausdehnung des Körpers (Hüllbox); 40 mm ohne Körper. */
     private fun bodyExtent(): Double {
-        val q = output?.mesh?.positions
-        if (q == null || q.isEmpty()) return 40.0
-        val lo = DoubleArray(3) { Double.MAX_VALUE }; val hi = DoubleArray(3) { -Double.MAX_VALUE }
-        for (i in q.indices) { val d = i % 3; lo[d] = minOf(lo[d], q[i].toDouble()); hi[d] = maxOf(hi[d], q[i].toDouble()) }
-        return (0..2).maxOf { hi[it] - lo[it] }.coerceAtLeast(10.0)
+        val (lo, hi) = bodyBounds() ?: return 40.0
+        return maxOf(hi.x - lo.x, hi.y - lo.y, hi.z - lo.z).coerceAtLeast(10.0)
     }
 
     // ---- Verrunden / Anfasen ----------------------------------------------------------------------
@@ -787,23 +786,14 @@ class WorkspaceState(private val scope: CoroutineScope, private val session: Mod
 
     /** Mitte des Körpers (Mitte der Hüllbox des Netzes) – sinnvolle Vorgabe für Drehachse und Spiegelebene. */
     private fun bodyCenter(): Vec3 {
-        val p = output?.mesh?.positions
-        if (p == null || p.isEmpty()) return Vec3(0.0, 0.0, 0.0)
-        val lo = DoubleArray(3) { Double.MAX_VALUE }; val hi = DoubleArray(3) { -Double.MAX_VALUE }
-        for (i in p.indices) { val d = i % 3; lo[d] = minOf(lo[d], p[i].toDouble()); hi[d] = maxOf(hi[d], p[i].toDouble()) }
-        return Vec3((lo[0] + hi[0]) / 2, (lo[1] + hi[1]) / 2, (lo[2] + hi[2]) / 2)
+        val (lo, hi) = bodyBounds() ?: return Vec3(0.0, 0.0, 0.0)
+        return Vec3((lo.x + hi.x) / 2, (lo.y + hi.y) / 2, (lo.z + hi.z) / 2)
     }
 
     // ---- Körper spiegeln ---------------------------------------------------------------------------
 
-    /** Hüllbox des Körpers (min, max) aus dem Netz; `null` ohne Körper. */
-    private fun bodyBounds(): Pair<Vec3, Vec3>? {
-        val p = output?.mesh?.positions
-        if (p == null || p.isEmpty()) return null
-        val lo = DoubleArray(3) { Double.MAX_VALUE }; val hi = DoubleArray(3) { -Double.MAX_VALUE }
-        for (i in p.indices) { val d = i % 3; lo[d] = minOf(lo[d], p[i].toDouble()); hi[d] = maxOf(hi[d], p[i].toDouble()) }
-        return Vec3(lo[0], lo[1], lo[2]) to Vec3(hi[0], hi[1], hi[2])
-    }
+    /** Hüllbox des Körpers (min, max); `null` ohne Körper. */
+    private fun bodyBounds(): Pair<Vec3, Vec3>? = output?.bounds
 
     /** Ebene einer Körperspiegelung als [Workplane] (für die Anzeige). */
     private fun mirrorPlane(f: MirrorBodyFeature): Workplane {
@@ -1273,7 +1263,8 @@ class WorkspaceState(private val scope: CoroutineScope, private val session: Mod
             val faceRefs = body.faceTags().map { FaceRef.fromTag(it) }
             val edgeInfos = body.edges()
             val edgeLines = bm.edgeIds.map { id ->
-                edgeInfos.firstOrNull { it.id == id }?.takeIf { it.isLine }?.let {
+                // edges() liefert die Kanten in ID-Reihenfolge (ID = Index + 1)
+                edgeInfos.getOrNull(id - 1)?.takeIf { it.isLine }?.let {
                     HolePlacement.Line(Vec3(it.start.first, it.start.second, it.start.third), Vec3(it.end.first, it.end.second, it.end.third))
                 }
             }
@@ -1296,8 +1287,17 @@ class WorkspaceState(private val scope: CoroutineScope, private val session: Mod
                 projected = r.projected,
                 errorIds = r.errors.keys,
                 datumPlanes = r.datumPlanes,
+                bounds = bounds(bm.positions),
             )
         }
+    }
+
+    /** Hüllbox der Punkte (x y z hintereinander); `null` ohne Punkte. */
+    private fun bounds(p: FloatArray): Pair<Vec3, Vec3>? {
+        if (p.isEmpty()) return null
+        val lo = DoubleArray(3) { Double.MAX_VALUE }; val hi = DoubleArray(3) { -Double.MAX_VALUE }
+        for (i in p.indices) { val d = i % 3; lo[d] = minOf(lo[d], p[i].toDouble()); hi[d] = maxOf(hi[d], p[i].toDouble()) }
+        return Vec3(lo[0], lo[1], lo[2]) to Vec3(hi[0], hi[1], hi[2])
     }
 }
 
