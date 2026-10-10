@@ -96,6 +96,9 @@ public class ProjectRepository(
 
     private fun dirOf(id: String): File? = if (ID.matches(id)) File(root, id).takeIf { it.isDirectory } else null
 
+    // Ein Schreiber zur Zeit: Autosave (Hintergrund) und flush() beim Verlassen der App (UI-Thread) nutzen dieselbe .tmp-Datei;
+    // gleichzeitig würden sie ineinander schreiben und den Inhalt vermischen.
+    @Synchronized
     private fun write(id: String, name: String, source: String, overrides: Map<String, String>): ProjectInfo {
         val dir = File(root, id)
         val updated = clock()

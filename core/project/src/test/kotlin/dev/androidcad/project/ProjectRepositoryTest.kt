@@ -143,4 +143,23 @@ class ProjectRepositoryTest {
         assertEquals(id, again.lastOpenedId)
         assertEquals("cube(2);", again.load(id)?.source)
     }
+
+    @Test
+    fun concurrentSavesNeverMixContent() {
+        // Autosave im Hintergrund und flush() auf dem UI-Thread speichern dasselbe Projekt gleichzeitig
+        val id = repo.create("Box", "cube(1);").info.id
+        val short = "cube(2);\n"
+        val long = "sphere(5);\n".repeat(2000)
+        val failures = java.util.concurrent.atomic.AtomicInteger()
+        val threads = listOf(short, long).map { text ->
+            Thread {
+                repeat(100) { runCatching { repo.save(id, text, emptyMap()) }.onFailure { failures.incrementAndGet() } }
+            }
+        }
+        threads.forEach { it.start() }
+        threads.forEach { it.join() }
+        assertEquals(0, failures.get(), "kein Speichern darf scheitern")
+        val source = assertNotNull(repo.load(id)).source
+        assertTrue(source == short || source == long, "Inhalt ist vermischt (Länge ${source.length})")
+    }
 }

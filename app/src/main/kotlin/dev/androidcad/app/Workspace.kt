@@ -1188,7 +1188,16 @@ class WorkspaceState(private val scope: CoroutineScope, private val session: Mod
         job = scope.launch {
             delay(delayMs)
             building = true
-            output = withContext(Dispatchers.Default) { compute(snapshot) }
+            output = withContext(Dispatchers.Default) {
+                // Fehler einzelner Features sammelt build(); was darüber hinaus scheitert (Tessellierung, Stacküberlauf), darf die App
+                // nicht beenden, sondern wird als Meldung gezeigt
+                try {
+                    compute(snapshot)
+                } catch (e: dev.androidcad.brep.BrepException) {
+                    ModelOutput(null, null, 0.0, 0, listOf("Körper konnte nicht dargestellt werden: ${e.message}"), 0)
+                } catch (_: StackOverflowError) {
+                    ModelOutput(null, null, 0.0, 0, listOf("Das Modell ist zu tief verschachtelt, um es aufzubauen"), 0)
+                }
             }
             syncSketchPlanes()
             syncProjections()

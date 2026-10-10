@@ -25,10 +25,16 @@ public object CadLang {
                 throw CadLangException("Ungültiger Wert für '$name': ${e.message}")
             }
         }
-        val program = Parser(Lexer(source).tokenize()).parseProgram()
-        val ev = Evaluator(values, files, isCancelled)
-        val root = ev.run(program)
-        return RenderResult(root, ev.echoes, ev.warnings)
+        // Parser und Auswertung sind rekursiv: Tiefe Verschachtelung (Rekursion unter der eigenen Grenze, tausende Klammern)
+        // kann den Stack eines Hintergrund-Threads (1 MB unter Android) sprengen, bevor die Tiefengrenze greift.
+        try {
+            val program = Parser(Lexer(source).tokenize()).parseProgram()
+            val ev = Evaluator(values, files, isCancelled)
+            val root = ev.run(program)
+            return RenderResult(root, ev.echoes, ev.warnings)
+        } catch (_: StackOverflowError) {
+            throw CadLangException("Zu tief verschachtelt (Rekursion oder Klammern) – bitte flacher aufbauen")
+        }
     }
 
     /** Customizer-Parameter der Datei (siehe [Customizer]). */

@@ -99,6 +99,9 @@ public class ModelRepository(
         null
     }
 
+    // Ein Schreiber zur Zeit: Autosave (Hintergrund) und flush() beim Verlassen der App (UI-Thread) nutzen dieselbe .tmp-Datei;
+    // gleichzeitig würden sie ineinander schreiben und den Inhalt vermischen.
+    @Synchronized
     private fun write(id: String, name: String, content: String): ProjectInfo {
         val dir = File(root, id)
         val updated = clock()
