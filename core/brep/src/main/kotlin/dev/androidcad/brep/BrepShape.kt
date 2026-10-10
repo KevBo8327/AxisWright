@@ -22,6 +22,7 @@ internal object NativeBrep {
     @JvmStatic external fun unifyFaces(h: Long): Long
     @JvmStatic external fun distance(h: Long, aKind: Int, aId: Int, bKind: Int, bId: Int): DoubleArray
     @JvmStatic external fun faceArea(h: Long, id: Int): Double
+    @JvmStatic external fun writeStep(h: Long, path: String)
     @JvmStatic external fun volume(h: Long): Double
     @JvmStatic external fun counts(h: Long): IntArray
     @JvmStatic external fun edgeInfo(h: Long): DoubleArray
@@ -107,6 +108,9 @@ class BrepShape private constructor(private val handle: Long) : AutoCloseable {
         val d = call { NativeBrep.distance(handle, kind(a), id(a), kind(b), id(b)) }
         return Distance(d[0], Triple(d[1], d[2], d[3]), Triple(d[4], d[5], d[6]))
     }
+
+    /** Schreibt den Körper als STEP-Datei (exakte Geometrie, Millimeter) – zum Austausch mit anderer CAD-Software. */
+    fun writeStep(file: java.io.File) = call { NativeBrep.writeStep(handle, file.absolutePath) }
 
     /** Flächeninhalt der Fläche [id] in mm². */
     fun faceArea(id: Int): Double = call { NativeBrep.faceArea(handle, id) }

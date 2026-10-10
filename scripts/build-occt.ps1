@@ -8,9 +8,8 @@
   veröffentlicht werden müssen.
 
 .DESCRIPTION
-  Nur die Module, die für die B-Rep-Modellierung nötig sind:
-  FoundationClasses, ModelingData, ModelingAlgorithms (keine Fremdbibliotheken).
-  DataExchange (STEP) kann später mit -WithDataExchange zugeschaltet werden.
+  Nur die Module, die die App braucht: FoundationClasses, ModelingData, ModelingAlgorithms und DataExchange (STEP-Export;
+  zieht Teile von ApplicationFramework und Visualization nach). Keine Fremdbibliotheken.
 
   Voraussetzungen: Android SDK mit NDK 28.2.13676358 und CMake 3.31.6 (inkl. Ninja). Läuft unter Windows PowerShell 5.1
   und PowerShell 7 (auch Linux, z. B. in GitHub Actions; SDK dann über ANDROID_HOME).
@@ -19,11 +18,9 @@
 .EXAMPLE
   ./scripts/build-occt.ps1 -Abis x86_64
   ./scripts/build-occt.ps1 -Abis x86_64 -LibraryType Static
-  ./scripts/build-occt.ps1 -Abis arm64-v8a,x86_64 -WithDataExchange
 #>
 param(
     [string[]]$Abis = @("x86_64", "arm64-v8a"),
-    [switch]$WithDataExchange,
     [ValidateSet("Shared", "Static")] [string]$LibraryType = "Shared",
     # Windows: Android-Studio-Standardpfad; Linux/macOS (z. B. GitHub Actions): ANDROID_HOME
     [string]$Sdk = $(if ($env:ANDROID_HOME) { $env:ANDROID_HOME } else { "$env:LOCALAPPDATA\Android\Sdk" }),
@@ -46,7 +43,6 @@ foreach ($abi in $Abis) {
     $build = Join-Path $root ($(if ($shared) { "build-occt/$abi-shared" } else { "build-occt/$abi" }))
     $prefix = Join-Path $root ($(if ($shared) { "third_party/occt-android-shared/$abi" } else { "third_party/occt-android/$abi" }))
     Write-Host "=== OpenCascade für $abi ($LibraryType) ===" -ForegroundColor Cyan
-    $dataExchange = if ($WithDataExchange) { "ON" } else { "OFF" }
     & $cmake -S $src -B $build -G Ninja `
         "-DCMAKE_MAKE_PROGRAM=$ninja" `
         "-DCMAKE_TOOLCHAIN_FILE=$ndk/build/cmake/android.toolchain.cmake" `
@@ -58,7 +54,7 @@ foreach ($abi in $Abis) {
         "-DCMAKE_SHARED_LINKER_FLAGS=-Wl,-z,max-page-size=16384" `
         "-DBUILD_MODULE_FoundationClasses=ON" "-DBUILD_MODULE_ModelingData=ON" "-DBUILD_MODULE_ModelingAlgorithms=ON" `
         "-DBUILD_MODULE_Visualization=OFF" "-DBUILD_MODULE_ApplicationFramework=OFF" `
-        "-DBUILD_MODULE_DataExchange=$dataExchange" "-DBUILD_MODULE_DETools=OFF" "-DBUILD_MODULE_Draw=OFF" `
+        "-DBUILD_MODULE_DataExchange=ON" "-DBUILD_MODULE_DETools=OFF" "-DBUILD_MODULE_Draw=OFF" `
         "-DUSE_FREETYPE=OFF" "-DUSE_TK=OFF" "-DUSE_RAPIDJSON=OFF" "-DUSE_DRACO=OFF" "-DUSE_TBB=OFF" "-DUSE_FREEIMAGE=OFF" `
         "-DBUILD_DOC_Overview=OFF" "-DBUILD_USE_PCH=OFF" "-DBUILD_TESTING=OFF" "-DBUILD_SAMPLES_QT=OFF"
     if ($LASTEXITCODE -ne 0) { throw "CMake-Konfiguration für $abi fehlgeschlagen" }

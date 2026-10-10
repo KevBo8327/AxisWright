@@ -1,7 +1,7 @@
 # Automatische Prüfung bei jedem Push und Pull Request.
 #
 # 1. JVM-Tests: Skizzen-Engine, Editor, Modell-Logik, App-Logik – schnell, ohne native Bibliotheken.
-# 2. OpenCascade je ABI: nur beim ersten Lauf bzw. wenn sich scripts/build-occt.ps1 ändert (auf einem 4-Kern-Runner ca. 2–3 h);
+# 2. OpenCascade je ABI: nur beim ersten Lauf bzw. wenn sich scripts/build-occt.ps1 ändert (auf einem 4-Kern-Runner ca. 3–4 h, mit STEP);
 #    danach kommt das Ergebnis aus dem Zwischenspeicher.
 # 3. App bauen: Debug-APK und Release-AAB (Release mit Debug-Schlüssel signiert – der Upload-Schlüssel liegt nie auf GitHub).
 #

@@ -28,6 +28,8 @@
 #include <BRepFilletAPI_MakeChamfer.hxx>
 #include <BRepFilletAPI_MakeFillet.hxx>
 #include <BRepGProp.hxx>
+#include <IFSelect_ReturnStatus.hxx>
+#include <STEPControl_Writer.hxx>
 #include <BRepCheck_Analyzer.hxx>
 #include <BRepOffsetAPI_MakeThickSolid.hxx>
 #include <BRepMesh_IncrementalMesh.hxx>
@@ -688,6 +690,20 @@ JNIEXPORT jdouble JNICALL Java_dev_androidcad_brep_NativeBrep_faceArea(JNIEnv* e
     GProp_GProps props;
     BRepGProp::SurfaceProperties(subShape(get(h), 0, id), props);
     return props.Mass();
+  });
+}
+
+// Schreibt den Körper als STEP-Datei (AP214, Millimeter) nach [path].
+JNIEXPORT void JNICALL Java_dev_androidcad_brep_NativeBrep_writeStep(JNIEnv* env, jclass, jlong h, jstring path) {
+  guarded(env, [&]() -> int {
+    TopoDS_Shape s = get(h);  // Kopie des Verweises: der Körper bleibt gültig, auch wenn das Handle währenddessen freigegeben wird
+    const char* p = env->GetStringUTFChars(path, nullptr);
+    std::string file(p);
+    env->ReleaseStringUTFChars(path, p);
+    STEPControl_Writer writer;
+    if (writer.Transfer(s, STEPControl_AsIs) != IFSelect_RetDone) throw std::runtime_error("Körper ließ sich nicht nach STEP übertragen");
+    if (writer.Write(file.c_str()) != IFSelect_RetDone) throw std::runtime_error("STEP-Datei ließ sich nicht schreiben");
+    return 0;
   });
 }
 

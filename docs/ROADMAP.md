@@ -8,7 +8,7 @@ Vergleichsprodukte sind Shapr3D und Onshape – **nicht** OpenSCAD.
 
 Entscheidungen:
 - **Erster Ablauf:** Skizze → Extrusion (2D-Skizze mit Constraints, dann Körper).
-- **Geometriekern:** **OpenCascade (B-Rep)** – echte Flächen/Kanten (auswählbar), Verrundung/Fase, später STEP.
+- **Geometriekern:** **OpenCascade (B-Rep)** – echte Flächen/Kanten (auswählbar), Verrundung/Fase, STEP-Export.
 - **Code-Editor / OpenSCAD:** bleibt als **optionale Erweiterung** (Experten-Modus, Import bestehender `.scad`), wird
   nicht weiter ausgebaut. Manifold bleibt dafür der Kern.
 
@@ -63,7 +63,7 @@ Entscheidungen: Vertrieb über **Google Play**, **Freemium** (Pro als einmaliger
   benannt, Innenkanten verrundbar) –
   beschlossen am 08.10.2026, Grundwerkzeuge für Wellen/Knöpfe bzw. Gehäuse; ~~**Projekt teilen/importieren**~~ ✅ (⋮ › Projekt exportieren als `.partwright.json`; Projektmenü › Projekt importieren erkennt
   Modell oder `.scad`; Formatversion wird geprüft, Dateien neuerer App-Versionen werden abgelehnt) (vor der Beta);
-  STEP-Export (OCCT `STEPControl_Writer`), ~~3MF-Export~~ ✅ (⋮ › 3MF exportieren, Modell und Skript; geschlossenes Netz in mm), ~~Messen~~ ✅ (Länge/Radius, Flächeninhalt, kürzester Abstand mit Linie, Winkel), ~~Parameter-Tabelle~~ ✅ (benannte Parameter mit Ausdrücken; Skizzenmaße, Extrusionslänge, Drehwinkel, Wandstärke, Verrundung binden);
+  ~~STEP-Export~~ ✅ (OCCT `STEPControl_Writer`, AP214 in mm; DataExchange kostet ca. 17,7 MB je ABI gestrippt), ~~3MF-Export~~ ✅ (⋮ › 3MF exportieren, Modell und Skript; geschlossenes Netz in mm), ~~Messen~~ ✅ (Länge/Radius, Flächeninhalt, kürzester Abstand mit Linie, Winkel), ~~Parameter-Tabelle~~ ✅ (benannte Parameter mit Ausdrücken; Skizzenmaße, Extrusionslänge, Drehwinkel, Wandstärke, Verrundung binden);
   kleine Lücken (Mittelebene, gedrehte Grundebene, Körperumriss direkt antippbar, zwei Layout-Punkte).
   Nach 1.0: Sweep/Loft, Schnittansicht, Ellipse/Spline, Baugruppen
 - [ ] **Phase 2 – Qualität:** verständliche Fehler statt Abbruch, Autosave/Wiederherstellen, Grenzen bei großen Modellen,

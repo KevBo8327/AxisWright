@@ -58,6 +58,7 @@ import dev.androidcad.viewport.OrthoCamera
 import dev.androidcad.viewport.SceneFrame
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /** Unter dieser Breite gilt das Gerät als schmal (Smartphone): Werkzeuge unten, Einstellungen als Blatt am unteren Rand. */
 private val COMPACT_WIDTH = 600.dp
@@ -167,6 +168,21 @@ private fun ModelTopBar(hub: ProjectHub, compact: Boolean) {
         val mesh = state.output?.mesh
         if (uri != null && mesh != null) scope.launch(Dispatchers.IO) { context.contentResolver.openOutputStream(uri)?.use { it.write(mesh.toThreeMf()) } }
     }
+    val stepExporter = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("model/step")) { uri ->
+        val body = state.output?.body
+        if (uri != null && body != null) scope.launch(Dispatchers.IO) {
+            // OpenCascade schreibt nur in Dateipfade: erst in den Cache, dann an den gewählten Ort kopieren
+            val tmp = java.io.File(context.cacheDir, "export.step")
+            try {
+                body.writeStep(tmp)
+                context.contentResolver.openOutputStream(uri)?.use { out -> tmp.inputStream().use { it.copyTo(out) } }
+            } catch (e: dev.androidcad.brep.BrepException) {
+                withContext(Dispatchers.Main) { state.notice = "STEP-Export fehlgeschlagen: ${e.message}" }
+            } finally {
+                tmp.delete()
+            }
+        }
+    }
     val projectExporter = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
         if (uri != null) {
             val text = state.exportText()
@@ -201,6 +217,7 @@ private fun ModelTopBar(hub: ProjectHub, compact: Boolean) {
                     }
                     DropdownMenuItem(text = { Text("STL exportieren") }, onClick = { menu = false; exporter.launch("${state.projectName}.stl") }, enabled = out?.mesh != null)
                 }
+                DropdownMenuItem(text = { Text("STEP exportieren (CAD-Austausch)") }, onClick = { menu = false; stepExporter.launch("${state.projectName}.step") }, enabled = out?.body != null)
                 DropdownMenuItem(text = { Text("3MF exportieren (3D-Druck)") }, onClick = { menu = false; threeMfExporter.launch("${state.projectName}.3mf") }, enabled = out?.mesh != null)
                 DropdownMenuItem(text = { Text("Projekt exportieren …") }, onClick = { menu = false; projectExporter.launch("${state.projectName}.partwright.json") })
                 DropdownMenuItem(text = { Text("Zum Skript-Editor (OpenSCAD)") }, onClick = { menu = false; hub.switchTo(ProjectKind.SCRIPT) })

@@ -21,7 +21,9 @@ add_compile_options("$<$<CONFIG:Debug>:-O2>")
 # Benötigte OCCT-Toolkits als importierte gemeinsame Bibliotheken – der Android-Gradle-Plugin packt sie mit in die App.
 set(OCCT_LIBS
     TKFillet TKOffset TKBO TKBool TKFeat TKMesh TKShHealing TKTopAlgo TKPrim TKGeomAlgo
-    TKBRep TKGeomBase TKG3d TKG2d TKMath TKernel)
+    TKBRep TKGeomBase TKG3d TKG2d TKMath TKernel
+    # STEP-Export (TKDESTEP) und was es nach sich zieht – STEP und XCAF stecken in OCCT 7.9 in einer Bibliothek
+    TKDESTEP TKDE TKXCAF TKXSBase TKVCAF TKCAF TKLCAF TKCDF TKV3d TKService TKHLR)
 set(OCCT_LINK "")
 foreach(lib ${OCCT_LIBS})
   set(file "${OCCT_PREFIX}/lib/lib${lib}.so")
