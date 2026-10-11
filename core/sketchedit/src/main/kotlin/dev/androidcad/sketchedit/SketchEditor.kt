@@ -454,9 +454,22 @@ public class SketchEditor(public val sketch: Sketch) {
             down = Down(screen, world, kind, additive, hit, was, null)
             if (hit != null && hit !is Sel.K && !was) select(hit, additive)
         } else {
-            down = Down(screen, world, kind, additive, null, false, snapAt(world))
+            val d = Down(screen, world, kind, additive, null, false, snapAt(world))
+            down = d
+            // Ein Finger schwebt nicht über der Fläche: die Vorschau erscheint schon beim Aufsetzen und folgt ihm, gesetzt wird beim Loslassen
+            if (!tool.isModify) { hover = d.snap; updateDrawPreview(d.snap!!, d) }
         }
         changed()
+    }
+
+    /** Maß der Vorschau zum Anzeigen beim Zeichnen („25 mm“, „30 × 20 mm“, „Ø 12 mm“); `null`, wenn es nichts zu messen gibt. */
+    public fun previewLabel(): String? = when (val p = preview) {
+        is Preview.Line -> dist(p.a, p.b).takeIf { it > MIN_SIZE }?.let { "${formatValue(it)} mm" }
+        is Preview.Rect -> (abs(p.b.x - p.a.x) to abs(p.b.y - p.a.y)).takeIf { (w, h) -> w > MIN_SIZE && h > MIN_SIZE }
+            ?.let { (w, h) -> "${formatValue(w)} × ${formatValue(h)} mm" }
+        is Preview.Circle -> p.radius.takeIf { it > MIN_SIZE }?.let { "Ø ${formatValue(2 * it)} mm" }
+        is Preview.Arc -> dist(p.center, p.start).takeIf { it > MIN_SIZE }?.let { "R ${formatValue(it)} mm" }
+        else -> null
     }
 
     public fun pointerMove(screen: Vec2) {

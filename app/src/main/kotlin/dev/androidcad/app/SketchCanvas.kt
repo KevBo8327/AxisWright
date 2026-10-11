@@ -240,6 +240,20 @@ private fun DrawScope.drawSketch(editor: SketchEditor, measurer: TextMeasurer, c
 
     // Vorschau
     editor.preview?.let { drawPreview(editor, it, c) }
+    // Maß der Vorschau schräg über dem Finger (er verdeckt sonst genau diese Stelle)
+    val label = editor.previewLabel()
+    val at = editor.hover?.position
+    if (label != null && at != null) {
+        val layout = measurer.measure(label, TextStyle(color = c.preview, fontSize = 13.sp))
+        val o = off(editor, at)
+        val topLeft = Offset(o.x + 20.dp.toPx(), o.y - 44.dp.toPx())
+        val pad = 4.dp.toPx()
+        drawRoundRect(
+            c.labelBg, Offset(topLeft.x - pad, topLeft.y - pad),
+            Size(layout.size.width + 2 * pad, layout.size.height + 2 * pad), androidx.compose.ui.geometry.CornerRadius(pad),
+        )
+        drawText(layout, topLeft = topLeft)
+    }
 
     // Constraint-Symbole und Maße
     for (b in editor.badges()) {
