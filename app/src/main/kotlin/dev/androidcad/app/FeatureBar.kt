@@ -40,6 +40,8 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.ui.unit.dp
 import dev.androidcad.model.BasePlane
 import dev.androidcad.model.BodyOp
@@ -111,38 +113,41 @@ internal fun Feature.label(): String = when (this) {
 }
 
 /**
- * Feature-Baum: die Modellhistorie senkrecht in Aufbau-Reihenfolge. Antippen wählt ein Feature (eine gewählte Skizze erneut
- * antippen öffnet sie zum Zeichnen); „⋯“ am Eintrag bearbeitet es. Features mit Fehler beim letzten Aufbau tragen ein ⚠.
+ * Zeitleiste des Modellaufbaus: alle Schritte waagrecht in Aufbau-Reihenfolge (scrollt). Antippen wählt einen Schritt (eine gewählte
+ * Skizze erneut antippen öffnet sie zum Zeichnen); am gewählten Schritt öffnet „⋯“ Umbenennen, Löschen usw. ⚠ = Fehler beim Aufbau.
  */
 @Composable
-fun FeatureList(state: WorkspaceState) {
-    val errors = state.output?.errorIds ?: emptySet()
-    Column(Modifier.fillMaxWidth()) {
-        state.features.forEach { f -> FeatureRow(state, f, f.id in errors) }
-    }
-}
-
-@Composable
-private fun FeatureRow(state: WorkspaceState, f: Feature, hasError: Boolean) {
+fun Timeline(state: WorkspaceState, modifier: Modifier) {
     val colors = MaterialTheme.colorScheme
-    val isSelected = f.id == state.selectedId
-    val isActiveSketch = f is SketchFeature && f.id == state.sketch.id
+    val errors = state.output?.errorIds ?: emptySet()
+    val scroll = rememberScrollState()
+    val shape = RoundedCornerShape(14.dp)
+    // neuer Schritt (kommt ans Ende): dorthin scrollen, damit er sichtbar ist
+    LaunchedEffect(state.features.size) { scroll.animateScrollTo(scroll.maxValue) }
     Row(
-        Modifier
-            .fillMaxWidth()
-            .background(if (isSelected) colors.primaryContainer else androidx.compose.ui.graphics.Color.Transparent)
-            .clickable { if (isSelected && f is SketchFeature) state.editSketch() else state.select(f.id) }
-            .padding(start = 12.dp, end = 4.dp, top = 2.dp, bottom = 2.dp),
-        verticalAlignment = Alignment.CenterVertically,
+        modifier.glass(shape).height(48.dp).horizontalScroll(scroll).padding(horizontal = 4.dp),
+        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(2.dp),
     ) {
-        Box(Modifier.width(30.dp)) { CadIconView(f.icon(), if (isSelected) colors.onPrimaryContainer else colors.primary, 20.dp) }
-        Text(
-            f.label(), Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis,
-            color = if (isSelected) colors.onPrimaryContainer else colors.onSurface,
-            fontWeight = if (isActiveSketch) FontWeight.SemiBold else FontWeight.Normal,
-        )
-        if (hasError) Text("⚠", Modifier.padding(horizontal = 4.dp), color = colors.error)
-        FeatureMenu(state, f)
+        state.features.forEach { f ->
+            val selected = f.id == state.selectedId
+            val shapeItem = RoundedCornerShape(10.dp)
+            Row(
+                Modifier
+                    .height(40.dp)
+                    .background(if (selected) colors.primaryContainer else androidx.compose.ui.graphics.Color.Transparent, shapeItem)
+                    .clickable { if (selected && f is SketchFeature) state.editSketch() else state.select(f.id) }
+                    .padding(start = 8.dp, end = if (selected) 0.dp else 10.dp),
+                verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                CadIconView(f.icon(), if (selected) colors.onPrimaryContainer else colors.primary, 18.dp)
+                Text(
+                    f.name, Modifier.widthIn(max = 140.dp), maxLines = 1, overflow = TextOverflow.Ellipsis,
+                    style = MaterialTheme.typography.labelLarge, color = if (selected) colors.onPrimaryContainer else colors.onSurface,
+                )
+                if (f.id in errors) Text("⚠", color = colors.error)
+                if (selected) FeatureMenu(state, f)
+            }
+        }
     }
 }
 

@@ -99,19 +99,19 @@ internal fun ModelScreen(hub: ProjectHub) {
                             Column(Modifier.fillMaxSize()) {
                                 ErrorBanner(state)
                                 Box(Modifier.weight(1f).fillMaxWidth().padding(8.dp)) {
-                                    StepChip(state, Modifier.align(Alignment.TopStart))
                                     ViewMenu(state, Modifier.align(Alignment.TopEnd))
+                                    // unten; das Achsenkreuz sitzt darüber
+                                    Timeline(state, Modifier.align(Alignment.BottomStart))
                                 }
                             }
                         }
                         val sheet = Modifier.fillMaxWidth().heightIn(max = areaHeight * 0.5f).padding(horizontal = 6.dp, vertical = 4.dp)
-                        if (state.parametersOpen) ParameterCard(state, sheet)
-                        else if (state.prefs.historyOpen) HistoryCard(state, sheet) else if (state.panelVisible) SettingsCard(state, sheet)
+                        if (state.parametersOpen) ParameterCard(state, sheet) else if (state.panelVisible) SettingsCard(state, sheet)
                     }
                 } else {
                     // das Modell zentriert sich im freien Bereich neben der Werkzeugleiste und den offenen Karten
                     val cad = CadTheme.colors
-                    val left = if (state.prefs.historyOpen || state.parametersOpen) 372.dp else 76.dp
+                    val left = if (state.parametersOpen) 372.dp else 76.dp
                     val right = if (state.panelVisible) CARD_WIDTH + 16.dp else 0.dp
                     Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(cad.viewportTop, cad.viewportBottom)))) {
                         ModelViewport(state, Modifier.fillMaxSize().padding(start = left, end = right))
@@ -119,12 +119,11 @@ internal fun ModelScreen(hub: ProjectHub) {
                     Column(Modifier.fillMaxSize()) {
                         ErrorBanner(state)
                         Box(Modifier.weight(1f).fillMaxWidth().padding(8.dp)) {
-                            StepChip(state, Modifier.align(Alignment.TopStart).padding(start = 76.dp))
                             ViewMenu(state, Modifier.align(Alignment.BottomEnd))
-                            // links: Parameter-Tabelle oder Modellaufbau (die Tabelle hat Vorrang)
-                            val leftCard = Modifier.align(Alignment.TopStart).padding(start = 76.dp, top = 48.dp).width(280.dp).heightIn(max = areaHeight - 72.dp)
-                            if (state.parametersOpen) ParameterCard(state, leftCard)
-                            else if (state.prefs.historyOpen) HistoryCard(state, leftCard)
+                            // unten: Zeitleiste zwischen Werkzeugleiste und Ansicht-Menü bzw. Einstellungskarte
+                            Timeline(state, Modifier.align(Alignment.BottomStart).padding(start = 76.dp, end = if (state.panelVisible) CARD_WIDTH + 16.dp else 140.dp))
+                            if (state.parametersOpen) ParameterCard(state, Modifier.align(Alignment.TopStart).padding(start = 76.dp).width(280.dp).heightIn(max = areaHeight - 80.dp))
+                            // Karte endet über der Zeitleiste
                             if (state.panelVisible) SettingsCard(state, Modifier.align(Alignment.TopEnd).width(CARD_WIDTH).heightIn(max = areaHeight - 80.dp))
                             // zuletzt: die aufgeklappte Werkzeugleiste liegt über allen Karten
                             GroupBar(toolGroups(state) { newSketch = true }, vertical = true, openGroup, { openGroup = it }, Modifier.align(Alignment.TopStart))
@@ -206,9 +205,6 @@ private fun ModelTopBar(hub: ProjectHub, compact: Boolean) {
         ActionButton(CadIcon.UNDO, "Rückgängig", enabled = state.canUndo, onClick = state::undo)
         ActionButton(CadIcon.REDO, "Wiederholen", enabled = state.canRedo, onClick = state::redo)
         TextButton(onClick = { state.parametersOpen = !state.parametersOpen }) { Text(if (state.parametersOpen) "Parameter ✕" else "Parameter") }
-        TextButton(onClick = { state.prefs.historyOpen = !state.prefs.historyOpen }) {
-            Text(if (state.prefs.historyOpen) "Verlauf ✕" else "Verlauf")
-        }
         if (!compact) TextButton(onClick = { exporter.launch("${state.projectName}.stl") }, enabled = out?.mesh != null) { Text("STL exportieren") }
         Box {
             TextButton(onClick = { menu = true }) { Text("⋮") }
@@ -336,49 +332,6 @@ private fun ToolStrip(g: ToolGroup, onDone: () -> Unit) {
     }
 }
 
-// ---- Verlauf ----------------------------------------------------------------------------------------
-
-/** Chip mit dem aktuellen Schritt des Modellaufbaus: ‹ › blättert, ein Tipp auf den Namen öffnet bzw. schließt den ganzen Verlauf. */
-@Composable
-private fun StepChip(state: WorkspaceState, modifier: Modifier) {
-    val colors = MaterialTheme.colorScheme
-    val features = state.features
-    val index = features.indexOfFirst { it.id == state.selectedId }
-    val errors = state.output?.errorIds ?: emptySet()
-    val shape = RoundedCornerShape(50)
-    Row(
-        modifier.glass(shape).height(40.dp).padding(horizontal = 2.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        TextButton(onClick = { features.getOrNull(index - 1)?.let { state.select(it.id) } }, enabled = index > 0) {
-            Text("‹", style = MaterialTheme.typography.titleLarge)
-        }
-        val f = features.getOrNull(index)
-        Row(
-            Modifier.clickable { state.prefs.historyOpen = !state.prefs.historyOpen }.padding(horizontal = 4.dp),
-            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp),
-        ) {
-            if (f != null) CadIconView(f.icon(), colors.onPrimaryContainer, 18.dp)
-            Text(
-                f?.name ?: "Modellaufbau · ${features.size} ${if (features.size == 1) "Schritt" else "Schritte"}",
-                style = MaterialTheme.typography.labelLarge, color = colors.onPrimaryContainer, maxLines = 1,
-            )
-            if (errors.isNotEmpty()) Text("⚠ ${errors.size}", color = colors.error, style = MaterialTheme.typography.labelLarge)
-        }
-        TextButton(onClick = { features.getOrNull(index + 1)?.let { state.select(it.id) } }, enabled = index < features.size - 1) {
-            Text("›", style = MaterialTheme.typography.titleLarge)
-        }
-    }
-}
-
-/** Der ganze Modellaufbau als Karte (nur auf Wunsch). */
-@Composable
-private fun HistoryCard(state: WorkspaceState, modifier: Modifier) {
-    FloatingCard(modifier, title = "Modellaufbau · ${state.features.size} Schritte", icon = null, onClose = { state.prefs.historyOpen = false }) {
-        FeatureList(state)
-    }
-}
-
 /** Die Parameter-Tabelle als Karte (nur auf Wunsch). */
 @Composable
 private fun ParameterCard(state: WorkspaceState, modifier: Modifier) {
@@ -477,7 +430,8 @@ private fun ModelViewport(state: WorkspaceState, modifier: Modifier) {
                 color = colors.onSurfaceVariant, textAlign = TextAlign.Center,
             )
         }
-        AxisTriad(state.camera, Modifier.align(Alignment.BottomStart).padding(12.dp).size(72.dp))
+        // über der Zeitleiste
+        AxisTriad(state.camera, Modifier.align(Alignment.BottomStart).padding(start = 12.dp, bottom = 64.dp).size(72.dp))
     }
 }
 

@@ -7,24 +7,13 @@ import java.io.File
 import java.util.Properties
 
 /**
- * Kleine Bedienvorlieben, die über einen Neustart erhalten bleiben (z. B. ob der Modellaufbau ausgeklappt ist). Liegen als
+ * Kleine Bedienvorlieben, die über einen Neustart erhalten bleiben (z. B. die Darstellung). Liegen als
  * Properties-Datei in [file]; ohne Datei (Tests) nur im Speicher. Lese- und Schreibfehler werden ignoriert – es sind Vorlieben.
  */
 class UiPrefs(private val file: File? = null) {
     private val props = Properties().apply {
         try { file?.takeIf { it.exists() }?.inputStream()?.use { load(it) } } catch (_: Exception) { }
     }
-
-    private var expandedState by mutableStateOf(props.getProperty(TREE_EXPANDED) == "true")
-
-    /** Ob der Verlauf (Modellaufbau) als Karte über dem 3D-Bild offen ist. Standard: geschlossen. */
-    var historyOpen: Boolean
-        get() = expandedState
-        set(on) {
-            expandedState = on
-            props.setProperty(TREE_EXPANDED, on.toString())
-            save()
-        }
 
     private var themeState by mutableStateOf(
         ThemeMode.entries.firstOrNull { it.name == props.getProperty(THEME) } ?: ThemeMode.DARK,
@@ -58,7 +47,6 @@ class UiPrefs(private val file: File? = null) {
     }
 
     private companion object {
-        const val TREE_EXPANDED = "history.open"
         const val THEME = "theme.mode"
     }
 }
