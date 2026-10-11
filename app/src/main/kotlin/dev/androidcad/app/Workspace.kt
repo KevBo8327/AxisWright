@@ -537,6 +537,30 @@ class WorkspaceState(private val scope: CoroutineScope, private val session: Mod
         get() = selectedId != null || edgeMode != null || holeMode != null || shellMode != null || measureMode != null || planePick || faceSketchPick
 
     /** Schließt die Einstellungskarte: bricht ein laufendes Werkzeug ab, sonst hebt es die Auswahl auf. */
+    /**
+     * Stand vor der Bearbeitung des gewählten Features (Momentaufnahme aus dem Verlauf beim Wählen; beim Anlegen ist das der Stand
+     * ohne das neue Feature). ✕ ([cancelEdit]) kehrt dorthin zurück, ✓ ([closePanel]) behält die Änderungen.
+     */
+    private var editStart: String? = null
+
+    /** Läuft gerade die Bearbeitung eines Körper-Features (✓ übernehmen / ✕ verwerfen)? Skizzen bearbeitet man im Skizzenmodus. */
+    val editing: Boolean
+        get() = selectedId != null && features.firstOrNull { it.id == selectedId } !is SketchFeature &&
+            edgeMode == null && holeMode == null && shellMode == null && measureMode == null && !planePick && !faceSketchPick
+
+    /** ✕ beim Bearbeiten: verwirft alle Änderungen seit dem Wählen des Features – ein gerade angelegtes Feature verschwindet wieder. */
+    fun cancelEdit() {
+        val start = editStart
+        editStart = null
+        if (start != null && start != DocumentCodec.encode(doc)) {
+            restore(start)
+            markDirty() // als Schritt im Verlauf: „Abbrechen“ lässt sich rückgängig machen
+        }
+        selectedId = null
+        refreshHighlight()
+        refresh()
+    }
+
     fun closePanel() {
         when {
             edgeMode != null -> cancelEdgeMode()
@@ -551,6 +575,7 @@ class WorkspaceState(private val scope: CoroutineScope, private val session: Mod
 
     fun select(id: FeatureId) {
         selectedId = id
+        editStart = history.current // ein anderes Feature wählen übernimmt die laufende Bearbeitung
         edgeMode = null
         holeMode = null
         shellMode = null

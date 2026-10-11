@@ -30,6 +30,8 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.Button
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -357,35 +359,48 @@ private fun SettingsCard(state: WorkspaceState, modifier: Modifier) {
         else -> "Eigenschaften" to null
     }
     var collapsed by remember { mutableStateOf(false) }
-    FloatingCard(modifier, title, icon, onClose = state::closePanel, collapsed = collapsed, onToggle = { collapsed = !collapsed }) {
+    // Bearbeiten eines Features: ✓ übernimmt, ✕ verwirft; Werkzeuge (Kanten wählen …) haben eigene Knöpfe, dort schließt ✕ nur
+    val editing = state.editing
+    FloatingCard(
+        modifier, title, icon, onClose = if (editing) state::cancelEdit else state::closePanel, collapsed = collapsed, onToggle = { collapsed = !collapsed },
+        onConfirm = if (editing) state::closePanel else null,
+    ) {
         FeatureControls(state)
     }
 }
 
 /**
  * Schwebende Karte über dem 3D-Bild: Kopfzeile mit Symbol, Titel, Einklappen (falls [onToggle]) und ✕; darunter scrollender
- * Inhalt. Die Höhe begrenzt der Aufrufer über [modifier].
+ * Inhalt. Mit [onConfirm] (Bearbeiten) statt ✕ eine Fußzeile „✕ Abbrechen“ ([onClose]) / „✓ Fertig“. Die Höhe begrenzt der Aufrufer über [modifier].
  */
 @Composable
 private fun FloatingCard(
     modifier: Modifier, title: String, icon: CadIcon?, onClose: () -> Unit,
-    collapsed: Boolean = false, onToggle: (() -> Unit)? = null, content: @Composable () -> Unit,
+    collapsed: Boolean = false, onToggle: (() -> Unit)? = null, onConfirm: (() -> Unit)? = null, content: @Composable () -> Unit,
 ) {
     val colors = MaterialTheme.colorScheme
     val shape = RoundedCornerShape(16.dp)
     Column(modifier.glass(shape)) {
         Row(
-            Modifier.fillMaxWidth().let { if (onToggle != null) it.clickable(onClick = onToggle) else it }.padding(start = 14.dp, end = 2.dp, top = 2.dp, bottom = 2.dp),
+            Modifier.fillMaxWidth().let { if (onToggle != null) it.clickable(onClick = onToggle) else it }.padding(start = 14.dp, end = if (onConfirm != null) 14.dp else 2.dp, top = 2.dp, bottom = 2.dp),
             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             if (icon != null) CadIconView(icon, colors.primary, 18.dp)
             Text(title, Modifier.weight(1f), style = MaterialTheme.typography.titleSmall, color = colors.primary, maxLines = 1)
             if (onToggle != null) Text(if (collapsed) "▸" else "▾", color = colors.primary)
-            TextButton(onClick = onClose) { Text("✕") }
+            if (onConfirm == null) TextButton(onClick = onClose) { Text("✕") }
         }
         if (!collapsed) {
             HorizontalDivider()
-            Column(Modifier.verticalScroll(rememberScrollState())) { content() }
+            // weight: der Inhalt scrollt, die Fußzeile mit ✕/✓ bleibt sichtbar
+            Column(Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState())) { content() }
+        }
+        if (onConfirm != null) {
+            HorizontalDivider()
+            Row(Modifier.fillMaxWidth().padding(8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(onClick = onClose, modifier = Modifier.weight(1f)) { Text("✕ Abbrechen") }
+                Button(onClick = onConfirm, modifier = Modifier.weight(1f)) { Text("✓ Fertig") }
+            }
         }
     }
 }
