@@ -142,7 +142,7 @@ private fun SketchPanel(state: WorkspaceState, modifier: Modifier) {
     BoxWithConstraints(modifier) {
         // Kopfzeile kompakt nur auf Smartphones; Werkzeuge unten auch auf Tablets im Hochformat (dort ist unten mehr Platz)
         val narrow = maxWidth < SKETCH_COMPACT_WIDTH
-        val compact = maxWidth < BOTTOM_TOOLS_WIDTH || maxWidth < maxHeight
+        val compact = maxWidth < BOTTOM_TOOLS_WIDTH || maxWidth < maxHeight || maxHeight < SKETCH_TOOLS_HEIGHT
         val density = LocalDensity.current
         handle.insetTop = with(density) { 44.dp.toPx().toDouble() }
         handle.editor.uiScale = density.density.toDouble()
@@ -184,6 +184,9 @@ private fun SketchPanel(state: WorkspaceState, modifier: Modifier) {
 
 /** Unter dieser Breite gilt das Gerät als schmal (Smartphone): Kopfzeile kompakt. */
 private val SKETCH_COMPACT_WIDTH = 600.dp
+
+/** Niedriger (Smartphone quer) passt die senkrechte Leiste der Skizze nicht: Kopfzeile + sechs Werkzeuggruppen à 56 dp. */
+private val SKETCH_TOOLS_HEIGHT = 460.dp
 
 /** Unter dieser Breite (oder im Hochformat) stehen die Werkzeuge unten statt links. */
 internal val BOTTOM_TOOLS_WIDTH = 720.dp

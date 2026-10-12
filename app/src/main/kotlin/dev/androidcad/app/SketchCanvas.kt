@@ -105,14 +105,16 @@ fun SketchCanvas(handle: EditorHandle, modifier: Modifier = Modifier, multiSelec
     var size by remember { mutableStateOf(androidx.compose.ui.unit.IntSize.Zero) }
 
     LaunchedEffect(size, editor) {
+        // Größenwechsel kommen oft in mehreren Schritten (Drehen, Faltgerät): erst die endgültige Größe auswerten
+        if (handle.fitted) kotlinx.coroutines.delay(200)
         val oldW = handle.width; val oldH = handle.height
         handle.width = size.width.toDouble(); handle.height = size.height.toDouble()
         if (size.width <= 0) return@LaunchedEffect
         when {
             !handle.fitted -> { handle.fitted = true; handle.fit(referencePoints(reference)) }
-            // gedreht (hoch ↔ quer): neu einpassen, sonst ragt die Skizze aus dem Bild
-            oldW > 0 && (oldW > oldH) != (size.width > size.height) -> handle.fit(referencePoints(reference))
-            // sonst (z. B. Tastatur): die Bildmitte bleibt, wo sie war
+            // andere Breite (gedreht, geteilter Bildschirm, Fenster, Faltgerät): neu einpassen, sonst ragt die Skizze aus dem Bild
+            oldW > 0 && oldW != size.width.toDouble() -> handle.fit(referencePoints(reference))
+            // nur die Höhe (z. B. Tastatur): die Bildmitte bleibt, wo sie war
             oldW > 0 -> editor.pan((size.width - oldW) / 2, (size.height - oldH) / 2)
         }
     }
