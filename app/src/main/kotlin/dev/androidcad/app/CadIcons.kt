@@ -37,6 +37,8 @@ enum class CadIcon(private vararg val parts: Part) {
     OFFSET(Part("M4 20 V8 H18"), Part("M8 20 V12 H18", dashed = true)),
     FILLET(Part("M5 20 V13 A8 8 0 0 1 13 5 H20"), Part("M5 9 V5 H9", dashed = true)),
     MIRROR(Part("M12 3 V21", dashed = true), Part("M9.5 7 L3.5 17 H9.5 Z"), Part("M14.5 7 L20.5 17 H14.5 Z")),
+    // Bemaßen: Maßlinie mit Pfeilen zwischen zwei Hilfslinien
+    DIMENSION(Part("M4 5 V19 M20 5 V19"), Part("M4 12 H20"), Part("M7.5 9 L4 12 L7.5 15 M16.5 9 L20 12 L16.5 15")),
     MULTI(Part("M4 4 H20 V20 H4 Z"), Part("M8 12 L11 15 L16 9")),
     DONE(Part("M5 12.5 L10 17.5 L19 7")),
     UNDO(Part("M8 7 L4 11 L8 15"), Part("M4 11 H14 A5 5 0 0 1 14 21 H10")),

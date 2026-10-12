@@ -66,10 +66,16 @@ public enum class Tool {
 
     /** Kreismuster: wartet auf den Mittelpunkt (Punkt antippen oder Ursprung). */
     PATTERN_CIRCULAR,
+
+    /**
+     * Bemaßen: Kreis → Durchmesser, Bogen → Radius; Linie oder Punkt, dann ein zweites Element → Abstand bzw. Winkel,
+     * oder nach einer Linie ins Leere tippen → Länge. Der Wert wird gleich abgefragt ([SketchEditor.pendingAction]).
+     */
+    DIMENSION,
     ;
 
     /** Werkzeuge, die vorhandene Geometrie bearbeiten (Tippen statt Zeichnen). */
-    public val isModify: Boolean get() = this == TRIM || this == EXTEND || this == OFFSET || this == FILLET || this == MIRROR || isPattern
+    public val isModify: Boolean get() = this == TRIM || this == EXTEND || this == OFFSET || this == FILLET || this == MIRROR || this == DIMENSION || isPattern
 
     /** Die beiden Musterwerkzeuge. */
     public val isPattern: Boolean get() = this == PATTERN_LINEAR || this == PATTERN_CIRCULAR
@@ -683,7 +689,7 @@ public class SketchEditor(public val sketch: Sketch) {
                     else -> null
                 }
             }
-            Tool.SELECT, Tool.TRIM, Tool.EXTEND, Tool.OFFSET, Tool.FILLET, Tool.MIRROR, Tool.PATTERN_LINEAR, Tool.PATTERN_CIRCULAR -> null
+            Tool.SELECT, Tool.TRIM, Tool.EXTEND, Tool.OFFSET, Tool.FILLET, Tool.MIRROR, Tool.PATTERN_LINEAR, Tool.PATTERN_CIRCULAR, Tool.DIMENSION -> null
         }
     }
 
@@ -738,7 +744,7 @@ public class SketchEditor(public val sketch: Sketch) {
                     }
                 }
             }
-            Tool.SELECT, Tool.TRIM, Tool.EXTEND, Tool.OFFSET, Tool.FILLET, Tool.MIRROR, Tool.PATTERN_LINEAR, Tool.PATTERN_CIRCULAR -> Unit
+            Tool.SELECT, Tool.TRIM, Tool.EXTEND, Tool.OFFSET, Tool.FILLET, Tool.MIRROR, Tool.PATTERN_LINEAR, Tool.PATTERN_CIRCULAR, Tool.DIMENSION -> Unit
         }
         if (pending == null) preview = null else updateDrawPreview(up, null)
     }
@@ -761,7 +767,8 @@ public class SketchEditor(public val sketch: Sketch) {
     /** Ein Tipp mit einem Bearbeitungswerkzeug an der Stelle [world]. */
     private fun modifyAt(world: Vec2, tolerancePx: Double) {
         // Beim Fillet zählt der Eckpunkt, sonst die Kurve – auch wenn man genau auf ein Linienende tippt
-        val hit = if (tool == Tool.FILLET || tool == Tool.PATTERN_CIRCULAR) HitTest.hit(sketch, world, view.worldLength(tolerancePx))
+        val hit = if (tool == Tool.DIMENSION) HitTest.hit(sketch, world, view.worldLength(tolerancePx)) ?: axisAt(world, view.worldLength(tolerancePx))
+        else if (tool == Tool.FILLET || tool == Tool.PATTERN_CIRCULAR) HitTest.hit(sketch, world, view.worldLength(tolerancePx))
         else HitTest.hitCurve(sketch, world, view.worldLength(tolerancePx))
             ?: if (tool == Tool.MIRROR || tool == Tool.PATTERN_LINEAR) axisAt(world, view.worldLength(tolerancePx)) else null
         when (tool) {
@@ -777,6 +784,7 @@ public class SketchEditor(public val sketch: Sketch) {
                 else -> { message = "Tippe auf das Ende einer Linie oder eines Bogens." }
             }
             Tool.OFFSET -> offsetTap(hit, world)
+            Tool.DIMENSION -> dimensionTap(hit)
             Tool.FILLET -> when (hit) {
                 is Sel.P -> runOp("Ecke runden") { SketchOps.fillet(sketch, hit.id, filletRadius) }
                 else -> { message = "Tippe auf die Ecke – den Punkt, an dem zwei Linien enden." }
@@ -811,6 +819,36 @@ public class SketchEditor(public val sketch: Sketch) {
             else -> Unit
         }
         changed()
+    }
+
+    /** Bemaßen: sammelt bis zu zwei Elemente in [selection] und fragt dann den Wert ab (siehe [Tool.DIMENSION]). */
+    private fun dimensionTap(hit: Sel?) {
+        val first = selection.singleOrNull()
+        val kind: ActionKind = when {
+            hit is Sel.C && first == null -> { selection = setOf(hit); ActionKind.DIAMETER }
+            hit is Sel.A && first == null -> { selection = setOf(hit); ActionKind.RADIUS }
+            hit == null || hit == first -> {
+                if (first is Sel.L) ActionKind.LENGTH
+                else { selection = emptySet(); return }
+            }
+            first == null -> {
+                selection = setOf(hit)
+                message = if (hit is Sel.L) "Zweites Element antippen – oder eine freie Stelle für die Länge." else "Zweites Element antippen (Punkt oder Linie)."
+                messageIsInfo = true
+                return
+            }
+            first is Sel.L && hit is Sel.L -> {
+                if (abs(kotlin.math.sin(Math.toRadians(sketch.angleBetween(first.id, hit.id)))) > 1e-3) {
+                    selection = setOf(first, hit); ActionKind.ANGLE
+                } else {
+                    // parallele Linien: Abstand eines Endpunkts der ersten zur zweiten
+                    selection = setOf(Sel.P(sketch.line(first.id).p1), hit); ActionKind.DISTANCE
+                }
+            }
+            else -> { selection = setOf(first, hit); ActionKind.DISTANCE }
+        }
+        requestAction(kind)
+        if (pendingAction == null) { selection = emptySet(); message = "Diese Elemente lassen sich nicht miteinander bemaßen." }
     }
 
     /** Versatz in zwei Schritten: erst das Element wählen, dann die Seite antippen. */
@@ -1337,13 +1375,15 @@ public class SketchEditor(public val sketch: Sketch) {
         pendingAction = null
         if (!validDimension(p.kind, value)) {
             message = if (p.kind == ActionKind.PATTERN_COUNT) "Anzahl: ganze Zahl von 2 bis ${SketchOps.MAX_PATTERN_COUNT}" else "Ungültiger Wert"
+            if (tool == Tool.DIMENSION) selection = emptySet()
             changed(); return false
         }
-        return applyAction(p.kind, value)
+        return applyAction(p.kind, value).also { if (tool == Tool.DIMENSION) { selection = emptySet(); changed() } }
     }
 
     public fun cancelPendingAction() {
         pendingAction = null
+        if (tool == Tool.DIMENSION) selection = emptySet()
         changed()
     }
 

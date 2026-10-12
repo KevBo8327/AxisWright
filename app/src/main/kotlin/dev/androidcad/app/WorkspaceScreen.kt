@@ -251,6 +251,7 @@ private fun sketchToolGroups(e: SketchEditor, multiSelect: Boolean, onMultiSelec
     return listOf(
         ToolGroup("Auswahl", CadIcon.SELECT, listOf(tool("Auswahl", CadIcon.SELECT, Tool.SELECT)), direct = true),
         ToolGroup("Mehrfach", CadIcon.MULTI, listOf(ToolDef("Mehrfach", CadIcon.MULTI, multiSelect, true) { onMultiSelect(!multiSelect) }), direct = true),
+        ToolGroup("Bemaßen", CadIcon.DIMENSION, listOf(tool("Bemaßen", CadIcon.DIMENSION, Tool.DIMENSION)), direct = true),
         ToolGroup("Zeichnen", drawIcon, listOf(
             tool("Linie", CadIcon.LINE, Tool.LINE), tool("Rechteck", CadIcon.RECTANGLE, Tool.RECTANGLE),
             tool("Kreis", CadIcon.CIRCLE, Tool.CIRCLE), tool("Bogen", CadIcon.ARC, Tool.ARC),
@@ -528,6 +529,7 @@ private fun hintFor(e: SketchEditor): String = when (e.tool) {
     Tool.OFFSET ->
         if (e.offsetSource == null) "Versatz: Tippe das Element an (bei Linien samt angrenzender Kette), dann die Seite."
         else "Versatz: Tippe jetzt auf die Seite, auf die der Versatz soll."
+    Tool.DIMENSION -> "Bemaßen: Kreis oder Bogen antippen – oder eine Linie bzw. einen Punkt, dann ein zweites Element (Abstand, Winkel) oder eine freie Stelle (Länge)."
     Tool.FILLET -> "Ecke runden: Tippe auf die Ecke – den Punkt, an dem zwei Linien enden."
     Tool.MIRROR -> "Spiegeln: Tippe eine Linie als Achse an oder wähle die X- bzw. Y-Achse."
     Tool.PATTERN_LINEAR -> "Reihe: Tippe eine Linie als Richtung an – auf der Seite, in die die Reihe wachsen soll – oder wähle X bzw. Y."
