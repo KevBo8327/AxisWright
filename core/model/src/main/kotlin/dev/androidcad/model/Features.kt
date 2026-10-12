@@ -101,6 +101,8 @@ enum class BodyOp {
  *   (stabil gegenüber Maßänderungen). Leer = alle Flächen der Skizze.
  * @param distance Länge in mm; negativ = gegen die Normale. 0 ist ungültig.
  * @param symmetric Verteilt die Länge zu gleichen Teilen auf beide Seiten der Ebene.
+ * @param throughAll „Durch alles“: die Länge reicht beim Aufbau immer durch den ganzen bisherigen Körper ([distance] gibt nur
+ *   noch die Richtung an; mit [symmetric] in beide Richtungen).
  */
 data class ExtrudeFeature(
     override val id: FeatureId,
@@ -110,6 +112,7 @@ data class ExtrudeFeature(
     val op: BodyOp = BodyOp.ADD,
     val regionPoints: List<Vec2> = emptyList(),
     val symmetric: Boolean = false,
+    val throughAll: Boolean = false,
 ) : Feature
 
 /** Drehachse eines [RevolveFeature], in der Ebene seiner Skizze. */

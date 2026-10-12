@@ -90,7 +90,7 @@ object DocumentCodec {
             "kind" to "extrude", "id" to f.id.value, "name" to f.name, "sketch" to f.sketch.value,
             "distance" to f.distance, "op" to f.op.name, "symmetric" to f.symmetric,
             "regionPoints" to f.regionPoints.map { listOf(it.x, it.y) },
-        )
+        ).also { if (f.throughAll) it["throughAll"] = true }
         is RevolveFeature -> linkedMapOf(
             "kind" to "revolve", "id" to f.id.value, "name" to f.name, "sketch" to f.sketch.value,
             "axis" to when (val a = f.axis) {
@@ -187,7 +187,7 @@ object DocumentCodec {
             val d = o.double("distance")
             if (!d.isFinite()) throw JsonException("Extrusion: Länge ungültig")
             val op = BodyOp.entries.firstOrNull { it.name == o.string("op") } ?: throw JsonException("Extrusion: unbekannte Operation '${o["op"]}'")
-            ExtrudeFeature(FeatureId(o.int("id")), o.string("name"), FeatureId(o.int("sketch")), d, op, regionPoints(o), o.bool("symmetric", false))
+            ExtrudeFeature(FeatureId(o.int("id")), o.string("name"), FeatureId(o.int("sketch")), d, op, regionPoints(o), o.bool("symmetric", false), o.bool("throughAll", false))
         }
         "revolve" -> {
             val angle = o.double("angle")

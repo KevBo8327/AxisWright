@@ -24,6 +24,7 @@ internal object NativeBrep {
     @JvmStatic external fun faceArea(h: Long, id: Int): Double
     @JvmStatic external fun writeStep(h: Long, path: String)
     @JvmStatic external fun volume(h: Long): Double
+    @JvmStatic external fun bounds(h: Long): DoubleArray
     @JvmStatic external fun counts(h: Long): IntArray
     @JvmStatic external fun edgeInfo(h: Long): DoubleArray
     @JvmStatic external fun tessellate(h: Long, linear: Double, angular: Double): Array<Any?>
@@ -117,6 +118,9 @@ class BrepShape private constructor(private val handle: Long) : AutoCloseable {
 
     /** Volumen in mm³ (exakt aus der B-Rep-Geometrie, nicht aus dem Netz). */
     fun volume(): Double = call { NativeBrep.volume(handle) }
+
+    /** Achsparallele Hüllbox `{xmin, ymin, zmin, xmax, ymax, zmax}` in mm (kann etwas größer als der Körper sein). */
+    fun bounds(): DoubleArray = call { NativeBrep.bounds(handle) }
 
     fun translate(x: Double, y: Double, z: Double): BrepShape = wrap { NativeBrep.translate(handle, x, y, z) }
 

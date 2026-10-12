@@ -440,7 +440,7 @@ class Document {
                     if (!r.isSolved) errors[f.id] = "Skizze „${f.name}“: Constraints widersprechen sich"
                 }
                 is ExtrudeFeature -> attempt(f, errors) {
-                    body = combine(body, extrudeTool(f, planes), f.op)
+                    body = combine(body, extrudeTool(f, planes, body), f.op)
                 }
                 is RevolveFeature -> attempt(f, errors) {
                     body = combine(body, revolveTool(f, planes), f.op)
@@ -565,7 +565,7 @@ class Document {
         // Muster eines Musters: kopiert wird dessen gesamtes Ergebnis (Original + Kopien), die Namen bekommen beide Kopienummern
         val nested = src is PatternFeature
         val original = when (src) {
-            is ExtrudeFeature -> extrudeTool(src, planes)
+            is ExtrudeFeature -> extrudeTool(src, planes, body)
             is RevolveFeature -> revolveTool(src, planes)
             is HoleFeature -> holeTool(body, src)
             is PatternFeature -> patternResultTool(body, src, planes)
@@ -619,7 +619,7 @@ class Document {
     /** Gesamtes Ergebnis eines einfachen Musters als Werkzeug: Werkzeug der Quelle plus alle Kopien (Quelle eines Musters von Mustern). */
     private fun patternResultTool(body: BrepShape, p: PatternFeature, planes: Map<FeatureId, Workplane>): BrepShape {
         val base = when (val src = items.firstOrNull { it.id == p.source }) {
-            is ExtrudeFeature -> extrudeTool(src, planes)
+            is ExtrudeFeature -> extrudeTool(src, planes, body)
             is RevolveFeature -> revolveTool(src, planes)
             is HoleFeature -> holeTool(body, src)
             is PatternFeature -> throw BrepException("Muster lassen sich nur eine Ebene tief verschachteln")
@@ -638,13 +638,31 @@ class Document {
     }
 
     /** Alle ausgewählten Flächen der Skizze, extrudiert und in den Raum gestellt, vereinigt zu einem Werkzeugkörper. */
-    private fun extrudeTool(f: ExtrudeFeature, planes: Map<FeatureId, Workplane>): BrepShape =
-        sketchTool(f.sketch, f.regionPoints, planes) { region ->
+    private fun extrudeTool(f: ExtrudeFeature, planes: Map<FeatureId, Workplane>, body: BrepShape?): BrepShape {
+        val distance = if (f.throughAll) throughAllDistance(f, planes[f.sketch] ?: sketch(f.sketch).plane, body) else f.distance
+        return sketchTool(f.sketch, f.regionPoints, planes) { region ->
             BrepShape.extrude(
-                region.toProfile(f.id), f.distance, f.symmetric,
+                region.toProfile(f.id), distance, f.symmetric,
                 bottomTag = faceTag(f.id, FaceRole.BOTTOM), topTag = faceTag(f.id, FaceRole.TOP),
             )
         }
+    }
+
+    /**
+     * Länge für „durch alles“: bis zur entferntesten Ecke der Hüllbox des Körpers in Extrusionsrichtung (symmetrisch: in beide Richtungen),
+     * plus 1 mm, damit keine hauchdünne Haut stehen bleibt. Vorzeichen wie [ExtrudeFeature.distance].
+     */
+    private fun throughAllDistance(f: ExtrudeFeature, plane: Workplane, body: BrepShape?): Double {
+        if (body == null) throw BrepException("„Durch alles“ braucht einen vorhandenen Körper")
+        val b = body.bounds()
+        val sign = if (f.distance < 0) -1.0 else 1.0
+        val reach = (0 until 8).maxOf { i ->
+            val c = Vec3(b[if (i and 1 == 0) 0 else 3], b[if (i and 2 == 0) 1 else 4], b[if (i and 4 == 0) 2 else 5])
+            val d = (c - plane.origin).dot(plane.normal)
+            if (f.symmetric) kotlin.math.abs(d) else sign * d
+        }.coerceAtLeast(0.0) + 1.0
+        return sign * if (f.symmetric) 2 * reach else reach
+    }
 
     /** Ausgewählte Flächen der Skizze, um die Achse gedreht und in den Raum gestellt, vereinigt zu einem Werkzeugkörper. */
     private fun revolveTool(f: RevolveFeature, planes: Map<FeatureId, Workplane>): BrepShape {

@@ -27,7 +27,9 @@
 #include <BRepBuilderAPI_Transform.hxx>
 #include <BRepFilletAPI_MakeChamfer.hxx>
 #include <BRepFilletAPI_MakeFillet.hxx>
+#include <BRepBndLib.hxx>
 #include <BRepGProp.hxx>
+#include <Bnd_Box.hxx>
 #include <IFSelect_ReturnStatus.hxx>
 #include <STEPControl_Writer.hxx>
 #include <BRepCheck_Analyzer.hxx>
@@ -704,6 +706,18 @@ JNIEXPORT void JNICALL Java_dev_androidcad_brep_NativeBrep_writeStep(JNIEnv* env
     if (writer.Transfer(s, STEPControl_AsIs) != IFSelect_RetDone) throw std::runtime_error("Körper ließ sich nicht nach STEP übertragen");
     if (writer.Write(file.c_str()) != IFSelect_RetDone) throw std::runtime_error("STEP-Datei ließ sich nicht schreiben");
     return 0;
+  });
+}
+
+// Achsparallele Hüllbox {xmin, ymin, zmin, xmax, ymax, zmax}.
+JNIEXPORT jdoubleArray JNICALL Java_dev_androidcad_brep_NativeBrep_bounds(JNIEnv* env, jclass, jlong h) {
+  return guarded(env, [&]() -> jdoubleArray {
+    Bnd_Box box;
+    BRepBndLib::Add(get(h), box);
+    if (box.IsVoid()) throw Standard_Failure("leerer Körper");
+    double x0, y0, z0, x1, y1, z1;
+    box.Get(x0, y0, z0, x1, y1, z1);
+    return toJ(env, std::vector<double>{x0, y0, z0, x1, y1, z1});
   });
 }
 

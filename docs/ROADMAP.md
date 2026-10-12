@@ -94,7 +94,7 @@ Spiegeln, Arbeitsebenen, Messen, Parameter, Export STEP/3MF/STL.
 - [ ] nach 1.0: Ellipse, Spline, DXF/SVG-Import, Kanten anderer Körper/Skizzen übernehmen (auch Schnittkanten)
 
 **3D-Bearbeitung:**
-- [ ] vor der Beta: Abtragen **durch alles**
+- [x] vor der Beta: Abtragen **durch alles** ✅ (12.10.; Länge aus der Hüllbox des Körpers in Extrusionsrichtung, wächst mit dem Körper mit)
 - [ ] bis 1.0: „bis Fläche“ und zwei Seiten mit verschiedenen Längen, Schnittmenge als dritte Art beim Extrudieren, Bohrungen mit Senkung/Kegelsenkung
   und Normgrößen (M3–M10), Schnittansicht, ggf. Loft (`BRepOffsetAPI_ThruSections`)
 - [ ] nach 1.0: Sweep, STEP-Import, Fläche ziehen/versetzen (direkte Bearbeitung), Gewinde (modelliert), mehrere Körper mit Booleschen

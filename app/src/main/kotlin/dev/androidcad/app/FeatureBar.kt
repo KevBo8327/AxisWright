@@ -91,7 +91,7 @@ internal fun planeLabel(s: SketchFeature): String = when {
 
 internal fun Feature.label(): String = when (this) {
     is SketchFeature -> "$name · ${planeLabel(this)}"
-    is ExtrudeFeature -> "$name · ${formatValue(kotlin.math.abs(distance))} mm"
+    is ExtrudeFeature -> if (throughAll) "$name · durch alles" else "$name · ${formatValue(kotlin.math.abs(distance))} mm"
     is RevolveFeature -> "$name · ${formatValue(kotlin.math.abs(angle))}°"
     is ShellFeature -> "$name · ${formatValue(thickness)} mm"
     is FilletFeature -> "$name · ${formatValue(size)} mm"
@@ -351,8 +351,9 @@ fun FeatureControls(state: WorkspaceState) {
                 FilterChip(selected = ex.op == BodyOp.ADD, onClick = { state.updateExtrusion(ex.distance, ex.symmetric, BodyOp.ADD) }, label = { Text("▲ Hinzufügen") })
                 FilterChip(selected = ex.op == BodyOp.CUT, onClick = { state.updateExtrusion(ex.distance, ex.symmetric, BodyOp.CUT) }, label = { Text("▼ Abtragen") })
             }
-            val bound = ExprField(state, "Länge (mm)", length, ValueRef.FeatureValue(ex.id)) { v -> if (v > 0) state.updateExtrusion(if (reversed) -v else v, ex.symmetric) }
-            if (!bound) Slider(value = length.toFloat().coerceIn(1f, 100f), onValueChange = { v ->
+            if (ex.op == BodyOp.CUT) SwitchRow("Durch alles", ex.throughAll) { state.updateExtrusion(ex.distance, ex.symmetric, throughAll = it) }
+            val bound = !ex.throughAll && ExprField(state, "Länge (mm)", length, ValueRef.FeatureValue(ex.id)) { v -> if (v > 0) state.updateExtrusion(if (reversed) -v else v, ex.symmetric) }
+            if (!bound && !ex.throughAll) Slider(value = length.toFloat().coerceIn(1f, 100f), onValueChange = { v ->
                 val d = Math.round(v).toDouble().coerceAtLeast(1.0)
                 state.updateExtrusion(if (reversed) -d else d, ex.symmetric)
             }, valueRange = 1f..100f)

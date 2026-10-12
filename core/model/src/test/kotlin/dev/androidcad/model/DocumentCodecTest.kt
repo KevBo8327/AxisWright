@@ -18,7 +18,8 @@ class DocumentCodecTest {
         val hole = doc.addSketch("Bohrung", Workplane.XZ)
         hole.sketch.addCircle(5.0, 5.0, 2.0)
         doc.addExtrude("Platte", sk, 8.0, regionPoints = listOf(Vec2(20.0, 12.0)))
-        doc.addExtrude("Loch", hole, -3.0, BodyOp.CUT, symmetric = true)
+        val loch = doc.addExtrude("Loch", hole, -3.0, BodyOp.CUT, symmetric = true)
+        doc.update(loch.copy(throughAll = true))
         return doc
     }
 

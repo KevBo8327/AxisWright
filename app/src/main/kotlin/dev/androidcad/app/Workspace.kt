@@ -722,9 +722,11 @@ class WorkspaceState(private val scope: CoroutineScope, private val session: Mod
         scheduleBuild(0)
     }
 
-    fun updateExtrusion(distance: Double, symmetric: Boolean, op: BodyOp? = null) {
+    /** [throughAll] gilt nur beim Abtragen (beim Wechsel auf Hinzufügen fällt es weg). */
+    fun updateExtrusion(distance: Double, symmetric: Boolean, op: BodyOp? = null, throughAll: Boolean? = null) {
         val f = extrusion ?: return
-        doc.update(f.copy(distance = distance, symmetric = symmetric, op = op ?: f.op))
+        val newOp = op ?: f.op
+        doc.update(f.copy(distance = distance, symmetric = symmetric, op = newOp, throughAll = (throughAll ?: f.throughAll) && newOp == BodyOp.CUT))
         refresh()
         markDirty()
         scheduleBuild()
