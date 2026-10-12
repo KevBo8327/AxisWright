@@ -650,18 +650,20 @@ class Document {
 
     /**
      * Länge für „durch alles“: bis zur entferntesten Ecke der Hüllbox des Körpers in Extrusionsrichtung (symmetrisch: in beide Richtungen),
-     * plus 1 mm, damit keine hauchdünne Haut stehen bleibt. Vorzeichen wie [ExtrudeFeature.distance].
+     * plus 1 mm, damit keine hauchdünne Haut stehen bleibt. Vorzeichen wie [ExtrudeFeature.distance], außer der Körper liegt ganz auf der anderen Seite.
      */
     private fun throughAllDistance(f: ExtrudeFeature, plane: Workplane, body: BrepShape?): Double {
         if (body == null) throw BrepException("„Durch alles“ braucht einen vorhandenen Körper")
         val b = body.bounds()
-        val sign = if (f.distance < 0) -1.0 else 1.0
-        val reach = (0 until 8).maxOf { i ->
+        val along = (0 until 8).map { i ->
             val c = Vec3(b[if (i and 1 == 0) 0 else 3], b[if (i and 2 == 0) 1 else 4], b[if (i and 4 == 0) 2 else 5])
-            val d = (c - plane.origin).dot(plane.normal)
-            if (f.symmetric) kotlin.math.abs(d) else sign * d
-        }.coerceAtLeast(0.0) + 1.0
-        return sign * if (f.symmetric) 2 * reach else reach
+            (c - plane.origin).dot(plane.normal)
+        }
+        if (f.symmetric) return 2 * (along.maxOf { kotlin.math.abs(it) } + 1.0)
+        // liegt in der gewählten Richtung nichts vom Körper (z. B. Skizze auf der Grundfläche, Abtrag nach unten), die andere Seite nehmen
+        var sign = if (f.distance < 0) -1.0 else 1.0
+        if (along.maxOf { sign * it } <= 1e-3) sign = -sign // 1 µm: die Hüllbox von OCCT ist um eine Toleranz größer
+        return sign * (along.maxOf { sign * it }.coerceAtLeast(0.0) + 1.0)
     }
 
     /** Ausgewählte Flächen der Skizze, um die Achse gedreht und in den Raum gestellt, vereinigt zu einem Werkzeugkörper. */

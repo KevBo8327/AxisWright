@@ -42,4 +42,20 @@ class ThroughAllTest {
             assertTrue(abs(res.body!!.volume() - (40.0 * 30 * 20 - PI * 25 * 20)) < 1e-3, "Volumen ${res.body.volume()}")
         }
     }
+
+    @Test
+    fun cutPointingAwayFromTheBodyTakesTheOtherSide() {
+        val doc = Document()
+        val sk = doc.addSketch("Grundriss")
+        sk.sketch.addRectangle(0.0, 0.0, 40.0, 30.0)
+        doc.addExtrude("Block", sk, 20.0)
+        val hole = doc.addSketch("Loch") // auf der Grundfläche; Abtragen zeigt standardmäßig nach unten, also ins Leere
+        hole.sketch.addCircle(20.0, 15.0, 5.0)
+        val cut = doc.addExtrude("Abtrag", hole, -1.0, BodyOp.CUT)
+        doc.update(cut.copy(throughAll = true))
+        doc.build().use { res ->
+            assertTrue(res.isOk, res.errors.toString())
+            assertTrue(abs(res.body!!.volume() - (40.0 * 30 * 20 - PI * 25 * 20)) < 1e-3, "Volumen ${res.body.volume()}")
+        }
+    }
 }

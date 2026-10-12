@@ -1,7 +1,12 @@
 package dev.androidcad.app
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.size
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -200,8 +205,13 @@ private fun FeatureMenu(state: WorkspaceState, f: Feature) {
 }
 
 
+/**
+ * Ebene einer Skizze wählen: Bildkacheln für XY, XZ und YZ (Würfel mit hervorgehobener Ebene, Achsen in den Farben des Achsenkreuzes),
+ * dazu der Versatz entlang der Normalen. Mit [onFace] gibt es eine vierte Kachel „Auf Körperfläche“ (schließt den Dialog und startet das Antippen).
+ */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
-internal fun PlaneDialog(title: String, initial: PlaneSpec, onConfirm: (PlaneSpec) -> Unit, onDismiss: () -> Unit) {
+internal fun PlaneDialog(title: String, initial: PlaneSpec, onConfirm: (PlaneSpec) -> Unit, onDismiss: () -> Unit, onFace: (() -> Unit)? = null) {
     var base by remember { mutableStateOf(initial.base) }
     var offsetText by remember { mutableStateOf(formatValue(initial.offset)) }
     val offset = offsetText.replace(',', '.').toDoubleOrNull()?.takeIf { it.isFinite() }
@@ -209,21 +219,78 @@ internal fun PlaneDialog(title: String, initial: PlaneSpec, onConfirm: (PlaneSpe
         onDismissRequest = onDismiss,
         title = { Text(title) },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                BasePlane.entries.forEach { b ->
-                    FilterChip(selected = base == b, onClick = { base = b }, label = { Text(b.title) })
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    BasePlane.entries.forEach { b ->
+                        val (name, view) = b.title.split(" · ").let { it[0] to it.getOrElse(1) { "" } }
+                        PlaneTile(name, view, base == b, onClick = { base = b }) { PlanePicture(b) }
+                    }
+                    if (onFace != null) PlaneTile("Fläche", "auf dem Körper", false, onClick = onFace) {
+                        CadIconView(CadIcon.SKETCH_ON_FACE, MaterialTheme.colorScheme.primary, 40.dp)
+                    }
                 }
                 OutlinedTextField(
                     value = offsetText, onValueChange = { offsetText = it }, singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     isError = offset == null, label = { Text("Versatz entlang der Normalen (mm)") },
                 )
-                Text("Tipp: Für eine Bohrung von oben die Skizze auf die Oberseite legen (Versatz = Höhe) und „Abtragen“ wählen.", style = MaterialTheme.typography.bodySmall)
             }
         },
         confirmButton = { TextButton(onClick = { offset?.let { onConfirm(PlaneSpec(base, it)) } }, enabled = offset != null) { Text("OK") } },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Abbrechen") } },
     )
+}
+
+@Composable
+private fun PlaneTile(name: String, view: String, selected: Boolean, onClick: () -> Unit, picture: @Composable () -> Unit) {
+    val colors = MaterialTheme.colorScheme
+    val shape = RoundedCornerShape(12.dp)
+    Column(
+        Modifier
+            .width(104.dp)
+            .background(if (selected) colors.primaryContainer else colors.surfaceVariant.copy(alpha = 0.4f), shape)
+            .border(if (selected) 2.dp else 1.dp, if (selected) colors.primary else colors.outlineVariant, shape)
+            .clickable(onClick = onClick)
+            .padding(vertical = 8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(2.dp),
+    ) {
+        Box(Modifier.size(64.dp), contentAlignment = Alignment.Center) { picture() }
+        Text(name, style = MaterialTheme.typography.titleSmall, color = if (selected) colors.onPrimaryContainer else colors.onSurface)
+        Text(view, style = MaterialTheme.typography.labelSmall, color = colors.onSurfaceVariant)
+    }
+}
+
+/** Isometrischer Würfel mit der Ebene [b] als Fläche; X, Y, Z wie im Achsenkreuz der 3D-Ansicht (Z nach oben). */
+@Composable
+private fun PlanePicture(b: BasePlane) {
+    val cad = CadTheme.colors
+    val fill = MaterialTheme.colorScheme.primary
+    val frame = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.45f)
+    Canvas(Modifier.size(64.dp)) {
+        // Würfel (Bildbreite 1,44 u, Höhe 1,70 u) mittig einpassen
+        val u = minOf(size.width / 1.6f, size.height / 1.85f)
+        val o = Offset(size.width / 2 - 0.72f * u, size.height / 2 + 0.53f * u)
+        // Bildrichtungen der Achsen (wie die Standardansicht: X nach rechts unten, Y nach rechts oben, Z nach oben)
+        fun p(x: Float, y: Float, z: Float) = Offset(o.x + u * (0.82f * x + 0.62f * y), o.y + u * (0.32f * x - 0.38f * y - 1f * z))
+        val corners = listOf(0f, 1f)
+        for (a in corners) for (c in corners) {
+            drawLine(frame, p(0f, a, c), p(1f, a, c), 1.dp.toPx())
+            drawLine(frame, p(a, 0f, c), p(a, 1f, c), 1.dp.toPx())
+            drawLine(frame, p(a, c, 0f), p(a, c, 1f), 1.dp.toPx())
+        }
+        val quad = when (b) {
+            BasePlane.XY -> listOf(p(0f, 0f, 0f), p(1f, 0f, 0f), p(1f, 1f, 0f), p(0f, 1f, 0f))
+            BasePlane.XZ -> listOf(p(0f, 0f, 0f), p(1f, 0f, 0f), p(1f, 0f, 1f), p(0f, 0f, 1f))
+            BasePlane.YZ -> listOf(p(0f, 0f, 0f), p(0f, 1f, 0f), p(0f, 1f, 1f), p(0f, 0f, 1f))
+        }
+        val path = androidx.compose.ui.graphics.Path().apply { moveTo(quad[0].x, quad[0].y); quad.drop(1).forEach { lineTo(it.x, it.y) }; close() }
+        drawPath(path, fill.copy(alpha = 0.45f))
+        drawPath(path, fill, style = androidx.compose.ui.graphics.drawscope.Stroke(1.5.dp.toPx()))
+        val w = 2.dp.toPx()
+        drawLine(cad.axisX, p(0f, 0f, 0f), p(1.25f, 0f, 0f), w)
+        drawLine(cad.axisY, p(0f, 0f, 0f), p(0f, 1.25f, 0f), w)
+        drawLine(cad.axisZ, p(0f, 0f, 0f), p(0f, 0f, 1.25f), w)
+    }
 }
 
 /**

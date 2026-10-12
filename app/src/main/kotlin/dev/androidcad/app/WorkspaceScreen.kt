@@ -172,12 +172,12 @@ private fun SketchPanel(state: WorkspaceState, modifier: Modifier) {
     }
     handle.version // Beobachtung: bei jeder Änderung des Editors neu zusammensetzen
     ValueDialogs(state, handle.editor, handle.editor.pendingAction, handle.editor.valueEdit)
-    if (planeDialog) {
+    if (planeDialog || state.askPlane) {
         PlaneDialog(
-            title = "Ebene der Skizze ändern",
+            title = if (state.askPlane) "Auf welcher Ebene beginnen?" else "Ebene der Skizze ändern",
             initial = PlaneSpec.from(state.sketch.plane) ?: PlaneSpec(BasePlane.XY),
-            onConfirm = { planeDialog = false; state.changePlane(it) },
-            onDismiss = { planeDialog = false },
+            onConfirm = { planeDialog = false; state.askPlane = false; state.changePlane(it) },
+            onDismiss = { planeDialog = false; state.askPlane = false },
         )
     }
 }

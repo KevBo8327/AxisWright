@@ -635,6 +635,9 @@ class WorkspaceState(private val scope: CoroutineScope, private val session: Mod
         syncProject()
     }
 
+    /** Nach „Neues Modell“: die Ebene der ersten Skizze wird gleich abgefragt (Abbrechen lässt sie auf XY). */
+    var askPlane by mutableStateOf(false)
+
     /** Löscht ein gespeichertes Modell, das gerade nicht geöffnet ist. */
     fun deleteProjectById(id: String) {
         if (id == session.currentId) { deleteProject(); return }
@@ -649,6 +652,7 @@ class WorkspaceState(private val scope: CoroutineScope, private val session: Mod
         adopt(Document())
         notice = null
         syncProject()
+        askPlane = true
     }
 
     /** Das aktuelle Modell als Datei-Inhalt (Projekt exportieren). */

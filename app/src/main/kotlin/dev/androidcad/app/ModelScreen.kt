@@ -149,6 +149,7 @@ internal fun ModelScreen(hub: ProjectHub) {
             initial = PlaneSpec(BasePlane.XY),
             onConfirm = { newSketch = false; state.addSketch(it) },
             onDismiss = { newSketch = false },
+            onFace = if (state.output?.mesh != null) ({ newSketch = false; state.startFaceSketchPick() }) else null,
         )
     }
 }
