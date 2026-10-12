@@ -166,7 +166,7 @@ public object SketchOps {
     }
 
     /** Nach dem Kürzen ungültige Maße der Linie entfernen (Länge, Gleichlänge, Mittelpunkt). */
-    private fun dropLengthConstraints(s: Sketch, line: LineId) {
+    internal fun dropLengthConstraints(s: Sketch, line: LineId) {
         for (e in s.constraintEntries) {
             val c = e.constraint
             val bad = (c is LengthDim && c.line == line) || (c is EqualLength && (c.a == line || c.b == line)) || (c is Midpoint && c.line == line)

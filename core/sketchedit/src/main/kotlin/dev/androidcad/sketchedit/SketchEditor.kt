@@ -19,6 +19,7 @@ import dev.androidcad.sketch.Parallel
 import dev.androidcad.sketch.Perpendicular
 import dev.androidcad.sketch.TangentLineRound
 import dev.androidcad.sketch.SketchOps
+import dev.androidcad.sketch.chamfer
 import dev.androidcad.sketch.PointId
 import dev.androidcad.sketch.PointOnLine
 import dev.androidcad.sketch.PointOnRound
@@ -145,6 +146,15 @@ public enum class ArcMode(public val label: String) {
     TANGENT("Tangential"),
 }
 
+/** Varianten des Ecken-Werkzeugs. */
+public enum class CornerMode(public val label: String) {
+    /** Bogen mit Radius zwischen den beiden Linien. */
+    ROUND("Runden"),
+
+    /** Gerade Verbindungslinie, beide Linien um denselben Abstand gekürzt. */
+    CHAMFER("Fase"),
+}
+
 public enum class PointerKind { MOUSE, TOUCH, STYLUS }
 
 public enum class PointerButton { PRIMARY, SECONDARY, MIDDLE, ERASER }
@@ -245,6 +255,14 @@ public class SketchEditor(public val sketch: Sketch) {
 
     /** Radius (mm) des Eckenverrundungs-Werkzeugs. */
     public var filletRadius: Double = 3.0
+        set(v) { field = v; changed() }
+
+    /** Variante des Ecken-Werkzeugs (Runden oder Fase). */
+    public var cornerMode: CornerMode = CornerMode.ROUND
+        set(v) { field = v; changed() }
+
+    /** Abstand (mm) der Fase von der Ecke, auf beiden Linien gleich. */
+    public var chamferDistance: Double = 2.0
         set(v) { field = v; changed() }
 
     /** Anzahl der Exemplare (mit Original) eines Skizzenmusters. */
@@ -789,7 +807,8 @@ public class SketchEditor(public val sketch: Sketch) {
             Tool.OFFSET -> offsetTap(hit, world)
             Tool.DIMENSION -> dimensionTap(hit)
             Tool.FILLET -> when (hit) {
-                is Sel.P -> runOp("Ecke runden") { SketchOps.fillet(sketch, hit.id, filletRadius) }
+                is Sel.P -> if (cornerMode == CornerMode.CHAMFER) runOp("Ecke fasen") { SketchOps.chamfer(sketch, hit.id, chamferDistance) }
+                    else runOp("Ecke runden") { SketchOps.fillet(sketch, hit.id, filletRadius) }
                 else -> { message = "Tippe auf die Ecke – den Punkt, an dem zwei Linien enden." }
             }
             Tool.MIRROR -> when (hit) {

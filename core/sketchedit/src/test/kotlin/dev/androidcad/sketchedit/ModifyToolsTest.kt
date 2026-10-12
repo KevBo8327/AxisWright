@@ -118,6 +118,22 @@ class ModifyToolsTest {
     }
 
     @Test
+    fun cornerToolInChamferModeCutsTheTappedCorner() {
+        val s = Sketch()
+        val rect = s.addRectangle(0.0, 0.0, 20.0, 10.0)
+        val e = editor(s)
+        e.cornerMode = CornerMode.CHAMFER
+        e.chamferDistance = 2.0
+        e.setTool(Tool.FILLET)
+        e.click(20.0, 0.0)
+        assertEquals(5, s.lineIds.size)
+        assertEquals(0, s.arcIds.size)
+        assertFalse(s.exists(rect.corners[1]))
+        e.undo()
+        assertEquals(4, s.lineIds.size)
+    }
+
+    @Test
     fun mirrorWaitsForTheAxisAndThenMirrorsTheSelection() {
         val s = Sketch()
         val l = s.addLine(2.0, 1.0, 6.0, 4.0)
