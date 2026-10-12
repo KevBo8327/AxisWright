@@ -33,6 +33,7 @@ public object SketchCodec {
             linkedMapOf("id" to id.value, "center" to a.center.value, "start" to a.start.value, "end" to a.end.value, "construction" to a.construction)
         }
         out["constraints"] = sketch.constraintEntries.map { encode(it.id, it.constraint) }
+        if (sketch.standalonePointIds.isNotEmpty()) out["standalonePoints"] = sketch.standalonePointIds.map { it.value }
         return out
     }
 
@@ -65,8 +66,10 @@ public object SketchCodec {
                 val o = c.asObject("Constraint")
                 put(constraints, o.int("id"), decode(o))
             }
+            // ältere Dateien kennen keine Einzelpunkte
+            val standalone = (json["standalonePoints"]?.asList("Einzelpunkte") ?: emptyList()).map { num(it).toInt() }.toSet()
             val sketch = Sketch()
-            sketch.load(json.int("nextId"), points, lines, circles, arcs, constraints)
+            sketch.load(json.int("nextId"), points, lines, circles, arcs, constraints, standalone)
             return sketch
         } catch (e: IllegalArgumentException) {
             throw JsonException("Skizze ungültig: ${e.message}")

@@ -247,6 +247,7 @@ private fun sketchToolGroups(e: SketchEditor, multiSelect: Boolean, onMultiSelec
         Tool.ARC -> CadIcon.ARC
         Tool.SLOT -> CadIcon.SLOT
         Tool.POLYGON -> CadIcon.POLYGON
+        Tool.POINT -> CadIcon.POINT
         else -> CadIcon.LINE
     }
     return listOf(
@@ -257,6 +258,7 @@ private fun sketchToolGroups(e: SketchEditor, multiSelect: Boolean, onMultiSelec
             tool("Linie", CadIcon.LINE, Tool.LINE), tool("Rechteck", CadIcon.RECTANGLE, Tool.RECTANGLE),
             tool("Kreis", CadIcon.CIRCLE, Tool.CIRCLE), tool("Bogen", CadIcon.ARC, Tool.ARC),
             tool("Langloch", CadIcon.SLOT, Tool.SLOT), tool("Vieleck", CadIcon.POLYGON, Tool.POLYGON),
+            tool("Punkt", CadIcon.POINT, Tool.POINT),
         )),
         ToolGroup("Bearbeiten", CadIcon.TRIM, listOf(
             tool("Trimmen", CadIcon.TRIM, Tool.TRIM), tool("Verlängern", CadIcon.EXTEND, Tool.EXTEND),
@@ -525,6 +527,7 @@ private fun hintFor(e: SketchEditor): String = when (e.tool) {
         ArcMode.TANGENT -> if (e.drawStep == 0) "Bogen: Ende einer Linie oder eines Bogens antippen – der Bogen setzt sie tangential fort."
         else "Bogen: Endpunkt antippen; weitere Tipps setzen den Zug tangential fort."
     }
+    Tool.POINT -> "Punkt: Tippe, wo der Punkt liegen soll – auf einer Linie, einem Kreis oder einer Achse wird er dort gebunden."
     Tool.TRIM -> "Trimmen: Tippe auf den Teil einer Linie, eines Kreises oder Bogens, der bis zu den nächsten Schnittpunkten wegfallen soll."
     Tool.EXTEND -> "Verlängern: Tippe auf das Ende einer Linie oder eines Bogens – es reicht dann bis zum nächsten Element."
     Tool.OFFSET ->
