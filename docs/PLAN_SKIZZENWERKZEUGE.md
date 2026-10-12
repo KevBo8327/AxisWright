@@ -15,7 +15,7 @@ eigenen Zweig; der Hauptagent (Koordinator) führt die Zweige nacheinander zusam
   Gerätetests in `core/model`/`core/brep`, wenn sich das Profil für OCCT ändert.
 - Prüfen: `./gradlew.bat testDebugUnitTest test :app:assembleDebug -Pandroid.injected.build.abi=x86_64` muss grün sein.
 - **Kein Emulator** (es gibt nur einen, und der Nutzer testet parallel darauf); die Sichtprüfung macht der Koordinator nach dem Zusammenführen.
-- Kommentare und Texte auf Deutsch, Stil wie im umgebenden Code; nichts committen oder pushen – das Ergebnis ist der Zweig im Worktree
+- Kommentare und Texte auf Deutsch, Stil wie im umgebenden Code; im eigenen Worktree-Zweig committen, nicht pushen – das Ergebnis ist dieser Zweig
   mit einer kurzen Zusammenfassung (geänderte Dateien, Tests, bekannte Grenzen).
 
 ## Welle 1 – vor dem Beta-Start (20.10.2026), drei Subagenten parallel

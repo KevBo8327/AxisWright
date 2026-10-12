@@ -20,3 +20,6 @@ third_party/occt/
 third_party/occt-android/
 third_party/occt-android-shared/
 build-occt/
+
+# Arbeitsverzeichnisse der Subagenten
+.claude/worktrees/
