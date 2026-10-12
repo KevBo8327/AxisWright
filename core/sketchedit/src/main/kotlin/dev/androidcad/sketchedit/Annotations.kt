@@ -99,16 +99,19 @@ internal object Annotations {
     /** Maße der Skizze; [k] = px je dp. */
     fun labels(sketch: Sketch, view: ViewTransform, k: Double = 1.0): List<DimLabel> {
         val out = ArrayList<DimLabel>()
+        // Mitte der Skizze (Bildschirm): Maße kommen auf die Seite, die von ihr weg zeigt – also außerhalb der Form
+        val pts = sketch.pointIds.filter { it != sketch.origin && !SketchOps.isAxisPoint(sketch, it) }.map { view.toScreen(sketch.point(it)) }
+        val center = if (pts.isEmpty()) null else Vec2((pts.minOf { it.x } + pts.maxOf { it.x }) / 2, (pts.minOf { it.y } + pts.maxOf { it.y }) / 2)
         for ((id, c) in sketch.constraintEntries) {
             if (c !is Dimension) continue
             // Radius einer projizierten Kreiskante: wird bei jedem Aufbau aus dem Körper gesetzt, kein Maß zum Bearbeiten
             if (c is RadiusDim && isReferenceRound(sketch, c.round)) continue
-            out += label(sketch, view, id, c, k).copy(scale = k)
+            out += label(sketch, view, id, c, k, center).copy(scale = k)
         }
         return out
     }
 
-    private fun label(sketch: Sketch, view: ViewTransform, id: ConstraintId, c: Dimension, k: Double): DimLabel {
+    private fun label(sketch: Sketch, view: ViewTransform, id: ConstraintId, c: Dimension, k: Double, center: Vec2?): DimLabel {
         fun s(p: PointId) = view.toScreen(sketch.point(p))
         val text = formatValue(abs(c.value))
 
@@ -120,10 +123,12 @@ internal object Annotations {
             return DimLabel(id, text, mid(a2, b2), ext + (a2 to b2), listOf(a2 to neg(dir), b2 to dir))
         }
 
-        /** Parallel zur Strecke a–b, auf der Seite „oben“ (kleineres y). */
+        /** Parallel zur Strecke a–b, auf der Seite weg von der Mitte der Skizze (liegt die Strecke durch die Mitte: oben). */
         fun aligned(a: Vec2, b: Vec2): DimLabel {
             val d = unit(a, b)
-            val n = Vec2(-d.y, d.x).let { if (it.y > 0) neg(it) else it }
+            val m = mid(a, b)
+            val away = center?.let { (m.x - it.x) * -d.y + (m.y - it.y) * d.x } ?: 0.0
+            val n = Vec2(-d.y, d.x).let { if (abs(away) > 1.0) (if (away > 0) it else neg(it)) else if (it.y > 0) neg(it) else it }
             return linear(a, b, n, OFFSET * k, OFFSET * k)
         }
         return when (c) {
@@ -132,13 +137,25 @@ internal object Annotations {
             // Das Vorzeichen (Richtung von a nach b) steckt in der Geometrie; angezeigt wird der Betrag.
             is HorizontalDistanceDim -> {
                 val a = s(c.a); val b = s(c.b)
-                val y = maxOf(a.y, b.y) + OFFSET * k // unterhalb des tieferen Punkts
-                linear(a, b, Vec2(0.0, 1.0), y - a.y, y - b.y)
+                // über dem höheren Punkt, wenn das Maß in der oberen Hälfte liegt, sonst unter dem tieferen
+                if (center != null && (a.y + b.y) / 2 < center.y) {
+                    val y = minOf(a.y, b.y) - OFFSET * k
+                    linear(a, b, Vec2(0.0, -1.0), a.y - y, b.y - y)
+                } else {
+                    val y = maxOf(a.y, b.y) + OFFSET * k
+                    linear(a, b, Vec2(0.0, 1.0), y - a.y, y - b.y)
+                }
             }
             is VerticalDistanceDim -> {
                 val a = s(c.a); val b = s(c.b)
-                val x = maxOf(a.x, b.x) + OFFSET * k // rechts vom äußeren Punkt
-                linear(a, b, Vec2(1.0, 0.0), x - a.x, x - b.x)
+                // links vom äußeren Punkt, wenn das Maß in der linken Hälfte liegt, sonst rechts
+                if (center != null && (a.x + b.x) / 2 < center.x) {
+                    val x = minOf(a.x, b.x) - OFFSET * k
+                    linear(a, b, Vec2(-1.0, 0.0), a.x - x, b.x - x)
+                } else {
+                    val x = maxOf(a.x, b.x) + OFFSET * k
+                    linear(a, b, Vec2(1.0, 0.0), x - a.x, x - b.x)
+                }
             }
             is PointLineDistanceDim -> {
                 // Maßlinie parallel zum Lot, entlang der Linie nach außen versetzt (sonst läge sie z. B. bei einer Ecke auf der Kante)

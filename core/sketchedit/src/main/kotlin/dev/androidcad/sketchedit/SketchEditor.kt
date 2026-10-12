@@ -466,7 +466,21 @@ public class SketchEditor(public val sketch: Sketch) {
         val size = maxOf(maxX - minX, maxY - minY)
         val gap = maxOf(minX, -maxX, minY, -maxY, 0.0)
         if (gap <= size) { minX = minOf(minX, 0.0); maxX = maxOf(maxX, 0.0); minY = minOf(minY, 0.0); maxY = maxOf(maxY, 0.0) }
-        setView(ViewTransform.fit(Vec2(minX, minY), Vec2(maxX, maxY), w, h).panned(left, top))
+        val min = Vec2(minX, minY); val max = Vec2(maxX, maxY)
+        setView(ViewTransform.fit(min, max, w, h).panned(left, top))
+        // Maße ragen um feste Abstände (dp) über die Form hinaus: diesen Rand freihalten; zweimal, weil sich Bogen- und Radiusmaße mitskalieren
+        repeat(2) {
+            val labels = dimensionLabels().takeIf { it.isNotEmpty() } ?: return
+            val g0 = view.toScreen(Vec2(minX, maxY)); val g1 = view.toScreen(Vec2(maxX, minY)) // oben links, unten rechts
+            var x0 = g0.x; var y0 = g0.y; var x1 = g1.x; var y1 = g1.y
+            fun take(p: Vec2) { x0 = minOf(x0, p.x); y0 = minOf(y0, p.y); x1 = maxOf(x1, p.x); y1 = maxOf(y1, p.y) }
+            labels.forEach { l ->
+                l.lines.forEach { (a, b) -> take(a); take(b) }
+                take(Vec2(l.center.x - l.halfWidth, l.center.y - l.halfHeight)); take(Vec2(l.center.x + l.halfWidth, l.center.y + l.halfHeight))
+            }
+            val mL = g0.x - x0; val mT = g0.y - y0; val mR = x1 - g1.x; val mB = y1 - g1.y
+            setView(ViewTransform.fit(min, max, (w - mL - mR).coerceAtLeast(1.0), (h - mT - mB).coerceAtLeast(1.0)).panned(left + mL, top + mT))
+        }
     }
 
     // ---- Zeigereingaben -------------------------------------------------------------------------
