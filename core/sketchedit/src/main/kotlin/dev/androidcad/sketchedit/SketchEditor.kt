@@ -47,6 +47,9 @@ public enum class Tool {
     /** Regelmäßiges Vieleck: Mittelpunkt, dann eine Ecke bzw. Seitenmitte (siehe [PolygonMode]). */
     POLYGON,
 
+    /** Einzelpunkt durch Tippen (mit Fangen), z. B. als Bezug für Bohrungsmitten. */
+    POINT,
+
     /** Element an der angetippten Stelle bis zu den nächsten Schnittpunkten kürzen. */
     TRIM,
 
@@ -710,7 +713,7 @@ public class SketchEditor(public val sketch: Sketch) {
                     else -> null
                 }
             }
-            Tool.SELECT, Tool.TRIM, Tool.EXTEND, Tool.OFFSET, Tool.FILLET, Tool.MIRROR, Tool.PATTERN_LINEAR, Tool.PATTERN_CIRCULAR, Tool.DIMENSION -> null
+            Tool.SELECT, Tool.POINT, Tool.TRIM, Tool.EXTEND, Tool.OFFSET, Tool.FILLET, Tool.MIRROR, Tool.PATTERN_LINEAR, Tool.PATTERN_CIRCULAR, Tool.DIMENSION -> null
         }
     }
 
@@ -737,6 +740,7 @@ public class SketchEditor(public val sketch: Sketch) {
                 else -> { finishTwoPointCircle(pending!!, up); pending = null }
             }
             Tool.SLOT -> threeTaps(first, up, dragged) { a, b, c -> finishSlot(a, b, c) }
+            Tool.POINT -> finishPoint(up)
             Tool.POLYGON -> when {
                 dragged && pending == null -> { finishPolygon(first, up); pending = null }
                 pending == null -> pending = first
@@ -926,6 +930,16 @@ public class SketchEditor(public val sketch: Sketch) {
         val r = sketch.solve(SolveOptions(analyze = false))
         if (!r.isSolved) { sketch.remove(id); return false }
         return true
+    }
+
+    /** Punkt-Werkzeug: Einzelpunkt mit den Bedingungen aus dem Fangen (auf Linie, Kreis, Achse …). */
+    private fun finishPoint(at: SnapResult) {
+        if (at.point != null) { message = "Hier liegt schon ein Punkt."; return }
+        val extra = ArrayList<Constraint>()
+        val p = materialize(at, extra)
+        sketch.markStandalone(p)
+        extra.forEach(::tryAdd)
+        commit("Punkt", analyze = true)
     }
 
     private fun finishLine(a: SnapResult, b: SnapResult): PointId? {

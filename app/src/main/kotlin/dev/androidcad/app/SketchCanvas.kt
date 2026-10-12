@@ -396,7 +396,13 @@ private fun DrawScope.drawGeometry(editor: SketchEditor, c: SketchColors) {
             drawLine(c.text, Offset(p.x - 11, p.y), Offset(p.x + 11, p.y), 1.5f); drawLine(c.text, Offset(p.x, p.y - 11), Offset(p.x, p.y + 11), 1.5f)
         } else {
             val fully = st?.constrainedPoints?.contains(id) == true
-            drawCircle(if (conflict) c.conflict else if (fully) c.fully else c.under, 3.dp.toPx(), p)
+            val pc = if (conflict) c.conflict else if (fully) c.fully else c.under
+            drawCircle(pc, 3.dp.toPx(), p)
+            if (sk.isStandalone(id)) {
+                // Einzelpunkt (Werkzeug „Punkt“): zusätzlich ein Kreuz, damit er als Bezug auffällt
+                val k = 7.dp.toPx(); val sw = 1.5.dp.toPx()
+                drawLine(pc, Offset(p.x - k, p.y), Offset(p.x + k, p.y), sw); drawLine(pc, Offset(p.x, p.y - k), Offset(p.x, p.y + k), sw)
+            }
         }
     }
 }

@@ -26,6 +26,7 @@ public class Sketch {
     private val circles = LinkedHashMap<Int, CircleData>()
     private val arcs = LinkedHashMap<Int, ArcData>()
     private val constraints = LinkedHashMap<Int, Constraint>()
+    private val standalone = LinkedHashSet<Int>()   // gewollte Einzelpunkte (Werkzeug „Punkt“)
 
     public val origin: PointId
 
@@ -40,6 +41,8 @@ public class Sketch {
     public val lineIds: List<LineId> get() = lines.keys.map(::LineId)
     public val circleIds: List<CircleId> get() = circles.keys.map(::CircleId)
     public val arcIds: List<ArcId> get() = arcs.keys.map(::ArcId)
+    /** Gewollte Einzelpunkte (Werkzeug „Punkt“); sie bleiben auch ohne Element erhalten ([removeOrphanPoints]). */
+    public val standalonePointIds: List<PointId> get() = standalone.map(::PointId)
     public val constraintEntries: List<ConstraintEntry> get() = constraints.map { ConstraintEntry(ConstraintId(it.key), it.value) }
 
     public fun point(id: PointId): Vec2 = points[id.value] ?: error("Unbekannter Punkt $id")
@@ -50,6 +53,7 @@ public class Sketch {
 
     public fun exists(id: PointId): Boolean = id.value in points
     public fun exists(id: LineId): Boolean = id.value in lines
+    public fun isStandalone(id: PointId): Boolean = id.value in standalone
     public fun exists(id: RoundId): Boolean = when (id) {
         is CircleId -> id.value in circles
         is ArcId -> id.value in arcs
@@ -126,6 +130,12 @@ public class Sketch {
 
     // ---- Elemente ändern / entfernen ------------------------------------------------------------
 
+    /** Markiert [id] als gewollten Einzelpunkt, der nicht als Waise entfernt wird. */
+    public fun markStandalone(id: PointId) {
+        require(exists(id)) { "Unbekannter Punkt" }
+        standalone += id.value
+    }
+
     public fun movePoint(id: PointId, x: Double, y: Double) {
         require(exists(id)) { "Unbekannter Punkt" }
         points[id.value] = Vec2(x, y)
@@ -175,6 +185,7 @@ public class Sketch {
         arcs.filterValues { it.center == id || it.start == id || it.end == id }.keys.toList().forEach { remove(ArcId(it)) }
         removeConstraintsReferencing(id)
         points.remove(id.value)
+        standalone.remove(id.value)
     }
 
     public fun remove(id: LineId) {
@@ -193,13 +204,14 @@ public class Sketch {
         constraints.remove(id.value)
     }
 
-    /** Löscht Punkte, die von keinem Element und keinem Constraint verwendet werden (außer dem Ursprung). */
+    /** Löscht Punkte, die von keinem Element und keinem Constraint verwendet werden (außer dem Ursprung und Einzelpunkten). */
     public fun removeOrphanPoints() {
         val used = HashSet<Any>()
         lines.values.forEach { used += it.p1; used += it.p2 }
         circles.values.forEach { used += it.center }
         arcs.values.forEach { used += it.center; used += it.start; used += it.end }
         constraints.values.forEach { used.addAll(it.refs) }
+        standalone.forEach { used += PointId(it) }
         pointIds.filter { it != origin && it !in used }.forEach { points.remove(it.value) }
     }
 
@@ -334,6 +346,7 @@ public class Sketch {
         circles: Map<Int, CircleData>,
         arcs: Map<Int, ArcData>,
         constraints: Map<Int, Constraint>,
+        standalone: Set<Int> = emptySet(),
     ) {
         val all = points.keys + lines.keys + circles.keys + arcs.keys + constraints.keys
         require(all.size == points.size + lines.size + circles.size + arcs.size + constraints.size) { "IDs sind nicht eindeutig" }
@@ -346,6 +359,7 @@ public class Sketch {
         lines.values.forEach { pt(it.p1); pt(it.p2) }
         circles.values.forEach { pt(it.center); require(it.radius.isFinite()) { "Radius ungültig" } }
         arcs.values.forEach { pt(it.center); pt(it.start); pt(it.end) }
+        standalone.forEach { pt(PointId(it)) }
         points.values.forEach { require(it.x.isFinite() && it.y.isFinite()) { "Koordinate ungültig" } }
         for (c in constraints.values) for (r in c.refs) when (r) {
             is PointId -> pt(r)
@@ -356,6 +370,7 @@ public class Sketch {
         this.points.clear(); this.lines.clear(); this.circles.clear(); this.arcs.clear(); this.constraints.clear()
         this.points.putAll(points); this.lines.putAll(lines); this.circles.putAll(circles); this.arcs.putAll(arcs)
         this.constraints.putAll(constraints)
+        this.standalone.clear(); this.standalone.addAll(standalone)
         this.nextId = nextId
     }
 
@@ -367,6 +382,7 @@ public class Sketch {
         points.clear(); lines.clear(); circles.clear(); arcs.clear(); constraints.clear()
         points.putAll(from.points); lines.putAll(from.lines); circles.putAll(from.circles); arcs.putAll(from.arcs)
         constraints.putAll(from.constraints)
+        standalone.clear(); standalone.addAll(from.standalone)
         nextId = from.nextId
     }
 
@@ -375,6 +391,7 @@ public class Sketch {
         val s = Sketch()
         s.points.clear(); s.lines.clear(); s.circles.clear(); s.arcs.clear(); s.constraints.clear()
         s.points.putAll(points); s.lines.putAll(lines); s.circles.putAll(circles); s.arcs.putAll(arcs); s.constraints.putAll(constraints)
+        s.standalone.clear(); s.standalone.addAll(standalone)
         s.nextId = nextId
         return s
     }
