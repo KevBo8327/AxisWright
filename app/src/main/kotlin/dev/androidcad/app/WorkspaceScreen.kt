@@ -232,7 +232,8 @@ private fun SketchTopBar(state: WorkspaceState, compact: Boolean, onPlaneDialog:
             }
         }
         Spacer(Modifier.width(4.dp))
-        Button(onClick = state::finishSketch) {
+        // kompakt nur das Häkchen: der Name kommt dann aus der Beschreibung (Screenreader)
+        Button(onClick = state::finishSketch, modifier = if (compact) Modifier.semantics { contentDescription = "Fertig" } else Modifier) {
             CadIconView(CadIcon.DONE, colors.onPrimary, 18.dp)
             if (!compact) { Spacer(Modifier.width(6.dp)); Text("Fertig") }
         }

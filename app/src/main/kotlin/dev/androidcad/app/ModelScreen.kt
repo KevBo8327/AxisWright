@@ -62,8 +62,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-/** Unter dieser Breite gilt das Gerät als schmal (Smartphone): Werkzeuge unten, Einstellungen als Blatt am unteren Rand. */
-private val COMPACT_WIDTH = 600.dp
+/** Unter dieser Breite ist die Kopfzeile kompakt: Volumen und „STL exportieren“ wandern ins ⋮-Menü (sonst läuft sie z. B. auf dem 7″-Tablet hoch über). */
+private val COMPACT_WIDTH = 720.dp
 
 /** Breite der schwebenden Einstellungskarte auf breiten Bildschirmen. */
 private val CARD_WIDTH = 330.dp

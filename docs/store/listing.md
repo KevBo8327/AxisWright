@@ -105,13 +105,14 @@ The geometry kernel is Open CASCADE Technology. Partwright is in active developm
 |---|---|---|
 | App-Symbol | 512 × 512 PNG | `docs/store/icon-512.png` ✓ |
 | Grafik für den Eintrag | 1024 × 500 | `docs/store/feature-graphic.png` ✓ |
-| Screenshots Smartphone | mind. 2, Seitenverhältnis höchstens 2:1 | fehlen |
-| Screenshots 7″- und 10″-Tablet | je mind. 1 (für die Tablet-Darstellung im Store mehr) | fehlen |
+| Screenshots Smartphone | mind. 2, Seitenverhältnis höchstens 2:1 | `docs/store/screenshots/phone-*.png` (1080 × 2160) ✓ |
+| Screenshots 7″-Tablet | mind. 1 | `docs/store/screenshots/tablet7-*.png` (1200 × 1920) ✓ |
+| Screenshots 10″-Tablet | mind. 1 | `docs/store/screenshots/tablet10-*.png` (2560 × 1600) ✓ |
 
-Vorschlag für die Screenshots (gleiche Reihenfolge auf Smartphone und Tablet):
-1. Skizze mit Maßen, „vollständig bestimmt“ – zeigt den Kern
-2. 3D-Modell mit Verlauf (z. B. Platte mit Bohrungen und Verrundungen)
-3. Schale oder Drehteil – zeigt, dass mehr als Extrudieren geht
-4. Parameter-Tabelle mit gebundenem Wert
-5. Messen mit Abstandslinie
-6. Export-Menü (STL, 3MF, STEP)
+Screenshots (12.10.2026, Emulator, Darstellung Dunkel, Statusleiste im Demo-Modus; 24-Bit-PNG ohne Transparenz), je Gerät in dieser Reihenfolge:
+1. `…-1-skizze` – Skizze der Montageplatte mit Maßen, „vollständig bestimmt“
+2. `…-2-modell` – Montageplatte in 3D mit Zeitleiste und Einstellungen der Verrundung
+3. `…-3-parameter` – ausgehöhltes Gehäuse mit Parameter-Tabelle (Breite, Tiefe, Höhe, Wand; Wandstärke folgt „wand“)
+4. `…-4-export` – Export-Menü (STL, STEP, 3MF, Projekt)
+
+Noch offen (bei Bedarf): Messen mit Abstandslinie, ein Drehteil.
