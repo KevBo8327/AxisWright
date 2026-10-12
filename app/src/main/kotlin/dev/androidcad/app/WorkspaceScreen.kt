@@ -87,6 +87,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import dev.androidcad.sketchedit.RectMode
 import dev.androidcad.sketchedit.CircleMode
 import dev.androidcad.sketchedit.ArcMode
+import dev.androidcad.sketchedit.CornerMode
 import dev.androidcad.sketchedit.LineMode
 import dev.androidcad.sketchedit.PolygonMode
 import dev.androidcad.sketchedit.formatValue
@@ -404,7 +405,11 @@ private fun BoxScope.ContextBar(handle: EditorHandle, prefs: UiPrefs, bottomGap:
                 when {
                     e.tool.isModify -> when (e.tool) {
                         Tool.OFFSET -> ToolNumberField("Abstand (mm)", e.offsetDistance) { e.offsetDistance = it }
-                        Tool.FILLET -> ToolNumberField("Radius (mm)", e.filletRadius) { e.filletRadius = it }
+                        Tool.FILLET -> {
+                            DrawVariants(handle, prefs)
+                            if (e.cornerMode == CornerMode.CHAMFER) ToolNumberField("Abstand (mm)", e.chamferDistance) { e.chamferDistance = it }
+                            else ToolNumberField("Radius (mm)", e.filletRadius) { e.filletRadius = it }
+                        }
                         Tool.MIRROR -> {
                             OutlinedButton(onClick = { e.mirrorAcrossAxis(horizontal = true) }) { Text("⇋ an der X-Achse") }
                             OutlinedButton(onClick = { e.mirrorAcrossAxis(horizontal = false) }) { Text("⇋ an der Y-Achse") }
@@ -531,13 +536,14 @@ private fun hintFor(e: SketchEditor): String = when (e.tool) {
         if (e.offsetSource == null) "Versatz: Tippe das Element an (bei Linien samt angrenzender Kette), dann die Seite."
         else "Versatz: Tippe jetzt auf die Seite, auf die der Versatz soll."
     Tool.DIMENSION -> "Bemaßen: Kreis oder Bogen antippen – oder eine Linie bzw. einen Punkt, dann ein zweites Element (Abstand, Winkel) oder eine freie Stelle (Länge)."
-    Tool.FILLET -> "Ecke runden: Tippe auf die Ecke – den Punkt, an dem zwei Linien enden."
+    Tool.FILLET -> if (e.cornerMode == CornerMode.CHAMFER) "Ecke fasen: Tippe auf die Ecke – den Punkt, an dem zwei Linien enden."
+        else "Ecke runden: Tippe auf die Ecke – den Punkt, an dem zwei Linien enden."
     Tool.MIRROR -> "Spiegeln: Tippe eine Linie als Achse an oder wähle die X- bzw. Y-Achse."
     Tool.PATTERN_LINEAR -> "Reihe: Tippe eine Linie als Richtung an – auf der Seite, in die die Reihe wachsen soll – oder wähle X bzw. Y."
     Tool.PATTERN_CIRCULAR -> "Kreismuster: Tippe einen Punkt oder Kreis als Mittelpunkt an oder nimm den Ursprung. 360° = voller Kreis."
 }
 
-/** Auswahl der Variante bei Linie, Rechteck, Kreis und Bogen; die Wahl bleibt über einen Neustart erhalten ([applyDrawModes]). */
+/** Auswahl der Variante bei Linie, Rechteck, Kreis, Bogen und Ecke; die Wahl bleibt über einen Neustart erhalten ([applyDrawModes]). */
 @Composable
 private fun DrawVariants(handle: EditorHandle, prefs: UiPrefs) {
     val e = handle.editor
@@ -551,6 +557,7 @@ private fun DrawVariants(handle: EditorHandle, prefs: UiPrefs) {
         Tool.RECTANGLE -> chips(RectMode.entries, e.rectMode, { it.label }) { e.rectMode = it; prefs.putText(PREF_RECT, it.name) }
         Tool.CIRCLE -> chips(CircleMode.entries, e.circleMode, { it.label }) { e.circleMode = it; prefs.putText(PREF_CIRCLE, it.name) }
         Tool.ARC -> chips(ArcMode.entries, e.arcMode, { it.label }) { e.arcMode = it; prefs.putText(PREF_ARC, it.name) }
+        Tool.FILLET -> chips(CornerMode.entries, e.cornerMode, { it.label }) { e.cornerMode = it; prefs.putText(PREF_CORNER, it.name) }
         Tool.POLYGON -> {
             ToolNumberField("Ecken", e.polygonSides.toDouble()) { e.polygonSides = Math.round(it).toInt(); prefs.putText(PREF_POLYGON_SIDES, e.polygonSides.toString()) }
             chips(PolygonMode.entries, e.polygonMode, { it.label }) { e.polygonMode = it; prefs.putText(PREF_POLYGON, it.name) }
@@ -565,6 +572,7 @@ private const val PREF_POLYGON_SIDES = "sketch.polygon.sides"
 private const val PREF_RECT = "sketch.rect"
 private const val PREF_CIRCLE = "sketch.circle"
 private const val PREF_ARC = "sketch.arc"
+private const val PREF_CORNER = "sketch.corner"
 
 /** Übernimmt die zuletzt gewählten Zeichenvarianten in einen (neuen) Editor. */
 internal fun applyDrawModes(e: SketchEditor, prefs: UiPrefs) {
@@ -574,6 +582,7 @@ internal fun applyDrawModes(e: SketchEditor, prefs: UiPrefs) {
     prefs.text(PREF_RECT)?.let { v -> RectMode.entries.firstOrNull { it.name == v } }?.let { e.rectMode = it }
     prefs.text(PREF_CIRCLE)?.let { v -> CircleMode.entries.firstOrNull { it.name == v } }?.let { e.circleMode = it }
     prefs.text(PREF_ARC)?.let { v -> ArcMode.entries.firstOrNull { it.name == v } }?.let { e.arcMode = it }
+    prefs.text(PREF_CORNER)?.let { v -> CornerMode.entries.firstOrNull { it.name == v } }?.let { e.cornerMode = it }
 }
 
 /** Kleines Zahlenfeld für Werkzeugparameter (Versatzabstand, Rundungsradius); ungültige oder nicht positive Eingaben werden ignoriert. */
