@@ -19,6 +19,7 @@ import dev.androidcad.sketch.Parallel
 import dev.androidcad.sketch.Perpendicular
 import dev.androidcad.sketch.TangentLineRound
 import dev.androidcad.sketch.SketchOps
+import dev.androidcad.sketch.split
 import dev.androidcad.sketch.PointId
 import dev.androidcad.sketch.PointOnLine
 import dev.androidcad.sketch.PointOnRound
@@ -49,6 +50,9 @@ public enum class Tool {
     /** Element an der angetippten Stelle bis zu den nächsten Schnittpunkten kürzen. */
     TRIM,
 
+    /** Linie, Bogen oder Kreis an der angetippten Stelle in zwei Teile trennen (Kreis: zwei Halbkreise). */
+    SPLIT,
+
     /** Linien-/Bogenende bis zum nächsten Element verlängern. */
     EXTEND,
 
@@ -75,7 +79,7 @@ public enum class Tool {
     ;
 
     /** Werkzeuge, die vorhandene Geometrie bearbeiten (Tippen statt Zeichnen). */
-    public val isModify: Boolean get() = this == TRIM || this == EXTEND || this == OFFSET || this == FILLET || this == MIRROR || this == DIMENSION || isPattern
+    public val isModify: Boolean get() = this == TRIM || this == SPLIT || this == EXTEND || this == OFFSET || this == FILLET || this == MIRROR || this == DIMENSION || isPattern
 
     /** Die beiden Musterwerkzeuge. */
     public val isPattern: Boolean get() = this == PATTERN_LINEAR || this == PATTERN_CIRCULAR
@@ -692,7 +696,7 @@ public class SketchEditor(public val sketch: Sketch) {
                     else -> null
                 }
             }
-            Tool.SELECT, Tool.TRIM, Tool.EXTEND, Tool.OFFSET, Tool.FILLET, Tool.MIRROR, Tool.PATTERN_LINEAR, Tool.PATTERN_CIRCULAR, Tool.DIMENSION -> null
+            Tool.SELECT, Tool.TRIM, Tool.SPLIT, Tool.EXTEND, Tool.OFFSET, Tool.FILLET, Tool.MIRROR, Tool.PATTERN_LINEAR, Tool.PATTERN_CIRCULAR, Tool.DIMENSION -> null
         }
     }
 
@@ -747,7 +751,7 @@ public class SketchEditor(public val sketch: Sketch) {
                     }
                 }
             }
-            Tool.SELECT, Tool.TRIM, Tool.EXTEND, Tool.OFFSET, Tool.FILLET, Tool.MIRROR, Tool.PATTERN_LINEAR, Tool.PATTERN_CIRCULAR, Tool.DIMENSION -> Unit
+            Tool.SELECT, Tool.TRIM, Tool.SPLIT, Tool.EXTEND, Tool.OFFSET, Tool.FILLET, Tool.MIRROR, Tool.PATTERN_LINEAR, Tool.PATTERN_CIRCULAR, Tool.DIMENSION -> Unit
         }
         if (pending == null) preview = null else updateDrawPreview(up, null)
     }
@@ -780,6 +784,12 @@ public class SketchEditor(public val sketch: Sketch) {
                 is Sel.C -> runOp("Trimmen") { SketchOps.trim(sketch, hit.id, world) }
                 is Sel.A -> runOp("Trimmen") { SketchOps.trim(sketch, hit.id, world) }
                 else -> { message = "Tippe auf eine Linie, einen Kreis oder Bogen."; }
+            }
+            Tool.SPLIT -> when (hit) {
+                is Sel.L -> runOp("Teilen") { SketchOps.split(sketch, hit.id, world) }
+                is Sel.C -> runOp("Teilen") { SketchOps.split(sketch, hit.id, world) }
+                is Sel.A -> runOp("Teilen") { SketchOps.split(sketch, hit.id, world) }
+                else -> { message = "Tippe auf eine Linie, einen Kreis oder Bogen." }
             }
             Tool.EXTEND -> when (hit) {
                 is Sel.L -> runOp("Verlängern") { SketchOps.extend(sketch, hit.id, world) }

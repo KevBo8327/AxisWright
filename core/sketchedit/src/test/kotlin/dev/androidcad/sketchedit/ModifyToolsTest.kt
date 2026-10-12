@@ -39,6 +39,19 @@ class ModifyToolsTest {
     }
 
     @Test
+    fun splitToolDividesTheTappedLine() {
+        val s = Sketch()
+        val h = s.addLine(-10.0, 0.0, 10.0, 0.0)
+        val e = editor(s)
+        e.setTool(Tool.SPLIT)
+        e.click(4.0, 0.0)
+        assertEquals(2, s.lineIds.size)
+        near(4.0, s.point(s.line(h).p2).x)
+        e.undo()
+        assertEquals(1, s.lineIds.size)
+    }
+
+    @Test
     fun aFailedOperationLeavesTheSketchAndHistoryUntouched() {
         val s = Sketch()
         val c = s.addCircle(0.0, 0.0, 10.0)
