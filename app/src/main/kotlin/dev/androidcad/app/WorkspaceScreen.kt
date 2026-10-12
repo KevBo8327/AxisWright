@@ -262,7 +262,7 @@ private fun sketchToolGroups(e: SketchEditor, multiSelect: Boolean, onMultiSelec
             tool("Punkt", CadIcon.POINT, Tool.POINT),
         )),
         ToolGroup("Bearbeiten", CadIcon.TRIM, listOf(
-            tool("Trimmen", CadIcon.TRIM, Tool.TRIM), tool("Verlängern", CadIcon.EXTEND, Tool.EXTEND),
+            tool("Trimmen", CadIcon.TRIM, Tool.TRIM), tool("Teilen", CadIcon.SPLIT, Tool.SPLIT), tool("Verlängern", CadIcon.EXTEND, Tool.EXTEND),
             tool("Versatz", CadIcon.OFFSET, Tool.OFFSET), tool("Ecke", CadIcon.FILLET, Tool.FILLET),
             ToolDef("Spiegeln", CadIcon.MIRROR, e.tool == Tool.MIRROR, e.selection.isNotEmpty() || e.mirrorPending) {
                 if (e.mirrorPending) e.cancelOperation() else e.startMirror()
@@ -534,6 +534,7 @@ private fun hintFor(e: SketchEditor): String = when (e.tool) {
     }
     Tool.POINT -> "Punkt: Tippe, wo der Punkt liegen soll – auf einer Linie, einem Kreis oder einer Achse wird er dort gebunden."
     Tool.TRIM -> "Trimmen: Tippe auf den Teil einer Linie, eines Kreises oder Bogens, der bis zu den nächsten Schnittpunkten wegfallen soll."
+    Tool.SPLIT -> "Teilen: Tippe auf eine Linie oder einen Bogen an der Stelle, an der sie geteilt werden sollen – einen Kreis teilt der Tipp in zwei Halbkreise."
     Tool.EXTEND -> "Verlängern: Tippe auf das Ende einer Linie oder eines Bogens – es reicht dann bis zum nächsten Element."
     Tool.OFFSET ->
         if (e.offsetSource == null) "Versatz: Tippe das Element an (bei Linien samt angrenzender Kette), dann die Seite."

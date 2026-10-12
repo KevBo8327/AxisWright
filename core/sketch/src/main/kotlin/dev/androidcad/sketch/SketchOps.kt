@@ -175,7 +175,7 @@ public object SketchOps {
     }
 
     /** Überträgt die längenunabhängigen Eigenschaften (waagerecht, senkrecht, parallel …) von [from] auf [to]. */
-    private fun copyShape(s: Sketch, from: LineId, to: LineId) {
+    internal fun copyShape(s: Sketch, from: LineId, to: LineId) {
         for (e in s.constraintEntries.toList()) {
             when (val c = e.constraint) {
                 is Horizontal -> if (c.line == from) s.add(Horizontal(to))
