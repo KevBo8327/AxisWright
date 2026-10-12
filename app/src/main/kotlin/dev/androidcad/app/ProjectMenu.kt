@@ -43,7 +43,7 @@ import java.util.Date
 internal fun ProjectKind.icon(): CadIcon = if (this == ProjectKind.MODEL) CadIcon.SKETCH else CadIcon.SCRIPT
 
 /** Wie viele zuletzt bearbeitete Projekte das Menü direkt zeigt (alle über „Alle Projekte …“). */
-private const val RECENT = 6
+private const val RECENT = 4
 
 /**
  * Gemeinsames Projektmenü (Titel der App-Leiste in Modell- und Skript-Editor): neue Projekte beider Arten, Beispiele, Import, die
@@ -81,7 +81,7 @@ internal fun ProjectMenu(hub: ProjectHub) {
             MenuItem("Neues Skript (OpenSCAD)", CadIcon.SCRIPT) { open = false; hub.newScript() }
             MenuItem("Beispiele …") { open = false; showExamples = true }
             MenuItem("Hilfe & Gesten …") { open = false; showHelp = true }
-            MenuItem("Projekt importieren (Modell oder .scad) …") { open = false; importer.launch(arrayOf("*/*")) }
+            MenuItem("Importieren (Modell, .scad) …") { open = false; importer.launch(arrayOf("*/*")) }
             HorizontalDivider()
             Text(
                 "Zuletzt bearbeitet", Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
@@ -100,17 +100,9 @@ internal fun ProjectMenu(hub: ProjectHub) {
             DropdownMenuItem(text = { Text("Duplizieren") }, enabled = current != null, onClick = { open = false; current?.let(hub::duplicate) })
             DropdownMenuItem(text = { Text("Löschen …") }, enabled = current != null, onClick = { open = false; deleting = current })
             HorizontalDivider()
-            Text(
-                "Darstellung", Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
-                style = MaterialTheme.typography.labelMedium, color = colors.onSurfaceVariant,
-            )
-            ThemeMode.entries.forEach { m ->
-                DropdownMenuItem(
-                    text = { Text(m.label + if (hub.workspace.prefs.themeMode == m) "  ✓" else "") },
-                    onClick = { open = false; hub.workspace.prefs.themeMode = m },
-                )
-            }
-            HorizontalDivider()
+            // eine Zeile statt drei (das Menü soll auch auf dem Smartphone ganz sichtbar sein): Tippen wechselt zur nächsten Darstellung
+            val theme = hub.workspace.prefs.themeMode
+            MenuItem("Darstellung: ${theme.label}") { hub.workspace.prefs.themeMode = ThemeMode.entries[(theme.ordinal + 1) % ThemeMode.entries.size] }
             MenuItem("Lizenzen …") { open = false; showLicenses = true }
         }
     }

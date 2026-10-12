@@ -107,7 +107,8 @@ internal fun ModelScreen(hub: ProjectHub) {
                                 }
                             }
                         }
-                        val sheet = Modifier.fillMaxWidth().heightIn(max = areaHeight * 0.5f).padding(horizontal = 6.dp, vertical = 4.dp)
+                        // so hoch, dass die Einstellungen meist ganz passen; dem 3D-Bild bleiben mindestens 260 dp
+                        val sheet = Modifier.fillMaxWidth().heightIn(max = maxOf(areaHeight * 0.5f, areaHeight - 260.dp)).padding(horizontal = 6.dp, vertical = 4.dp)
                         if (state.parametersOpen) ParameterCard(state, sheet) else if (state.panelVisible) SettingsCard(state, sheet)
                     }
                 } else {
@@ -121,12 +122,14 @@ internal fun ModelScreen(hub: ProjectHub) {
                     Column(Modifier.fillMaxSize()) {
                         ErrorBanner(state)
                         Box(Modifier.weight(1f).fillMaxWidth().padding(8.dp)) {
-                            ViewMenu(state, Modifier.align(Alignment.BottomEnd))
-                            // unten: Zeitleiste zwischen Werkzeugleiste und Ansicht-Menü bzw. Einstellungskarte
-                            Timeline(state, Modifier.align(Alignment.BottomStart).padding(start = 76.dp, end = if (state.panelVisible) CARD_WIDTH + 16.dp else 140.dp))
+                            // offene Karte: das Ansicht-Menü rückt links neben sie, damit die Karte die ganze Höhe nutzen kann
+                            val cardSpace = if (state.panelVisible) CARD_WIDTH + 8.dp else 0.dp
+                            ViewMenu(state, Modifier.align(Alignment.BottomEnd).padding(end = cardSpace))
+                            // unten: Zeitleiste zwischen Werkzeugleiste und Ansicht-Menü
+                            Timeline(state, Modifier.align(Alignment.BottomStart).padding(start = 76.dp, end = cardSpace + 140.dp))
                             if (state.parametersOpen) ParameterCard(state, Modifier.align(Alignment.TopStart).padding(start = 76.dp).width(280.dp).heightIn(max = areaHeight - 80.dp))
-                            // Karte endet über der Zeitleiste
-                            if (state.panelVisible) SettingsCard(state, Modifier.align(Alignment.TopEnd).width(CARD_WIDTH).heightIn(max = areaHeight - 80.dp))
+                            // Karte über die ganze Höhe; Zeitleiste und Ansicht-Menü liegen links davon
+                            if (state.panelVisible) SettingsCard(state, Modifier.align(Alignment.TopEnd).width(CARD_WIDTH).heightIn(max = areaHeight - 16.dp))
                             // zuletzt: die aufgeklappte Werkzeugleiste liegt über allen Karten
                             GroupBar(toolGroups(state) { newSketch = true }, vertical = true, openGroup, { openGroup = it }, Modifier.align(Alignment.TopStart))
                         }
