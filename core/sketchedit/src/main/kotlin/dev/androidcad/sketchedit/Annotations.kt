@@ -37,15 +37,28 @@ import dev.androidcad.sketch.Vec2
 import dev.androidcad.sketch.Vertical
 import dev.androidcad.sketch.VerticalDistanceDim
 import dev.androidcad.sketch.VerticalPoints
+import kotlin.math.abs
+import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.hypot
 import kotlin.math.sin
 
-/** Maßetikett: [center] ist die Bildschirmmitte, [anchor] der Punkt am Element, an den es gehört (für Hilfslinie). */
-public data class DimLabel(val id: ConstraintId, val text: String, val center: Vec2, val anchor: Vec2) {
+/**
+ * Maß wie in der technischen Zeichnung (alles in Bildschirm-px): [lines] sind Strecken (Maßhilfslinien, Maßlinie bzw. Maßbogen),
+ * [arrows] Maßpfeile als (Spitze, Richtung der Spitze als Einheitsvektor); die Maßzahl steht mittig auf [center].
+ */
+public data class DimLabel(
+    val id: ConstraintId,
+    val text: String,
+    val center: Vec2,
+    val lines: List<Pair<Vec2, Vec2>> = emptyList(),
+    val arrows: List<Pair<Vec2, Vec2>> = emptyList(),
+    /** px je dp (siehe [SketchEditor.uiScale]). */
+    val scale: Double = 1.0,
+) {
     /** Näherung der Etikettgröße in px (für Treffertests und Hintergrund). */
-    public val halfWidth: Double get() = 4.5 * text.length + 8
-    public val halfHeight: Double get() = 12.0
+    public val halfWidth: Double get() = (4.5 * text.length + 8) * scale
+    public val halfHeight: Double get() = 12.0 * scale
     public fun contains(p: Vec2): Boolean = kotlin.math.abs(p.x - center.x) <= halfWidth && kotlin.math.abs(p.y - center.y) <= halfHeight
 }
 
@@ -58,7 +71,15 @@ public fun formatValue(v: Double): String {
 }
 
 internal object Annotations {
-    private const val OFFSET = 18.0
+    /** Abstand der Maßlinie vom Element. */
+    private const val OFFSET = 28.0
+
+    /** Lücke zwischen Element und Maßhilfslinie bzw. Überstand der Hilfslinie über die Maßlinie hinaus. */
+    private const val GAP = 4.0
+    private const val OVERSHOOT = 6.0
+
+    /** Radius des Maßbogens bei Winkeln. */
+    private const val ANGLE_RADIUS = 46.0
 
     /** Ob [p] nur zu festen Referenzen gehört (projizierte Körperkanten, Achsen) – dort sind „F“ und Maße nur Rauschen. */
     private fun isReferencePoint(sketch: Sketch, p: PointId): Boolean {
@@ -75,66 +96,107 @@ internal object Annotations {
     private fun isReferenceRound(sketch: Sketch, r: RoundId): Boolean =
         r is CircleId && sketch.circle(r).construction && sketch.constraintEntries.any { (it.constraint as? Fixed)?.point == sketch.circle(r).center }
 
-    fun labels(sketch: Sketch, view: ViewTransform): List<DimLabel> {
+    /** Maße der Skizze; [k] = px je dp. */
+    fun labels(sketch: Sketch, view: ViewTransform, k: Double = 1.0): List<DimLabel> {
         val out = ArrayList<DimLabel>()
         for ((id, c) in sketch.constraintEntries) {
             if (c !is Dimension) continue
             // Radius einer projizierten Kreiskante: wird bei jedem Aufbau aus dem Körper gesetzt, kein Maß zum Bearbeiten
             if (c is RadiusDim && isReferenceRound(sketch, c.round)) continue
-            label(sketch, view, id, c)?.let { out += it }
+            out += label(sketch, view, id, c, k).copy(scale = k)
         }
         return out
     }
 
-    private fun label(sketch: Sketch, view: ViewTransform, id: ConstraintId, c: Dimension): DimLabel? {
+    private fun label(sketch: Sketch, view: ViewTransform, id: ConstraintId, c: Dimension, k: Double): DimLabel {
         fun s(p: PointId) = view.toScreen(sketch.point(p))
-        /** Etikett auf halber Strecke a–b, seitlich versetzt. */
-        fun along(a: Vec2, b: Vec2, text: String, offset: Double = OFFSET): DimLabel {
-            val mid = Vec2((a.x + b.x) / 2, (a.y + b.y) / 2)
-            val dx = b.x - a.x; val dy = b.y - a.y
-            val len = hypot(dx, dy).coerceAtLeast(1e-9)
-            val n = Vec2(-dy / len, dx / len)
-            // Etikett soll über/neben der Linie stehen: Normale so wählen, dass sie nach oben (kleineres y) zeigt
-            val sign = if (n.y > 0) -1.0 else 1.0
-            return DimLabel(id, text, Vec2(mid.x + n.x * offset * sign, mid.y + n.y * offset * sign), mid)
+        val text = formatValue(abs(c.value))
+
+        /** Maß zwischen [a] und [b]; die Maßlinie liegt [offsetA] bzw. [offsetB] in Richtung [n] von den Punkten entfernt. */
+        fun linear(a: Vec2, b: Vec2, n: Vec2, offsetA: Double, offsetB: Double): DimLabel {
+            val a2 = at(a, n, offsetA); val b2 = at(b, n, offsetB)
+            val dir = unit(a2, b2)
+            val ext = listOf(a to offsetA, b to offsetB).filter { it.second > GAP * k }.map { (p, o) -> at(p, n, GAP * k) to at(p, n, o + OVERSHOOT * k) }
+            return DimLabel(id, text, mid(a2, b2), ext + (a2 to b2), listOf(a2 to neg(dir), b2 to dir))
+        }
+
+        /** Parallel zur Strecke a–b, auf der Seite „oben“ (kleineres y). */
+        fun aligned(a: Vec2, b: Vec2): DimLabel {
+            val d = unit(a, b)
+            val n = Vec2(-d.y, d.x).let { if (it.y > 0) neg(it) else it }
+            return linear(a, b, n, OFFSET * k, OFFSET * k)
         }
         return when (c) {
-            is LengthDim -> sketch.line(c.line).let { l -> along(s(l.p1), s(l.p2), formatValue(c.value)) }
-            is DistanceDim -> along(s(c.a), s(c.b), formatValue(c.value))
+            is LengthDim -> sketch.line(c.line).let { l -> aligned(s(l.p1), s(l.p2)) }
+            is DistanceDim -> aligned(s(c.a), s(c.b))
             // Das Vorzeichen (Richtung von a nach b) steckt in der Geometrie; angezeigt wird der Betrag.
             is HorizontalDistanceDim -> {
                 val a = s(c.a); val b = s(c.b)
-                val low = if (a.y > b.y) a else b
-                val mid = Vec2((a.x + b.x) / 2, low.y)
-                DimLabel(id, formatValue(kotlin.math.abs(c.value)), Vec2(mid.x, mid.y + OFFSET), mid)
+                val y = maxOf(a.y, b.y) + OFFSET * k // unterhalb des tieferen Punkts
+                linear(a, b, Vec2(0.0, 1.0), y - a.y, y - b.y)
             }
             is VerticalDistanceDim -> {
                 val a = s(c.a); val b = s(c.b)
-                val right = if (a.x > b.x) a else b
-                val mid = Vec2(right.x, (a.y + b.y) / 2)
-                DimLabel(id, formatValue(kotlin.math.abs(c.value)), Vec2(mid.x + OFFSET + 6, mid.y), mid)
+                val x = maxOf(a.x, b.x) + OFFSET * k // rechts vom äußeren Punkt
+                linear(a, b, Vec2(1.0, 0.0), x - a.x, x - b.x)
+            }
+            is PointLineDistanceDim -> {
+                // Maßlinie parallel zum Lot, entlang der Linie nach außen versetzt (sonst läge sie z. B. bei einer Ecke auf der Kante)
+                val p = s(c.point)
+                val l = sketch.line(c.line)
+                val l1 = s(l.p1); val l2 = s(l.p2)
+                val q = nearestOnSegment(p, l1, l2).point
+                val u = unit(l1, l2)
+                val m = mid(l1, l2)
+                val n = if ((q.x - m.x) * u.x + (q.y - m.y) * u.y >= 0) u else neg(u)
+                linear(p, q, n, OFFSET * k, OFFSET * k)
             }
             is RadiusDim, is DiameterDim -> {
                 val round: RoundId = if (c is RadiusDim) c.round else (c as DiameterDim).round
-                val center = view.toScreen(sketch.point(sketch.centerOf(round)))
+                val center = s(sketch.centerOf(round))
                 val r = sketch.radiusOf(round) * view.scale
-                val anchor = Vec2(center.x + r * cos(Math.PI / 4), center.y - r * sin(Math.PI / 4))
-                val text = (if (c is RadiusDim) "R" else "Ø") + formatValue(c.value)
-                DimLabel(id, text, Vec2(anchor.x + 22, anchor.y - 14), anchor)
+                val d = Vec2(cos(Math.PI / 4), -sin(Math.PI / 4)) // nach rechts oben
+                val tip = at(center, d, r)
+                val outer = at(center, d, r + 34 * k)
+                // Radius: vom Mittelpunkt zum Kreis; Durchmesser: quer durch den Kreis. Die Zahl steht außen an der Verlängerung.
+                val from = if (c is RadiusDim) center else at(center, d, -r)
+                val arrows = if (c is RadiusDim) listOf(tip to d) else listOf(tip to d, from to neg(d))
+                DimLabel(id, (if (c is RadiusDim) "R" else "Ø") + text, at(outer, d, 18.0 * k), listOf(from to outer), arrows)
             }
-            is AngleDim -> {
-                val a = sketch.line(c.a)
-                val anchor = s(a.p1)
-                DimLabel(id, formatValue(c.value) + "°", Vec2(anchor.x + 30, anchor.y - 22), anchor)
-            }
-            is PointLineDistanceDim -> {
-                val p = s(c.point)
-                val l = sketch.line(c.line)
-                val a = s(l.p1); val b = s(l.p2)
-                val q = nearestOnSegment(p, a, b).point
-                along(p, q, formatValue(c.value), offset = 12.0)
-            }
+            is AngleDim -> angle(sketch, view, id, c, k)
         }
+    }
+
+    /**
+     * Winkelmaß: Maßbogen um den Schnittpunkt der beiden Linien, von der Richtung von a um den Wert gedreht.
+     * shortcut: liegt der Schnittpunkt weit außerhalb des Bilds, liegt auch der Bogen dort; bei Bedarf an das nähere Linienende legen.
+     */
+    private fun angle(sketch: Sketch, view: ViewTransform, id: ConstraintId, c: AngleDim, k: Double): DimLabel {
+        val la = sketch.line(c.a); val lb = sketch.line(c.b)
+        val a1 = sketch.point(la.p1); val a2 = sketch.point(la.p2); val b1 = sketch.point(lb.p1); val b2 = sketch.point(lb.p2)
+        val dax = a2.x - a1.x; val day = a2.y - a1.y; val dbx = b2.x - b1.x; val dby = b2.y - b1.y
+        val den = dax * dby - day * dbx
+        val pivot = if (abs(den) < 1e-12) a1 else {
+            val t = ((b1.x - a1.x) * dby - (b1.y - a1.y) * dbx) / den
+            Vec2(a1.x + dax * t, a1.y + day * t)
+        }
+        val r = ANGLE_RADIUS * k / view.scale
+        val start = atan2(day, dax)
+        val sweep = Math.toRadians(c.value)
+        val steps = 24
+        val pts = (0..steps).map { i -> val t = start + sweep * i / steps; view.toScreen(Vec2(pivot.x + r * cos(t), pivot.y + r * sin(t))) }
+        val arrows = listOf(pts[0] to unit(pts[1], pts[0]), pts[steps] to unit(pts[steps - 1], pts[steps]))
+        val m = start + sweep / 2
+        val rl = r + 22 * k / view.scale
+        return DimLabel(id, formatValue(abs(c.value)) + "°", view.toScreen(Vec2(pivot.x + rl * cos(m), pivot.y + rl * sin(m))), pts.zipWithNext(), arrows)
+    }
+
+    private fun at(p: Vec2, d: Vec2, k: Double) = Vec2(p.x + d.x * k, p.y + d.y * k)
+    private fun mid(a: Vec2, b: Vec2) = Vec2((a.x + b.x) / 2, (a.y + b.y) / 2)
+    private fun neg(v: Vec2) = Vec2(-v.x, -v.y)
+    private fun unit(a: Vec2, b: Vec2): Vec2 {
+        val l = hypot(b.x - a.x, b.y - a.y).coerceAtLeast(1e-9)
+        return Vec2((b.x - a.x) / l, (b.y - a.y) / l)
     }
 
     fun badges(sketch: Sketch, view: ViewTransform): List<Badge> {

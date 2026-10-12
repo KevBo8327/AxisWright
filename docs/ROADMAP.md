@@ -81,6 +81,25 @@ Entscheidungen: Vertrieb über **Google Play**, **Freemium** (Pro als einmaliger
   sobald Projekt-Export und Drehen da sind – Rückmeldungen fließen noch in die 1.0)
   → Produktionszugang → gestaffelter Rollout; Android Vitals beobachten
 
+## Funktionsabgleich mit Shapr3D, Onshape, Fusion, FreeCAD (12.10.2026)
+
+Vorhanden und auf Augenhöhe: Grundformen der Skizze (Linie, Rechteck, Kreis, Bogen, Langloch, Vieleck), Trimmen/Verlängern/Versatz/Ecke,
+Spiegeln/Muster, Bedingungen und Maße, Werkzeug **Bemaßen** ✅ (12.10.), **Maße mit Maßlinie, Maßpfeilen, Maßhilfslinien und Maßzahl** ✅ (12.10.;
+Abstände in dp über `SketchEditor.uiScale`, auch Treffer- und Fangradius). 3D: Extrudieren, Drehen, Bohrung, Verrundung/Fase, Schale, Muster,
+Spiegeln, Arbeitsebenen, Messen, Parameter, Export STEP/3MF/STL.
+
+**Skizze** (Umsetzung mit Subagenten: [PLAN_SKIZZENWERKZEUGE.md](PLAN_SKIZZENWERKZEUGE.md)):
+- [ ] vor der Beta: Punkt-Werkzeug, Fase an einer Skizzenecke, Teilen (Element auftrennen)
+- [ ] bis 1.0: Verschieben/Drehen/Skalieren/Kopieren der Auswahl, **Text** (größter Hebel beim 3D-Druck)
+- [ ] nach 1.0: Ellipse, Spline, DXF/SVG-Import, Kanten anderer Körper/Skizzen übernehmen (auch Schnittkanten)
+
+**3D-Bearbeitung:**
+- [ ] vor der Beta: Abtragen **durch alles**
+- [ ] bis 1.0: „bis Fläche“ und zwei Seiten mit verschiedenen Längen, Schnittmenge als dritte Art beim Extrudieren, Bohrungen mit Senkung/Kegelsenkung
+  und Normgrößen (M3–M10), Schnittansicht, ggf. Loft (`BRepOffsetAPI_ThruSections`)
+- [ ] nach 1.0: Sweep, STEP-Import, Fläche ziehen/versetzen (direkte Bearbeitung), Gewinde (modelliert), mehrere Körper mit Booleschen
+  Operationen und Körper teilen, Formschräge/Rippe/Aufdicken, Masse mit Dichte
+
 ## Meilensteine
 
 ### M0 – OpenCascade-Machbarkeit  (fast abgeschlossen)

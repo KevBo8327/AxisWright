@@ -23,6 +23,7 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -262,12 +263,22 @@ private fun DrawScope.drawSketch(editor: SketchEditor, measurer: TextMeasurer, c
         drawCentered(measurer, b.symbol, center, TextStyle(color = c.text, fontSize = 11.sp))
     }
     for (l in editor.dimensionLabels()) {
-        val anchor = Offset(l.anchor.x.toFloat(), l.anchor.y.toFloat()); val center = Offset(l.center.x.toFloat(), l.center.y.toFloat())
-        drawLine(c.labelBorder.copy(alpha = 0.6f), anchor, center, 1f)
+        val center = Offset(l.center.x.toFloat(), l.center.y.toFloat())
         val selected = Sel.K(l.id) in editor.selection
+        val ink = if (selected) c.selected else c.dimension
+        // Maßhilfslinien, Maßlinie und Pfeile; die Maßzahl unterbricht die Maßlinie (Hintergrund deckt sie ab)
+        for ((a, b) in l.lines) drawLine(ink, Offset(a.x.toFloat(), a.y.toFloat()), Offset(b.x.toFloat(), b.y.toFloat()), 1.dp.toPx())
+        for ((tip, d) in l.arrows) {
+            val len = 10.0 * editor.uiScale; val w = 3.0 * editor.uiScale
+            val base = Offset((tip.x - d.x * len).toFloat(), (tip.y - d.y * len).toFloat())
+            val side = Offset((-d.y * w).toFloat(), (d.x * w).toFloat())
+            drawPath(Path().apply {
+                moveTo(tip.x.toFloat(), tip.y.toFloat()); lineTo(base.x + side.x, base.y + side.y); lineTo(base.x - side.x, base.y - side.y); close()
+            }, ink)
+        }
         val half = Offset(l.halfWidth.toFloat(), l.halfHeight.toFloat())
         drawRoundRect(c.labelBg, center - half, Size(half.x * 2, half.y * 2), CornerRadius(6f))
-        drawRoundRect(if (selected) c.selected else c.labelBorder, center - half, Size(half.x * 2, half.y * 2), CornerRadius(6f), style = Stroke(1.5f))
+        if (selected) drawRoundRect(c.selected, center - half, Size(half.x * 2, half.y * 2), CornerRadius(6f), style = Stroke(1.5f))
         drawCentered(measurer, l.text, center, TextStyle(color = c.dimension, fontSize = 13.sp))
     }
 

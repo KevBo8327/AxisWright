@@ -212,6 +212,9 @@ public class SketchEditor(public val sketch: Sketch) {
     public var gridSnap: Boolean = true
         set(v) { field = v; changed() }
 
+    /** Bildschirmpixel je dp (Bildschirmdichte): Trefferradien, Fangradius und Maßabstände sind in dp gedacht. */
+    public var uiScale: Double = 1.0
+
     /** Variante des Vieleck-Werkzeugs. */
     public var polygonMode: PolygonMode = PolygonMode.INSCRIBED
         set(v) { if (field != v) { field = v; resetDrawing() }; changed() }
@@ -490,7 +493,7 @@ public class SketchEditor(public val sketch: Sketch) {
             }
         } else if (tool.isModify) {
             hover = null
-            hoverHit = HitTest.hit(sketch, world, view.worldLength(HIT_TOLERANCE_PX))
+            hoverHit = HitTest.hit(sketch, world, view.worldLength(HIT_TOLERANCE_PX * uiScale))
         } else {
             hover = snapAt(world)
             updateDrawPreview(hover!!, d)
@@ -519,8 +522,8 @@ public class SketchEditor(public val sketch: Sketch) {
         val world = view.toWorld(screen)
         if (tool == Tool.SELECT || tool.isModify) {
             hover = null
-            hoverHit = if (tool.isModify) HitTest.hit(sketch, world, view.worldLength(HIT_TOLERANCE_PX))
-            else labelAt(screen)?.let { Sel.K(it.id) } ?: HitTest.hit(sketch, world, view.worldLength(HIT_TOLERANCE_PX))
+            hoverHit = if (tool.isModify) HitTest.hit(sketch, world, view.worldLength(HIT_TOLERANCE_PX * uiScale))
+            else labelAt(screen)?.let { Sel.K(it.id) } ?: HitTest.hit(sketch, world, view.worldLength(HIT_TOLERANCE_PX * uiScale))
         } else {
             hoverHit = null
             hover = snapAt(world)
@@ -625,7 +628,7 @@ public class SketchEditor(public val sketch: Sketch) {
 
     // ---- Zeichnen -------------------------------------------------------------------------------
 
-    private fun snapAt(world: Vec2): SnapResult = Snapping.snap(sketch, world, view, SnapOptions(grid = gridSnap, tolerancePx = SNAP_TOLERANCE_PX))
+    private fun snapAt(world: Vec2): SnapResult = Snapping.snap(sketch, world, view, SnapOptions(grid = gridSnap, tolerancePx = SNAP_TOLERANCE_PX * uiScale))
 
     private fun updateDrawPreview(snap: SnapResult, d: Down?) {
         val start = pending ?: d?.snap
@@ -868,7 +871,7 @@ public class SketchEditor(public val sketch: Sketch) {
             is Sel.A -> sketch.arc(src.id).let { nearestOnArc(world, sketch.point(it.center), sketch.point(it.start), sketch.point(it.end)).distance }
             else -> Double.MAX_VALUE
         }
-        if (near < view.worldLength(HIT_TOLERANCE_PX)) { message = "Tippe weiter vom Element entfernt, um die Seite zu wählen."; return }
+        if (near < view.worldLength(HIT_TOLERANCE_PX * uiScale)) { message = "Tippe weiter vom Element entfernt, um die Seite zu wählen."; return }
         offsetSource = null
         selection = emptySet()
         val d = offsetDistance
@@ -1334,7 +1337,7 @@ public class SketchEditor(public val sketch: Sketch) {
     }
 
     private fun eraseAt(screen: Vec2) {
-        val hit = HitTest.hit(sketch, view.toWorld(screen), view.worldLength(HIT_TOLERANCE_PX)) ?: return
+        val hit = HitTest.hit(sketch, view.toWorld(screen), view.worldLength(HIT_TOLERANCE_PX * uiScale)) ?: return
         when (hit) {
             is Sel.P -> if (hit.id != sketch.origin) sketch.remove(hit.id)
             is Sel.L -> sketch.remove(hit.id)
@@ -1554,7 +1557,7 @@ public class SketchEditor(public val sketch: Sketch) {
 
     // ---- Anzeige --------------------------------------------------------------------------------
 
-    public fun dimensionLabels(): List<DimLabel> = Annotations.labels(sketch, view)
+    public fun dimensionLabels(): List<DimLabel> = Annotations.labels(sketch, view, uiScale)
 
     public fun badges(): List<Badge> = Annotations.badges(sketch, view)
 
@@ -1625,9 +1628,9 @@ public class SketchEditor(public val sketch: Sketch) {
 
     private fun angleOf(from: Vec2, to: Vec2) = atan2(to.y - from.y, to.x - from.x)
 
-    private fun hitTolerancePx(kind: PointerKind): Double = if (kind == PointerKind.TOUCH) 16.0 else HIT_TOLERANCE_PX
+    private fun hitTolerancePx(kind: PointerKind): Double = (if (kind == PointerKind.TOUCH) 16.0 else HIT_TOLERANCE_PX) * uiScale
 
-    private fun dragThresholdPx(kind: PointerKind): Double = if (kind == PointerKind.TOUCH) 12.0 else 6.0
+    private fun dragThresholdPx(kind: PointerKind): Double = (if (kind == PointerKind.TOUCH) 12.0 else 6.0) * uiScale
 
     public companion object {
         public const val HIT_TOLERANCE_PX: Double = 9.0

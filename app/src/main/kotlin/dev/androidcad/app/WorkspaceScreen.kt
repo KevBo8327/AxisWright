@@ -144,6 +144,7 @@ private fun SketchPanel(state: WorkspaceState, modifier: Modifier) {
         val compact = maxWidth < BOTTOM_TOOLS_WIDTH || maxWidth < maxHeight
         val density = LocalDensity.current
         handle.insetTop = with(density) { 44.dp.toPx().toDouble() }
+        handle.editor.uiScale = density.density.toDouble()
         handle.insetLeft = if (compact) 0.0 else with(density) { 80.dp.toPx().toDouble() }
         val e = handle.editor
         handle.version // Beobachtung
