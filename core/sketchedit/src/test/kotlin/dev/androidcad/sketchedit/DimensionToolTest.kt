@@ -81,4 +81,44 @@ class DimensionToolTest {
         assertEquals(ActionKind.DISTANCE, e.pendingAction?.kind)
         assertTrue(abs(e.pendingAction!!.initial - 20.0) < 1e-6, "vorbelegt mit dem aktuellen Abstand: ${e.pendingAction}")
     }
+
+    @Test
+    fun tappingADimensionedLineEditsTheExistingDimensionAndMovesTheGeometry() {
+        val line = sketch.addLine(10.0, 10.0, 40.0, 10.0)
+        tap(25.0, 10.0); e.confirmPendingAction(30.0)
+        tap(25.0, 10.0)
+        assertNull(e.pendingAction, "kein zweites Maß")
+        assertEquals(30.0, e.valueEdit?.initial)
+        e.confirmValueEdit(45.0)
+        assertEquals(1, count<LengthDim>())
+        assertTrue(abs(sketch.length(line) - 45.0) < 1e-6, "Linie folgt dem neuen Maß: ${sketch.length(line)}")
+    }
+
+    @Test
+    fun tappingTheDimensionLabelEditsIt() {
+        val line = sketch.addLine(10.0, 10.0, 40.0, 10.0)
+        tap(25.0, 10.0); e.confirmPendingAction(30.0)
+        val label = e.dimensionLabels().single()
+        e.pointerDown(label.center, PointerKind.TOUCH); e.pointerUp(label.center)
+        assertEquals(30.0, e.valueEdit?.initial, "Maßzahl angetippt")
+        e.confirmValueEdit(20.0)
+        assertTrue(abs(sketch.length(line) - 20.0) < 1e-6)
+
+        // auch mit „Auswahl“
+        e.setTool(Tool.SELECT)
+        val l2 = e.dimensionLabels().single()
+        e.pointerDown(l2.center, PointerKind.TOUCH); e.pointerUp(l2.center)
+        assertEquals(20.0, e.valueEdit?.initial)
+        e.confirmValueEdit(12.5)
+        assertTrue(abs(sketch.length(line) - 12.5) < 1e-6)
+    }
+
+    @Test
+    fun lengthFixedElsewhereIsReportedInsteadOfAsking() {
+        val r = sketch.addRectangle(0.0, 0.0, 40.0, 20.0)
+        sketch.add(LengthDim(r.edges[1], 20.0)) // rechte Kante; die linke ist damit auch bestimmt (Rechteck)
+        tap(0.0, 10.0) // linke Kante
+        assertNull(e.pendingAction, "kein Dialog, dessen Wert nichts bewirken könnte")
+        assertTrue(e.message!!.contains("festgelegt"), e.message)
+    }
 }

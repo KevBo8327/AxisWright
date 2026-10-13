@@ -32,6 +32,7 @@ import dev.androidcad.sketch.PointLineDistanceDim
 import dev.androidcad.sketch.SolveOptions
 import dev.androidcad.sketch.SolveResult
 import dev.androidcad.sketch.Sketch
+import dev.androidcad.sketch.AngleDim
 import dev.androidcad.sketch.Vec2
 import dev.androidcad.sketch.Vertical
 import kotlin.math.abs
@@ -548,7 +549,10 @@ public class SketchEditor(public val sketch: Sketch) {
         if (tool == Tool.SELECT) {
             finishSelectGesture(d, world)
         } else if (tool.isModify) {
-            if (!d.moved) modifyAt(world, hitTolerancePx(d.kind), d.additive)
+            // Bemaßen: eine vorhandene Maßzahl antippen ändert ihren Wert (wie mit „Auswahl“)
+            val label = if (tool == Tool.DIMENSION && !d.moved) labelAt(screen) else null
+            if (label != null) { selection = emptySet(); requestValueEdit(label.id) }
+            else if (!d.moved) modifyAt(world, hitTolerancePx(d.kind), d.additive)
         } else {
             val up = snapAt(world)
             drawUp(d, up)
@@ -899,6 +903,13 @@ public class SketchEditor(public val sketch: Sketch) {
             }
             else -> { selection = setOf(first, hit); ActionKind.DISTANCE }
         }
+        // schon bemaßt: das vorhandene Maß ändern statt ein zweites (überzähliges) anzulegen
+        existingDimension(kind, selection)?.let { id -> selection = emptySet(); requestValueEdit(id); return }
+        if (alreadyDetermined(kind)) {
+            selection = emptySet()
+            message = "Schon durch andere Maße oder Bedingungen festgelegt – tippe das bestimmende Maß an, um es zu ändern."
+            return
+        }
         requestAction(kind)
         val p = pendingAction
         if (p == null) { selection = emptySet(); message = "Diese Elemente lassen sich nicht miteinander bemaßen." }
@@ -906,6 +917,38 @@ public class SketchEditor(public val sketch: Sketch) {
         else if (kind == ActionKind.DISTANCE && p.initial < 1e-9) {
             pendingAction = null; selection = emptySet(); message = "Der Punkt liegt auf der Linie – wähle ein anderes Element."
         }
+    }
+
+    /** Probelauf: würde das Maß [kind] für die Auswahl nichts Neues festlegen (ein Wert wäre wirkungslos oder ein Widerspruch)? */
+    private fun alreadyDetermined(kind: ActionKind): Boolean {
+        val constraints = ConstraintActions.build(sketch, kind, selInfo(selection), null) ?: return false
+        val before = sketch.copy()
+        try {
+            val ids = constraints.map { sketch.add(it) }
+            val res = sketch.solve()
+            return res.isSolved && ids.all { it in res.redundant }
+        } finally {
+            sketch.restore(before)
+        }
+    }
+
+    /** Das Maß, das [kind] für die Elemente [sel] anlegen würde, falls es schon da ist (Kreis/Bogen: Radius oder Durchmesser). */
+    private fun existingDimension(kind: ActionKind, sel: Set<Sel>): ConstraintId? {
+        val i = selInfo(sel)
+        fun same(a: Any, b: Any, x: Any, y: Any) = (a == x && b == y) || (a == y && b == x)
+        return sketch.constraintEntries.firstOrNull { (_, c) ->
+            when (kind) {
+                ActionKind.LENGTH -> c is LengthDim && i.lines.singleOrNull() == c.line
+                ActionKind.DIAMETER, ActionKind.RADIUS -> i.rounds.singleOrNull()?.let { r -> (c is DiameterDim && c.round == r) || (c is RadiusDim && c.round == r) } ?: false
+                ActionKind.ANGLE -> c is AngleDim && i.lines.size == 2 && same(c.a, c.b, i.lines[0], i.lines[1])
+                ActionKind.DISTANCE -> when {
+                    i.points.size == 2 -> c is DistanceDim && same(c.a, c.b, i.points[0], i.points[1])
+                    i.points.size == 1 && i.lines.size == 1 -> c is PointLineDistanceDim && c.point == i.points[0] && c.line == i.lines[0]
+                    else -> false
+                }
+                else -> false
+            }
+        }?.id
     }
 
     /** Versatz in zwei Schritten: erst das Element wählen, dann die Seite antippen. */
