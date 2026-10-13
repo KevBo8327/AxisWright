@@ -685,6 +685,7 @@ class WorkspaceState(private val scope: CoroutineScope, private val session: Mod
         val m = PlateModel()
         m.solveSketch()
         adopt(m.document)
+        session.rename(EXAMPLE_NAME)
         notice = null
         markDirty()
         syncProject()
@@ -1659,6 +1660,7 @@ class WorkspaceState(private val scope: CoroutineScope, private val session: Mod
 
 private const val AUTOSAVE_DELAY_MS = 700L
 private const val GRID_OFF = "view.grid.off"
+private const val EXAMPLE_NAME = "Platte mit vier Bohrungen"
 
 /** Polylinien der Kanten → einzelne Liniensegmente für `GL_LINES`. */
 internal fun BrepMesh.edgeSegments(): FloatArray {

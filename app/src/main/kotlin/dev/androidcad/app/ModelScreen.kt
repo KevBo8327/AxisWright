@@ -314,7 +314,8 @@ internal fun GroupBar(groups: List<ToolGroup>, vertical: Boolean, open: String?,
             }
         }
     } else {
-        Row(modifier.padding(vertical = 4.dp), horizontalArrangement = Arrangement.SpaceEvenly) { groups.forEach { group(it) } }
+        // mittig mit festem Abstand statt über die ganze Breite verteilt (sonst große Lücken auf breiteren Geräten)
+        Row(modifier.padding(vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally)) { groups.forEach { group(it) } }
     }
 }
 
@@ -442,10 +443,16 @@ private fun ModelViewport(state: WorkspaceState, modifier: Modifier) {
         }
         if (mesh == null) {
             Text(
-                if (state.features.none { it is dev.androidcad.model.ExtrudeFeature || it is dev.androidcad.model.RevolveFeature }) "Noch kein Körper – wähle eine Skizze, dann Körper › Extrudieren oder Drehen."
-                else "Kein Körper – siehe die Meldung oben.",
-                // mit Skizzenlinien im Bild unten, damit der Hinweis sie nicht überdeckt
-                Modifier.align(if (state.sketchOverlay != null) Alignment.BottomCenter else Alignment.Center).padding(24.dp),
+                when {
+                    state.features.none { it is dev.androidcad.model.ExtrudeFeature || it is dev.androidcad.model.RevolveFeature } ->
+                        "Noch kein Körper – wähle eine Skizze, dann Körper › Extrudieren oder Drehen."
+                    // erster Aufbau läuft noch (z. B. gleich nach dem Öffnen): nicht von einem Fehler sprechen
+                    state.building || out == null -> "Körper wird berechnet …"
+                    else -> "Kein Körper – siehe die Meldung oben."
+                },
+                // mit Skizzenlinien im Bild unten (über der Zeitleiste), damit der Hinweis sie nicht überdeckt
+                Modifier.align(if (state.sketchOverlay != null) Alignment.BottomCenter else Alignment.Center)
+                    .padding(start = 24.dp, end = 24.dp, top = 24.dp, bottom = if (state.sketchOverlay != null) 72.dp else 24.dp),
                 color = colors.onSurfaceVariant, textAlign = TextAlign.Center,
             )
         }

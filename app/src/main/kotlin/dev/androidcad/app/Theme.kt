@@ -9,7 +9,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.material3.Typography
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.TextStyle
 
 /** Darstellung: dem System folgen oder fest dunkel/hell. Standard ist Dunkel (CAD-Gewohnheit: starke Kontraste). */
 enum class ThemeMode(val label: String) { DARK("Dunkel"), LIGHT("Hell"), SYSTEM("Wie das System") }
@@ -90,6 +92,18 @@ private val LightScheme: ColorScheme = lightColorScheme(
     error = Color(0xFFC62839), onError = Color.White, errorContainer = Color(0xFFFFDADC), onErrorContainer = Color(0xFF410009),
 )
 
+/** Material-Schrift, aber mit gleich breiten Ziffern („tnum“): Maße, Werte und Volumen springen beim Ändern nicht. */
+private val AppTypography: Typography = Typography().let { t ->
+    fun TextStyle.tnum() = copy(fontFeatureSettings = "tnum")
+    Typography(
+        displayLarge = t.displayLarge.tnum(), displayMedium = t.displayMedium.tnum(), displaySmall = t.displaySmall.tnum(),
+        headlineLarge = t.headlineLarge.tnum(), headlineMedium = t.headlineMedium.tnum(), headlineSmall = t.headlineSmall.tnum(),
+        titleLarge = t.titleLarge.tnum(), titleMedium = t.titleMedium.tnum(), titleSmall = t.titleSmall.tnum(),
+        bodyLarge = t.bodyLarge.tnum(), bodyMedium = t.bodyMedium.tnum(), bodySmall = t.bodySmall.tnum(),
+        labelLarge = t.labelLarge.tnum(), labelMedium = t.labelMedium.tnum(), labelSmall = t.labelSmall.tnum(),
+    )
+}
+
 val LocalCadColors = staticCompositionLocalOf { BlueprintDark }
 
 /** Zugriff auf die CAD-Farben des aktuellen Themas: `CadTheme.colors.selection` … */
@@ -109,7 +123,7 @@ fun isDarkTheme(mode: ThemeMode): Boolean = when (mode) {
 @Composable
 fun PartwrightTheme(mode: ThemeMode, content: @Composable () -> Unit) {
     val dark = isDarkTheme(mode)
-    MaterialTheme(colorScheme = if (dark) DarkScheme else LightScheme) {
+    MaterialTheme(colorScheme = if (dark) DarkScheme else LightScheme, typography = AppTypography) {
         CompositionLocalProvider(LocalCadColors provides if (dark) BlueprintDark else BlueprintLight, content = content)
     }
 }
