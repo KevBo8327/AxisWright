@@ -76,8 +76,8 @@ public enum class Tool {
     PATTERN_CIRCULAR,
 
     /**
-     * Bemaßen: Kreis → Durchmesser, Bogen → Radius; Linie oder Punkt, dann ein zweites Element → Abstand bzw. Winkel,
-     * oder nach einer Linie ins Leere tippen → Länge. Der Wert wird gleich abgefragt ([SketchEditor.pendingAction]).
+     * Bemaßen: Kreis → Durchmesser, Bogen → Radius, Linie → Länge (je ein Tipp). Ein Punkt – oder eine Linie mit „Mehrfach“ –
+     * und ein zweites Element → Abstand bzw. Winkel. Der Wert wird gleich abgefragt ([SketchEditor.pendingAction]).
      */
     DIMENSION,
     ;
@@ -548,7 +548,7 @@ public class SketchEditor(public val sketch: Sketch) {
         if (tool == Tool.SELECT) {
             finishSelectGesture(d, world)
         } else if (tool.isModify) {
-            if (!d.moved) modifyAt(world, hitTolerancePx(d.kind))
+            if (!d.moved) modifyAt(world, hitTolerancePx(d.kind), d.additive)
         } else {
             val up = snapAt(world)
             drawUp(d, up)
@@ -808,7 +808,7 @@ public class SketchEditor(public val sketch: Sketch) {
     }
 
     /** Ein Tipp mit einem Bearbeitungswerkzeug an der Stelle [world]. */
-    private fun modifyAt(world: Vec2, tolerancePx: Double) {
+    private fun modifyAt(world: Vec2, tolerancePx: Double, additive: Boolean = false) {
         // Beim Fillet zählt der Eckpunkt, sonst die Kurve – auch wenn man genau auf ein Linienende tippt
         val hit = if (tool == Tool.DIMENSION) HitTest.hit(sketch, world, view.worldLength(tolerancePx)) ?: axisAt(world, view.worldLength(tolerancePx))
         else if (tool == Tool.FILLET || tool == Tool.PATTERN_CIRCULAR) HitTest.hit(sketch, world, view.worldLength(tolerancePx))
@@ -833,7 +833,7 @@ public class SketchEditor(public val sketch: Sketch) {
                 else -> { message = "Tippe auf das Ende einer Linie oder eines Bogens." }
             }
             Tool.OFFSET -> offsetTap(hit, world)
-            Tool.DIMENSION -> dimensionTap(hit)
+            Tool.DIMENSION -> dimensionTap(hit, additive)
             Tool.FILLET -> when (hit) {
                 is Sel.P -> if (cornerMode == CornerMode.CHAMFER) runOp("Ecke fasen") { SketchOps.chamfer(sketch, hit.id, chamferDistance) }
                     else runOp("Ecke runden") { SketchOps.fillet(sketch, hit.id, filletRadius) }
@@ -872,7 +872,7 @@ public class SketchEditor(public val sketch: Sketch) {
     }
 
     /** Bemaßen: sammelt bis zu zwei Elemente in [selection] und fragt dann den Wert ab (siehe [Tool.DIMENSION]). */
-    private fun dimensionTap(hit: Sel?) {
+    private fun dimensionTap(hit: Sel?, additive: Boolean) {
         val first = selection.singleOrNull()
         val kind: ActionKind = when {
             hit is Sel.C && first == null -> { selection = setOf(hit); ActionKind.DIAMETER }
@@ -881,9 +881,11 @@ public class SketchEditor(public val sketch: Sketch) {
                 if (first is Sel.L) ActionKind.LENGTH
                 else { selection = emptySet(); return }
             }
+            // ein Tipp auf eine Linie: gleich die Länge; mit „Mehrfach“ (bzw. Umschalt) wartet sie auf ein zweites Element
+            first == null && hit is Sel.L && !additive -> { selection = setOf(hit); ActionKind.LENGTH }
             first == null -> {
                 selection = setOf(hit)
-                message = if (hit is Sel.L) "Zweites Element antippen – oder eine freie Stelle für die Länge." else "Zweites Element antippen (Punkt oder Linie)."
+                message = if (hit is Sel.L) "Zweites Element antippen (Abstand, Winkel) – oder eine freie Stelle für die Länge." else "Zweites Element antippen (Punkt oder Linie)."
                 messageIsInfo = true
                 return
             }
@@ -898,7 +900,12 @@ public class SketchEditor(public val sketch: Sketch) {
             else -> { selection = setOf(first, hit); ActionKind.DISTANCE }
         }
         requestAction(kind)
-        if (pendingAction == null) { selection = emptySet(); message = "Diese Elemente lassen sich nicht miteinander bemaßen." }
+        val p = pendingAction
+        if (p == null) { selection = emptySet(); message = "Diese Elemente lassen sich nicht miteinander bemaßen." }
+        // z. B. ein Endpunkt und seine eigene Linie: ein Abstand von 0 ist kein sinnvolles Maß
+        else if (kind == ActionKind.DISTANCE && p.initial < 1e-9) {
+            pendingAction = null; selection = emptySet(); message = "Der Punkt liegt auf der Linie – wähle ein anderes Element."
+        }
     }
 
     /** Versatz in zwei Schritten: erst das Element wählen, dann die Seite antippen. */

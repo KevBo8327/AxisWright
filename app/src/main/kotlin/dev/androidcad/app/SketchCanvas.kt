@@ -300,10 +300,9 @@ private fun DrawScope.drawSketch(editor: SketchEditor, measurer: TextMeasurer, c
         drawCircle(snapColor, 8f, o, style = Stroke(2f))
         drawCircle(snapColor, 2.5f, o)
         if (label.isNotEmpty()) drawText(measurer, label, Offset(o.x + 12, o.y + 8), TextStyle(color = snapColor, fontSize = 11.sp))
-        drawText(
-            measurer, "x %.2f   y %.2f".format(java.util.Locale.ROOT, snap.position.x, snap.position.y), Offset(10f, size.height - 22f),
-            TextStyle(color = c.text.copy(alpha = 0.6f), fontSize = 11.sp),
-        )
+        // oben rechts: unten links liegen Hinweise und Werkzeugfelder darüber
+        val coords = measurer.measure("x %.2f   y %.2f".format(java.util.Locale.ROOT, snap.position.x, snap.position.y), TextStyle(color = c.text.copy(alpha = 0.6f), fontSize = 11.sp))
+        drawText(coords, topLeft = Offset(size.width - coords.size.width - 12f, 12f))
     }
     // Fensterauswahl
     (editor.preview as? Preview.Box)?.let {

@@ -341,14 +341,19 @@ internal fun ActionButton(icon: CadIcon, description: String, selected: Boolean 
 
 /** Werkzeugknopf mit Symbol und Beschriftung (Skizzen- und 3D-Werkzeugleiste). */
 @Composable
-internal fun ToolButton(label: String, icon: CadIcon, selected: Boolean, enabled: Boolean = true, size: androidx.compose.ui.unit.Dp = 60.dp, onClick: () -> Unit) {
+internal fun ToolButton(
+    label: String, icon: CadIcon, selected: Boolean, enabled: Boolean = true, size: androidx.compose.ui.unit.Dp = 60.dp,
+    /** Nur umrandet (z. B. aufgeklappte Gruppe) – gefüllt ist allein das aktive Werkzeug. */
+    outlined: Boolean = false,
+    onClick: () -> Unit,
+) {
     val colors = MaterialTheme.colorScheme
     val shape = RoundedCornerShape(12.dp)
     Column(
         Modifier
             .size(size)
             .background(if (selected) colors.primaryContainer else colors.surfaceVariant.copy(alpha = 0.4f), shape)
-            .then(if (selected) Modifier.border(2.dp, colors.primary, shape) else Modifier)
+            .then(if (selected || outlined) Modifier.border(2.dp, colors.primary, shape) else Modifier)
             .semantics { contentDescription = label }
             .clickable(enabled = enabled, onClick = onClick),
         verticalArrangement = Arrangement.Center,
@@ -543,7 +548,7 @@ private fun hintFor(e: SketchEditor): String = when (e.tool) {
     Tool.OFFSET ->
         if (e.offsetSource == null) "Versatz: Tippe das Element an (bei Linien samt angrenzender Kette), dann die Seite."
         else "Versatz: Tippe jetzt auf die Seite, auf die der Versatz soll."
-    Tool.DIMENSION -> "Bemaßen: Kreis oder Bogen antippen – oder eine Linie bzw. einen Punkt, dann ein zweites Element (Abstand, Winkel) oder eine freie Stelle (Länge)."
+    Tool.DIMENSION -> "Bemaßen: Linie, Kreis oder Bogen antippen. Abstand oder Winkel: einen Punkt und ein zweites Element – bei zwei Linien mit „Mehrfach“."
     Tool.FILLET -> if (e.cornerMode == CornerMode.CHAMFER) "Ecke fasen: Tippe auf die Ecke – den Punkt, an dem zwei Linien enden."
         else "Ecke runden: Tippe auf die Ecke – den Punkt, an dem zwei Linien enden."
     Tool.MIRROR -> "Spiegeln: Tippe eine Linie als Achse an oder wähle die X- bzw. Y-Achse."

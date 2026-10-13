@@ -6,6 +6,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.border
+import androidx.compose.ui.draw.shadow
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -299,7 +300,7 @@ internal fun GroupBar(groups: List<ToolGroup>, vertical: Boolean, open: String?,
             val t = g.tools.single()
             ToolButton(g.label, g.icon, t.active, enabled = t.enabled, size = 52.dp) { onOpen(null); t.onClick() }
         } else {
-            ToolButton(g.label, g.icon, open == g.label || g.active, size = 52.dp) { onOpen(if (open == g.label) null else g.label) }
+            ToolButton(g.label, g.icon, g.active, size = 52.dp, outlined = open == g.label) { onOpen(if (open == g.label) null else g.label) }
         }
     }
     if (vertical) {
@@ -331,8 +332,9 @@ internal fun GroupFlyout(groups: List<ToolGroup>, open: String?, onOpen: (String
 private fun ToolStrip(g: ToolGroup, onDone: () -> Unit) {
     val colors = MaterialTheme.colorScheme
     val shape = RoundedCornerShape(14.dp)
+    // deckend statt Glas: die Leiste liegt über Karten und Hinweisen, deren Text sonst durchscheint
     Row(
-        Modifier.glass(shape).padding(4.dp),
+        Modifier.shadow(8.dp, shape).background(colors.surfaceContainerHigh, shape).border(1.dp, colors.outlineVariant, shape).padding(4.dp),
         horizontalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         g.tools.forEach { t -> ToolButton(t.label, t.icon, t.active, enabled = t.enabled, size = 56.dp) { onDone(); t.onClick() } }
