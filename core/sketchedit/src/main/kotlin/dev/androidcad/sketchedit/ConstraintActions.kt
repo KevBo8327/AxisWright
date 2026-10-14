@@ -163,7 +163,9 @@ internal object ConstraintActions {
             ActionKind.VERTICAL_DISTANCE -> two { a, b -> VerticalDistanceDim(a, b, value ?: (sketch.point(b).y - sketch.point(a).y)) }
             ActionKind.RADIUS -> if (i.onlyRounds && i.rounds.size == 1) listOf(RadiusDim(i.rounds[0], value ?: sketch.radiusOf(i.rounds[0]))) else null
             ActionKind.DIAMETER -> if (i.onlyRounds && i.rounds.size == 1) listOf(DiameterDim(i.rounds[0], value ?: (2 * sketch.radiusOf(i.rounds[0])))) else null
-            ActionKind.ANGLE -> if (i.onlyLines && i.lines.size == 2) listOf(AngleDim(i.lines[0], i.lines[1], value ?: sketch.angleBetween(i.lines[0], i.lines[1]))) else null
+            // parallele Linien: ein Winkel von 0° bzw. ±180° ist kein sinnvolles Maß (dafür gibt es „Parallel“ und den Abstand)
+            ActionKind.ANGLE -> if (i.onlyLines && i.lines.size == 2 && abs(kotlin.math.sin(Math.toRadians(sketch.angleBetween(i.lines[0], i.lines[1])))) > 1e-3)
+                listOf(AngleDim(i.lines[0], i.lines[1], value ?: sketch.angleBetween(i.lines[0], i.lines[1]))) else null
             ActionKind.CONSTRUCTION -> emptyList()
             // Lage zum Ursprung: legt ggf. Hilfsgeometrie an, daher im Editor über SketchOps ausgeführt; hier nur „passt / passt nicht“
             // Form + genau eine projizierte Bohrung bzw. Kante als Bezug

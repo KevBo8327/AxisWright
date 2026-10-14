@@ -23,6 +23,7 @@ class TapSelectionTest {
         tap(25.0, 10.0); tap(25.0, 30.0)
         assertEquals(setOf<Sel>(Sel.L(a), Sel.L(b)), e.selection, "zwei Tipps, zwei Elemente – ohne „Mehrfach“")
         assertTrue(e.actionOptions().any { it.kind == ActionKind.PARALLEL }, "Bedingungen für beide")
+        assertTrue(e.actionOptions().none { it.kind == ActionKind.ANGLE }, "kein Winkel zwischen parallelen Linien")
         tap(25.0, 10.0)
         assertEquals(setOf<Sel>(Sel.L(b)), e.selection, "erneut antippen nimmt heraus")
         tap(25.0, 60.0)
