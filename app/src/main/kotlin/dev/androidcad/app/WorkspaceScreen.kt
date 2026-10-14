@@ -160,6 +160,7 @@ private fun SketchPanel(state: WorkspaceState, modifier: Modifier) {
                 // Meldungen des Editors oben im Zeichenfeld – wie die Fehlerzeile im Modellmodus
                 MessageBand(handle, Modifier.align(Alignment.TopStart).fillMaxWidth())
                 ContextBar(handle, state.prefs, bottomGap = if (compact) 12.dp else 16.dp)
+                DismissLayer(openGroup != null) { openGroup = null }
                 if (!compact) GroupBar(groups, vertical = true, openGroup, { openGroup = it }, Modifier.align(Alignment.TopStart).padding(8.dp).padding(top = 40.dp))
             }
             if (compact) {

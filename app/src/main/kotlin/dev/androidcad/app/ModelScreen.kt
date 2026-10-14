@@ -4,6 +4,10 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.border
 import androidx.compose.ui.draw.shadow
@@ -107,6 +111,7 @@ internal fun ModelScreen(hub: ProjectHub) {
                                     Timeline(state, Modifier.align(Alignment.BottomStart))
                                 }
                             }
+                            DismissLayer(openGroup != null) { openGroup = null }
                         }
                         // so hoch, dass die Einstellungen meist ganz passen; dem 3D-Bild bleiben mindestens 260 dp
                         val sheet = Modifier.fillMaxWidth().heightIn(max = maxOf(areaHeight * 0.5f, areaHeight - 260.dp)).padding(horizontal = 6.dp, vertical = 4.dp)
@@ -131,6 +136,7 @@ internal fun ModelScreen(hub: ProjectHub) {
                             if (state.parametersOpen) ParameterCard(state, Modifier.align(Alignment.TopStart).padding(start = 76.dp).width(280.dp).heightIn(max = areaHeight - 80.dp))
                             // Karte über die ganze Höhe; Zeitleiste und Ansicht-Menü liegen links davon
                             if (state.panelVisible) SettingsCard(state, Modifier.align(Alignment.TopEnd).width(CARD_WIDTH).heightIn(max = areaHeight - 16.dp))
+                            DismissLayer(openGroup != null) { openGroup = null }
                             // zuletzt: die aufgeklappte Werkzeugleiste liegt über allen Karten
                             GroupBar(toolGroups(state) { newSketch = true }, vertical = true, openGroup, { openGroup = it }, Modifier.align(Alignment.TopStart))
                         }
@@ -318,6 +324,18 @@ internal fun GroupBar(groups: List<ToolGroup>, vertical: Boolean, open: String?,
         // mittig mit festem Abstand statt über die ganze Breite verteilt (sonst große Lücken auf breiteren Geräten)
         Row(modifier.padding(vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally)) { groups.forEach { group(it) } }
     }
+}
+
+/**
+ * Solange eine Werkzeuggruppe aufgeklappt ist: Tippen ins Leere (Bild, Zeichenfläche) schließt sie, ohne dort etwas auszulösen.
+ * Muss vor der Werkzeugleiste im selben [Box] stehen, damit die Leiste darüber bedienbar bleibt.
+ */
+@Composable
+internal fun BoxScope.DismissLayer(open: Boolean, onDismiss: () -> Unit) {
+    if (!open) return
+    Box(Modifier.matchParentSize().pointerInput(Unit) {
+        awaitEachGesture { awaitFirstDown(requireUnconsumed = false).consume(); onDismiss() }
+    })
 }
 
 /** Schmal: die Werkzeuge der aufgeklappten Gruppe (schwebend über der unteren Leiste). */
