@@ -125,7 +125,8 @@ internal fun NoticeRow(state: WorkspaceState) {
  *
  * - **Kopfzeile**: Skizze, Rückgängig/Wiederholen/Löschen, „Fertig“; Ebene, Kanten projizieren, Raster und Einpassen stehen breit
  *   als Knöpfe, schmal im ⋮-Menü.
- * - **Werkzeuge** in Gruppen (Auswahl, Mehrfach, Zeichnen, Bearbeiten, Muster) – breit links, schmal unten (wie im Modellmodus).
+ * - **Werkzeuge** in Gruppen (Bemaßen, Zeichnen, Bearbeiten, Muster) – breit links, schmal unten (wie im Modellmodus). Ohne aktives
+ *   Werkzeug wird ausgewählt: Antippen fügt hinzu, erneut antippen nimmt heraus, ins Leere tippen hebt die Auswahl auf.
  * - **Status** als kleine Plakette oben im Bild, Meldungen des Editors als Band darüber.
  * - **Kontextleiste** ([ContextBar]): Bedingungen und Maße zur Auswahl schweben an der Auswahl; Hinweise und Felder eines
  *   Werkzeugs unten im Bild – nur solange sie gebraucht werden.
@@ -133,7 +134,6 @@ internal fun NoticeRow(state: WorkspaceState) {
 @Composable
 private fun SketchPanel(state: WorkspaceState, modifier: Modifier) {
     val handle = state.handle
-    var multiSelect by rememberSaveable { mutableStateOf(false) }
     var planeDialog by remember { mutableStateOf(false) }
     var openGroup by remember { mutableStateOf<String?>(null) }
     // Glas-Flächen über der Zeichenfläche bekommen echte Unschärfe: die Zeichenfläche ist ihre Quelle
@@ -149,13 +149,13 @@ private fun SketchPanel(state: WorkspaceState, modifier: Modifier) {
         handle.insetLeft = if (compact) 0.0 else with(density) { 80.dp.toPx().toDouble() }
         val e = handle.editor
         handle.version // Beobachtung
-        val groups = sketchToolGroups(e, multiSelect) { multiSelect = it }
+        val groups = sketchToolGroups(e)
         Column(Modifier.fillMaxSize()) {
             SketchTopBar(state, narrow, onPlaneDialog = { planeDialog = true })
             HorizontalDivider()
             NoticeRow(state)
             Box(Modifier.weight(1f).fillMaxWidth()) {
-                SketchCanvas(handle, Modifier.fillMaxSize().hazeSource(glassSource), multiSelect, state.referenceLines)
+                SketchCanvas(handle, Modifier.fillMaxSize().hazeSource(glassSource), reference = state.referenceLines)
                 StatusPill(handle, Modifier.align(Alignment.TopCenter).padding(top = 8.dp))
                 // Meldungen des Editors oben im Zeichenfeld – wie die Fehlerzeile im Modellmodus
                 MessageBand(handle, Modifier.align(Alignment.TopStart).fillMaxWidth())
@@ -241,11 +241,12 @@ private fun SketchTopBar(state: WorkspaceState, compact: Boolean, onPlaneDialog:
 }
 
 /**
- * Werkzeuge der Skizze in Gruppen: **Auswahl** und **Mehrfach** als direkte Knöpfe, **Zeichnen** (Linie, Rechteck, Kreis, Bogen),
+ * Werkzeuge der Skizze in Gruppen: **Bemaßen** als direkter Knopf, **Zeichnen** (Linie, Rechteck, Kreis, Bogen),
  * **Bearbeiten** (Trimmen, Verlängern, Versatz, Ecke, Spiegeln) und **Muster** (Reihe, Kreis) zum Aufklappen.
  */
-private fun sketchToolGroups(e: SketchEditor, multiSelect: Boolean, onMultiSelect: (Boolean) -> Unit): List<ToolGroup> {
-    fun tool(label: String, icon: CadIcon, t: Tool) = ToolDef(label, icon, e.tool == t, true) { e.setTool(t) }
+private fun sketchToolGroups(e: SketchEditor): List<ToolGroup> {
+    // das aktive Werkzeug erneut antippen beendet es (zurück zum Auswählen)
+    fun tool(label: String, icon: CadIcon, t: Tool) = ToolDef(label, icon, e.tool == t, true) { e.setTool(if (e.tool == t) Tool.SELECT else t) }
     val drawIcon = when (e.tool) {
         Tool.RECTANGLE -> CadIcon.RECTANGLE
         Tool.CIRCLE -> CadIcon.CIRCLE
@@ -256,8 +257,6 @@ private fun sketchToolGroups(e: SketchEditor, multiSelect: Boolean, onMultiSelec
         else -> CadIcon.LINE
     }
     return listOf(
-        ToolGroup("Auswahl", CadIcon.SELECT, listOf(tool("Auswahl", CadIcon.SELECT, Tool.SELECT)), direct = true),
-        ToolGroup("Mehrfach", CadIcon.MULTI, listOf(ToolDef("Mehrfach", CadIcon.MULTI, multiSelect, true) { onMultiSelect(!multiSelect) }), direct = true),
         ToolGroup("Bemaßen", CadIcon.DIMENSION, listOf(tool("Bemaßen", CadIcon.DIMENSION, Tool.DIMENSION)), direct = true),
         ToolGroup("Zeichnen", drawIcon, listOf(
             tool("Linie", CadIcon.LINE, Tool.LINE), tool("Rechteck", CadIcon.RECTANGLE, Tool.RECTANGLE),
@@ -411,7 +410,11 @@ private fun BoxScope.ContextBar(handle: EditorHandle, prefs: UiPrefs, bottomGap:
                 .padding(horizontal = 8.dp, vertical = 6.dp),
             verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
-            if (!selecting) Text(hintFor(e), style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant, maxLines = 2)
+            if (!selecting) Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(hintFor(e), Modifier.weight(1f, fill = false), style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant, maxLines = 2)
+                // Werkzeug beenden (zurück zum Auswählen); bricht auch ein wartendes Spiegeln/Muster ab
+                TextButton(onClick = { e.cancelOperation(); e.setTool(Tool.SELECT) }, modifier = Modifier.semantics { contentDescription = "Werkzeug beenden" }) { Text("✕") }
+            }
             Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
                 when {
                     e.tool.isModify -> when (e.tool) {
@@ -548,7 +551,7 @@ private fun hintFor(e: SketchEditor): String = when (e.tool) {
     Tool.OFFSET ->
         if (e.offsetSource == null) "Versatz: Tippe das Element an (bei Linien samt angrenzender Kette), dann die Seite."
         else "Versatz: Tippe jetzt auf die Seite, auf die der Versatz soll."
-    Tool.DIMENSION -> "Bemaßen: Linie, Kreis oder Bogen antippen. Abstand oder Winkel: einen Punkt und ein zweites Element – bei zwei Linien mit „Mehrfach“."
+    Tool.DIMENSION -> "Bemaßen: Linie, Kreis oder Bogen antippen. Abstand oder Winkel: einen Punkt und ein zweites Element – zwei Linien: ohne Werkzeug beide antippen, dann „Abstand“ bzw. „Winkel“."
     Tool.FILLET -> if (e.cornerMode == CornerMode.CHAMFER) "Ecke fasen: Tippe auf die Ecke – den Punkt, an dem zwei Linien enden."
         else "Ecke runden: Tippe auf die Ecke – den Punkt, an dem zwei Linien enden."
     Tool.MIRROR -> "Spiegeln: Tippe eine Linie als Achse an oder wähle die X- bzw. Y-Achse."

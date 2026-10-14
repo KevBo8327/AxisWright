@@ -217,14 +217,14 @@ class ModifyToolsTest {
         assertFalse(e.patternPending)
         assertEquals(6, s.circleIds.size)
         near(-10.0, s.point(s.circle(s.circleIds[3]).center).x)
-        // um einen angetippten Punkt; Abbrechen ohne Änderung
-        e.click(11.0, 0.0)
+        // um einen angetippten Punkt; Abbrechen ohne Änderung (Antippen fügt hinzu bzw. nimmt heraus: vorher die Auswahl leeren)
+        e.clearSelection(); e.click(11.0, 0.0)
         e.startPattern(circular = true)
         e.cancelOperation()
         assertFalse(e.patternPending)
         assertEquals(6, s.circleIds.size)
         val p = s.addPoint(30.0, 0.0)
-        e.click(11.0, 0.0)
+        e.clearSelection(); e.click(11.0, 0.0)
         e.patternCount = 2
         e.startPattern(circular = true)
         e.click(30.0, 0.0)

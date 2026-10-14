@@ -501,7 +501,8 @@ public class SketchEditor(public val sketch: Sketch) {
             val hit: Sel? = label?.let { Sel.K(it.id) } ?: HitTest.hit(sketch, world, view.worldLength(hitTolerancePx(kind)))?.takeUnless { isReference(it) && it is Sel.L }
             val was = hit != null && hit in selection
             down = Down(screen, world, kind, additive, hit, was, null)
-            if (hit != null && hit !is Sel.K && !was) select(hit, additive)
+            // Antippen fügt hinzu (Bedingungen brauchen meist zwei Elemente); ein zweiter Tipp nimmt es wieder heraus, ins Leere hebt alles auf
+            if (hit != null && hit !is Sel.K && !was) select(hit, true)
         } else {
             val d = Down(screen, world, kind, additive, null, false, snapAt(world))
             down = d
@@ -635,9 +636,9 @@ public class SketchEditor(public val sketch: Sketch) {
             // Tipp ins Leere: auf einer Achse wählt er die Achse (als Bezug für Bedingungen), sonst hebt er die Auswahl auf
             d.hit == null -> {
                 val axis = axisAt(d.world, view.worldLength(hitTolerancePx(d.kind)))
-                if (axis != null) select(axis, d.additive) else if (!d.additive) selection = emptySet()
+                if (axis != null) select(axis, true) else if (!d.additive) selection = emptySet()
             }
-            d.additive && d.wasSelected -> selection = selection - d.hit
+            d.wasSelected -> selection = selection - d.hit
         }
     }
 
@@ -648,7 +649,8 @@ public class SketchEditor(public val sketch: Sketch) {
         if (st == null) {
             val hit = d.hit ?: return
             val ids = LinkedHashSet<PointId>()
-            val source = if (hit in selection && selection.size > 1) selection else setOf(hit)
+            // ein schon gewähltes Element zieht die ganze Auswahl mit, ein eben erst angetipptes nur sich selbst
+            val source = if (d.wasSelected && selection.size > 1) selection else setOf(hit)
             source.forEach { ids += pointsOf(it) }
             if (ids.isEmpty()) return
             val offsets = ids.associateWith { p -> sketch.point(p).let { Vec2(it.x - d.world.x, it.y - d.world.y) } }
