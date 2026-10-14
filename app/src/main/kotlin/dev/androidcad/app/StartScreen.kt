@@ -113,7 +113,7 @@ fun StartScreen(hub: ProjectHub) {
 
 /** Lädt das Vorschaubild im Hintergrund; [stamp] (Änderungszeit der Datei) lädt es nach einer Änderung neu. `null` = keins. */
 @Composable
-private fun rememberThumbnail(file: java.io.File?, stamp: Long): ImageBitmap? =
+internal fun rememberThumbnail(file: java.io.File?, stamp: Long): ImageBitmap? =
     produceState<ImageBitmap?>(null, file, stamp) {
         value = withContext(Dispatchers.IO) { file?.takeIf { it.isFile }?.let { BitmapFactory.decodeFile(it.path)?.asImageBitmap() } }
     }.value

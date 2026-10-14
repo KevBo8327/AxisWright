@@ -3,6 +3,12 @@ package dev.androidcad.app
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.background
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -71,35 +77,50 @@ internal fun ProjectMenu(hub: ProjectHub) {
             Spacer(Modifier.width(8.dp))
             Text("${hub.currentName} ▾", maxLines = 1, style = MaterialTheme.typography.titleMedium, color = colors.onSurface)
         }
-        DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
-            MenuItem("Startseite") { open = false; hub.showHome() }
+        // Menü im Stil der übrigen Flächen: abgerundet, feiner heller Rand, Abschnitte mit Überschrift, jede Zeile mit Symbol
+        DropdownMenu(
+            expanded = open, onDismissRequest = { open = false },
+            modifier = Modifier.widthIn(min = 280.dp),
+            shape = RoundedCornerShape(16.dp), containerColor = colors.surfaceContainerHigh,
+            border = BorderStroke(1.dp, CadTheme.colors.glassBorder), shadowElevation = 12.dp,
+        ) {
+            Section("Start")
+            MenuItem("Startseite", CadIcon.HOME) { open = false; hub.showHome() }
             MenuItem("Neues Modell", CadIcon.SKETCH) { open = false; hub.newModel() }
             MenuItem("Neues Skript (OpenSCAD)", CadIcon.SCRIPT) { open = false; hub.newScript() }
-            MenuItem("Beispiele …") { open = false; showExamples = true }
-            MenuItem("Hilfe & Gesten …") { open = false; showHelp = true }
-            MenuItem("Importieren (Modell, .scad) …") { open = false; import() }
-            HorizontalDivider()
-            Text(
-                "Zuletzt bearbeitet", Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
-                style = MaterialTheme.typography.labelMedium, color = colors.onSurfaceVariant,
-            )
+            MenuItem("Beispiele …", CadIcon.EXAMPLES) { open = false; showExamples = true }
+            MenuItem("Importieren (Modell, .scad) …", CadIcon.IMPORT) { open = false; import() }
+            MenuDivider()
+            Section("Zuletzt bearbeitet")
             entries.take(RECENT).forEach { e ->
+                val isOpen = hub.isCurrent(e)
+                val thumb = if (e.kind == ProjectKind.MODEL) hub.workspace.thumbnailFile(e.info.id).let { f -> rememberThumbnail(f, f?.lastModified() ?: 0L) } else null
                 DropdownMenuItem(
-                    text = { Text(e.info.name + if (hub.isCurrent(e)) "  ✓" else "", maxLines = 1, overflow = TextOverflow.Ellipsis) },
-                    leadingIcon = { CadIconView(e.kind.icon(), colors.onSurfaceVariant, 20.dp) },
-                    onClick = { open = false; if (!hub.isCurrent(e)) hub.open(e) },
+                    text = { Text(e.info.name, maxLines = 1, overflow = TextOverflow.Ellipsis, color = if (isOpen) colors.onPrimaryContainer else colors.onSurface) },
+                    leadingIcon = {
+                        // kleines Vorschaubild wie auf der Startseite, sonst das Symbol der Art
+                        Box(Modifier.size(28.dp).background(colors.surfaceContainerHighest, RoundedCornerShape(6.dp)), contentAlignment = Alignment.Center) {
+                            if (thumb != null) Image(thumb, null, Modifier.size(26.dp)) else CadIconView(e.kind.icon(), colors.primary, 18.dp)
+                        }
+                    },
+                    trailingIcon = if (isOpen) ({ Text("geöffnet", style = MaterialTheme.typography.labelSmall, color = colors.onPrimaryContainer) }) else null,
+                    modifier = if (isOpen) Modifier.padding(horizontal = 6.dp).background(colors.primaryContainer.copy(alpha = 0.55f), RoundedCornerShape(10.dp)) else Modifier,
+                    onClick = { open = false; if (!isOpen) hub.open(e) },
                 )
             }
-            MenuItem("Alle Projekte (${entries.size}) …") { open = false; showAll = true }
-            HorizontalDivider()
-            MenuItem("Umbenennen …") { open = false; renaming = true }
-            DropdownMenuItem(text = { Text("Duplizieren") }, enabled = current != null, onClick = { open = false; current?.let(hub::duplicate) })
-            DropdownMenuItem(text = { Text("Löschen …") }, enabled = current != null, onClick = { open = false; deleting = current })
-            HorizontalDivider()
-            // eine Zeile statt drei (das Menü soll auch auf dem Smartphone ganz sichtbar sein): Tippen wechselt zur nächsten Darstellung
+            MenuItem("Alle Projekte …", CadIcon.LIST, trailing = "${entries.size}") { open = false; showAll = true }
+            MenuDivider()
+            Section("Dieses Projekt")
+            MenuItem("Umbenennen …", CadIcon.RENAME) { open = false; renaming = true }
+            MenuItem("Duplizieren", CadIcon.COPY, enabled = current != null) { open = false; current?.let(hub::duplicate) }
+            MenuItem("Löschen …", CadIcon.DELETE, enabled = current != null, danger = true) { open = false; deleting = current }
+            MenuDivider()
+            Section("App")
+            // eine Zeile statt drei: Tippen wechselt zur nächsten Darstellung, das Menü bleibt offen
             val theme = hub.workspace.prefs.themeMode
-            MenuItem("Darstellung: ${theme.label}") { hub.workspace.prefs.themeMode = ThemeMode.entries[(theme.ordinal + 1) % ThemeMode.entries.size] }
-            MenuItem("Lizenzen …") { open = false; showLicenses = true }
+            MenuItem("Darstellung", CadIcon.THEME, trailing = theme.label) { hub.workspace.prefs.themeMode = ThemeMode.entries[(theme.ordinal + 1) % ThemeMode.entries.size] }
+            MenuItem("Hilfe & Gesten …", CadIcon.HELP) { open = false; showHelp = true }
+            MenuItem("Lizenzen …", CadIcon.INFO) { open = false; showLicenses = true }
         }
     }
 
@@ -128,14 +149,29 @@ internal fun ProjectMenu(hub: ProjectHub) {
     if (showLicenses) LicensesDialog(onDismiss = { showLicenses = false })
 }
 
+/** Zeile des Projektmenüs: Symbol in der Akzentfarbe, optional ein Wert rechts; [danger] für Löschen (rot). */
 @Composable
-private fun MenuItem(text: String, icon: CadIcon? = null, onClick: () -> Unit) {
+private fun MenuItem(text: String, icon: CadIcon, enabled: Boolean = true, danger: Boolean = false, trailing: String? = null, onClick: () -> Unit) {
+    val colors = MaterialTheme.colorScheme
+    val tint = when { !enabled -> colors.onSurface.copy(alpha = 0.38f); danger -> colors.error; else -> colors.primary }
     DropdownMenuItem(
-        text = { Text(text) },
-        leadingIcon = icon?.let { { CadIconView(it, MaterialTheme.colorScheme.onSurfaceVariant, 20.dp) } },
+        text = { Text(text, color = if (danger && enabled) colors.error else if (enabled) colors.onSurface else colors.onSurface.copy(alpha = 0.38f)) },
+        leadingIcon = { Box(Modifier.size(28.dp), contentAlignment = Alignment.Center) { CadIconView(icon, tint, 20.dp) } },
+        trailingIcon = trailing?.let { { Text(it, style = MaterialTheme.typography.labelMedium, color = colors.onSurfaceVariant) } },
+        enabled = enabled,
         onClick = onClick,
     )
 }
+
+/** Überschrift eines Abschnitts im Projektmenü. */
+@Composable
+private fun Section(title: String) = Text(
+    title, Modifier.padding(start = 16.dp, end = 16.dp, top = 10.dp, bottom = 4.dp),
+    style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary,
+)
+
+@Composable
+private fun MenuDivider() = HorizontalDivider(Modifier.padding(horizontal = 12.dp, vertical = 4.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f))
 
 /** Alle Projekte beider Arten mit Art, Änderungsdatum, „Kopie“ und „Löschen“. */
 @Composable
