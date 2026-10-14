@@ -899,9 +899,11 @@ public class SketchEditor(public val sketch: Sketch) {
         val kind: ActionKind = when {
             hit is Sel.C && first == null -> { selection = setOf(hit); ActionKind.DIAMETER }
             hit is Sel.A && first == null -> { selection = setOf(hit); ActionKind.RADIUS }
+            // ins Leere ohne angefangenes Maß: Werkzeug beenden (zurück zum Auswählen)
+            hit == null && first == null && selection.isEmpty() -> { tool = Tool.SELECT; hover = null; hoverHit = null; return }
             hit == null || hit == first -> {
                 if (first is Sel.L) ActionKind.LENGTH
-                else { selection = emptySet(); return }
+                else { selection = emptySet(); return } // angefangene Wahl zurücknehmen; der nächste Tipp ins Leere beendet
             }
             // ein Tipp auf eine Linie: gleich die Länge; mit „Mehrfach“ (bzw. Umschalt) wartet sie auf ein zweites Element
             first == null && hit is Sel.L && !additive -> { selection = setOf(hit); ActionKind.LENGTH }

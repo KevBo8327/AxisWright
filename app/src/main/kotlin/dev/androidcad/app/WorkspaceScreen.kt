@@ -555,7 +555,7 @@ private fun hintFor(e: SketchEditor): String = when (e.tool) {
     Tool.OFFSET ->
         if (e.offsetSource == null) "Versatz: Tippe das Element an (bei Linien samt angrenzender Kette), dann die Seite."
         else "Versatz: Tippe jetzt auf die Seite, auf die der Versatz soll."
-    Tool.DIMENSION -> "Bemaßen: Linie, Kreis oder Bogen antippen. Abstand oder Winkel: einen Punkt und ein zweites Element – zwei Linien: ohne Werkzeug beide antippen, dann „Abstand“ bzw. „Winkel“."
+    Tool.DIMENSION -> "Bemaßen: Linie, Kreis oder Bogen antippen. Abstand oder Winkel: einen Punkt und ein zweites Element – zwei Linien: ohne Werkzeug beide antippen, dann „Abstand“ bzw. „Winkel“. Ins Leere tippen beendet."
     Tool.FILLET -> if (e.cornerMode == CornerMode.CHAMFER) "Ecke fasen: Tippe auf die Ecke – den Punkt, an dem zwei Linien enden."
         else "Ecke runden: Tippe auf die Ecke – den Punkt, an dem zwei Linien enden."
     Tool.MIRROR -> "Spiegeln: Tippe eine Linie als Achse an oder wähle die X- bzw. Y-Achse."

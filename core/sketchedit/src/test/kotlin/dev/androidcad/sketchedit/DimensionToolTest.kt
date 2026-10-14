@@ -121,4 +121,14 @@ class DimensionToolTest {
         assertNull(e.pendingAction, "kein Dialog, dessen Wert nichts bewirken könnte")
         assertTrue(e.message!!.contains("festgelegt"), e.message)
     }
+
+    @Test
+    fun tapIntoEmptySpaceEndsTheToolButFirstDropsAPendingPick() {
+        sketch.addLine(10.0, 10.0, 40.0, 10.0)
+        tap(10.0, 10.0) // Endpunkt: wartet auf ein zweites Element
+        tap(25.0, 60.0)
+        assertTrue(e.selection.isEmpty() && e.tool == Tool.DIMENSION, "erst nur die angefangene Wahl zurücknehmen")
+        tap(25.0, 60.0)
+        assertEquals(Tool.SELECT, e.tool, "dann beenden")
+    }
 }
