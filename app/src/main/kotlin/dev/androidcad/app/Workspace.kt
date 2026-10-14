@@ -806,9 +806,12 @@ class WorkspaceState(private val scope: CoroutineScope, private val session: Mod
         // Spiegelebene der gewählten Körperspiegelung (bei einer Arbeitsebene ist deren Rahmen schon da)
         val mirror = mirrorBody?.takeIf { it.datum == null }?.let { listOf(datumFrame(mirrorPlane(it), true)) } ?: emptyList()
         val axis = revolve?.let { revolveAxisLine(it) }?.let(::listOf) ?: emptyList()
+        // Gitter so groß wie Körper und sichtbare Skizzen zusammen (ohne Körper sonst nur die 40-mm-Vorgabe)
+        val scene = sceneBounds(parts)
         grid = if (gridOn) gridLines(
             (features.firstOrNull { it.id == selectedId } as? SketchFeature)?.let { output?.sketchPlanes?.get(it.id) ?: it.plane } ?: Workplane.XY,
-            bodyCenter(), bodyExtent(),
+            scene?.let { (lo, hi) -> Vec3((lo.x + hi.x) / 2, (lo.y + hi.y) / 2, (lo.z + hi.z) / 2) } ?: Vec3(0.0, 0.0, 0.0),
+            scene?.let { (lo, hi) -> maxOf(hi.x - lo.x, hi.y - lo.y, hi.z - lo.z).coerceAtLeast(10.0) } ?: 40.0,
         ) else null
         val all = parts + planes + mirror + axis
         val total = all.sumOf { it.size }
@@ -954,6 +957,17 @@ class WorkspaceState(private val scope: CoroutineScope, private val session: Mod
     }
 
     // ---- Körper spiegeln ---------------------------------------------------------------------------
+
+    /** Hüllbox von Körper und den Linien [segments] (x, y, z je Punkt); `null`, wenn es beides nicht gibt. */
+    private fun sceneBounds(segments: List<FloatArray>): Pair<Vec3, Vec3>? {
+        var lo = bodyBounds()?.first; var hi = bodyBounds()?.second
+        for (seg in segments) for (i in 0 until seg.size / 3) {
+            val x = seg[3 * i].toDouble(); val y = seg[3 * i + 1].toDouble(); val z = seg[3 * i + 2].toDouble()
+            lo = Vec3(minOf(lo?.x ?: x, x), minOf(lo?.y ?: y, y), minOf(lo?.z ?: z, z))
+            hi = Vec3(maxOf(hi?.x ?: x, x), maxOf(hi?.y ?: y, y), maxOf(hi?.z ?: z, z))
+        }
+        return if (lo != null && hi != null) lo to hi else null
+    }
 
     /** Hüllbox des Körpers (min, max); `null` ohne Körper. */
     private fun bodyBounds(): Pair<Vec3, Vec3>? = output?.bounds
