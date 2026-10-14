@@ -1600,6 +1600,7 @@ class WorkspaceState(private val scope: CoroutineScope, private val session: Mod
                 }
             }
             replaceOutput(built)
+            scheduleThumbnail(built)
             syncSketchPlanes()
             syncProjections()
             refreshOverlay() // Rahmen der Arbeitsebenen richten sich nach dem Körper
@@ -1608,6 +1609,23 @@ class WorkspaceState(private val scope: CoroutineScope, private val session: Mod
             building = false
         }
     }
+
+    private var thumbJob: Job? = null
+
+    /** Vorschaubild für die Startseite – kurz nach dem letzten Aufbau, im Hintergrund. */
+    private fun scheduleThumbnail(out: ModelOutput) {
+        val mesh = out.mesh ?: return
+        thumbJob?.cancel()
+        thumbJob = scope.launch {
+            delay(1500)
+            // erst jetzt nach der ID fragen: ein neues Modell wird kurz nach dem ersten Aufbau angelegt (Autosave)
+            val file = currentProjectId?.let { session.thumbnailFile(it) } ?: return@launch
+            withContext(saveDispatcher) { runCatching { writeThumbnail(mesh, file) } } // ein fehlendes Vorschaubild ist kein Fehler
+        }
+    }
+
+    /** Vorschaubild-Datei des Modells [id]; `null`, wenn es das Modell nicht gibt. */
+    fun thumbnailFile(id: String): java.io.File? = session.thumbnailFile(id)
 
     private fun compute(d: Document): ModelOutput {
         val t0 = System.nanoTime()

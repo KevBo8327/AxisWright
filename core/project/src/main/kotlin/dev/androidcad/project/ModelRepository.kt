@@ -10,6 +10,7 @@ public data class ModelData(val info: ProjectInfo, val content: String)
  * root/<id>/model.json         Modell (UTF-8, Format siehe DocumentCodec in :core:model)
  * root/<id>/model.json.bak     vorheriger Stand (eine Sicherung)
  * root/<id>/meta.properties    name, updatedAt
+ * root/<id>/thumb.png          Vorschaubild (von der App geschrieben, optional)
  * root/last                    id des zuletzt geöffneten Modells
  * ```
  * Die Ablage kennt den Inhalt nicht (nur Text) und prüft ihn nicht; ein unlesbares Modell überschreibt sie nie von selbst.
@@ -57,6 +58,9 @@ public class ModelRepository(
     }
 
     public fun delete(id: String): Boolean = store.delete(id)
+
+    /** Datei des Vorschaubilds von [id] (muss nicht existieren); `null` für ein unbekanntes Modell. */
+    public fun thumbnailFile(id: String): File? = store.dirOf(id)?.let { File(it, "thumb.png") }
 
     /** ID des zuletzt geöffneten Modells; `null`, wenn keines (mehr) existiert. */
     public var lastOpenedId: String?

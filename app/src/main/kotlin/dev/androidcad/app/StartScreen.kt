@@ -1,6 +1,15 @@
 package dev.androidcad.app
 
+import android.graphics.BitmapFactory
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.runtime.produceState
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -80,15 +89,17 @@ fun StartScreen(hub: ProjectHub) {
             }
             items(entries, key = { "${it.kind}/${it.info.id}" }) { e ->
                 val shape = RoundedCornerShape(14.dp)
-                Row(
+                Column(
                     Modifier.fillMaxWidth().background(colors.surfaceContainer, shape).border(1.dp, colors.outlineVariant, shape)
-                        .clickable { hub.open(e) }.padding(14.dp),
-                    verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        .clip(shape).clickable { hub.open(e) },
                 ) {
-                    Box(Modifier.size(44.dp).background(colors.primaryContainer, RoundedCornerShape(10.dp)), contentAlignment = Alignment.Center) {
-                        CadIconView(e.kind.icon(), colors.onPrimaryContainer, 24.dp)
+                    // Vorschau: Bild des Körpers, sonst das Symbol der Art (Skript, Modell ohne Körper oder noch ohne Bild)
+                    val thumb = if (e.kind == ProjectKind.MODEL) hub.workspace.thumbnailFile(e.info.id).let { f -> rememberThumbnail(f, f?.lastModified() ?: 0L) } else null
+                    Box(Modifier.fillMaxWidth().aspectRatio(4f / 3f).background(colors.surfaceContainerHighest), contentAlignment = Alignment.Center) {
+                        if (thumb != null) Image(thumb, contentDescription = "Vorschau von ${e.info.name}", Modifier.fillMaxSize().padding(8.dp))
+                        else CadIconView(e.kind.icon(), colors.onSurfaceVariant.copy(alpha = 0.6f), 40.dp)
                     }
-                    Column(Modifier.weight(1f)) {
+                    Column(Modifier.padding(horizontal = 14.dp, vertical = 10.dp)) {
                         Text(e.info.name, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.titleSmall, color = colors.onSurface)
                         Text("${e.kind.label} · ${format.format(Date(e.info.updatedAt))}", maxLines = 1, style = MaterialTheme.typography.labelSmall, color = colors.onSurfaceVariant)
                     }
@@ -99,6 +110,13 @@ fun StartScreen(hub: ProjectHub) {
     if (showExamples) ExamplesDialog(hub, onDismiss = { showExamples = false })
     if (showHelp) HelpDialog(hub, firstStart = false) { showHelp = false }
 }
+
+/** Lädt das Vorschaubild im Hintergrund; [stamp] (Änderungszeit der Datei) lädt es nach einer Änderung neu. `null` = keins. */
+@Composable
+private fun rememberThumbnail(file: java.io.File?, stamp: Long): ImageBitmap? =
+    produceState<ImageBitmap?>(null, file, stamp) {
+        value = withContext(Dispatchers.IO) { file?.takeIf { it.isFile }?.let { BitmapFactory.decodeFile(it.path)?.asImageBitmap() } }
+    }.value
 
 @Composable
 private fun QuickTile(title: String, subtitle: String, icon: CadIcon, primary: Boolean = false, onClick: () -> Unit) {

@@ -23,6 +23,9 @@ class ModelSession(private val repo: ModelRepository) {
 
     fun list(): List<ProjectInfo> = repo.list()
 
+    /** Vorschaubild-Datei des Modells [id] (siehe [ModelRepository.thumbnailFile]). */
+    fun thumbnailFile(id: String): java.io.File? = repo.thumbnailFile(id)
+
     /** Öffnet das zuletzt geöffnete Modell; `null`, wenn es keines gibt (Neustart mit leerem Modell). */
     fun restoreLast(): OpenResult? = repo.lastOpenedId?.let(::open)
 
