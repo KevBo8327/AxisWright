@@ -55,6 +55,7 @@ class PointToolTest {
         val onLine = standalone().single()
         assertTrue(sketch.constraintEntries.any { it.constraint == PointOnLine(onLine, line) }, "Fangen bindet den Punkt an die Linie")
 
+        e.setTool(Tool.POINT)
         tap(25.0, 30.0)
         val free = standalone().single { it != onLine }
         e.setTool(Tool.DIMENSION)

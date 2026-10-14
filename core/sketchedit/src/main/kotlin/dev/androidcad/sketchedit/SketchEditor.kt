@@ -318,6 +318,8 @@ public class SketchEditor(public val sketch: Sketch) {
     private class DragState(val session: DragSession, val offsets: Map<PointId, Vec2>, var moved: Boolean = false)
 
     private var down: Down? = null
+    private var chainStart: PointId? = null // Anfangspunkt des laufenden Linienzugs
+    private var commits = 0 // zählt abgeschlossene Änderungen (erkennt in drawUp eine fertige Form)
     private var drag: DragState? = null
     private var erasing = false
     private var pending: SnapResult? = null   // erster Punkt (beim Bogen um den Mittelpunkt: der Mittelpunkt)
@@ -591,6 +593,7 @@ public class SketchEditor(public val sketch: Sketch) {
         drag = null
         down = null
         pending = null
+        chainStart = null
         second = null
         if (tangentPicks.isNotEmpty()) { tangentPicks = emptyList(); selection = emptySet() }
         preview = null
@@ -744,11 +747,20 @@ public class SketchEditor(public val sketch: Sketch) {
     private fun drawUp(d: Down, up: SnapResult) {
         val dragged = d.moved
         val first = d.snap ?: return
+        val committedBefore = commits
         when (tool) {
             Tool.LINE -> when {
                 dragged && pending == null -> { finishAnyLine(first, up); pending = null }   // Stift: ziehen = eine Linie
-                pending == null -> pending = first
-                else -> finishAnyLine(pending!!, up)?.let { pending = SnapResult(sketch.point(it), SnapKind.POINT, point = it) }
+                pending == null -> { pending = first; chainStart = null }
+                else -> {
+                    val firstSegment = chainStart == null
+                    finishAnyLine(pending!!, up)?.let { end ->
+                        if (firstSegment) chainStart = sketch.lineIds.lastOrNull()?.let { sketch.line(it).p1 }
+                        // zurück auf den Anfangspunkt getippt: Zug geschlossen
+                        if (end == chainStart) { pending = null; chainStart = null }
+                        else pending = SnapResult(sketch.point(end), SnapKind.POINT, point = end)
+                    }
+                }
             }
             Tool.RECTANGLE -> if (rectMode == RectMode.THREE_POINTS) threeTaps(first, up, dragged) { a, b, c -> finishRect3(a, b, c) }
             else when {
@@ -794,6 +806,10 @@ public class SketchEditor(public val sketch: Sketch) {
                 }
             }
             Tool.SELECT, Tool.TRIM, Tool.SPLIT, Tool.EXTEND, Tool.OFFSET, Tool.FILLET, Tool.MIRROR, Tool.PATTERN_LINEAR, Tool.PATTERN_CIRCULAR, Tool.DIMENSION -> Unit
+        }
+        // Form fertig (bei Linien: Zug geschlossen bzw. mit dem Stift gezogen) → zurück zum Auswählen; Meldungen bleiben stehen
+        if (commits > committedBefore && pending == null && second == null && tangentPicks.isEmpty()) {
+            tool = Tool.SELECT; hover = null; preview = null; return
         }
         if (pending == null) preview = null else updateDrawPreview(up, null)
     }
@@ -1648,6 +1664,7 @@ public class SketchEditor(public val sketch: Sketch) {
 
     /** Löst die Skizze, hält den Verlauf fest und meldet die Änderung. */
     private fun commit(label: String, analyze: Boolean, solved: SolveResult? = null) {
+        commits++
         status = solved ?: sketch.solve(SolveOptions(analyze = true))
         history.record(sketch.copy())
         selection = selection.filter { exists(it) }.toSet()

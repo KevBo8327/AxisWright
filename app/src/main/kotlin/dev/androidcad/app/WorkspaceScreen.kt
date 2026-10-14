@@ -446,7 +446,10 @@ private fun BoxScope.ContextBar(handle: EditorHandle, prefs: UiPrefs, bottomGap:
                     }
                     !selecting -> {
                         DrawVariants(handle, prefs)
-                        if (e.drawingInProgress) OutlinedButton(onClick = { e.cancelOperation() }) { Text(if (e.drawingChain) "✓ Zug beenden" else "Abbrechen") }
+                        if (e.drawingInProgress) OutlinedButton(onClick = {
+                            e.cancelOperation()
+                            if (e.drawingChain) e.setTool(Tool.SELECT) // Zug beendet = Linie fertig
+                        }) { Text(if (e.drawingChain) "✓ Zug beenden" else "Abbrechen") }
                     }
                     options.isEmpty() -> Text(
                         "Keine Bedingungen für diese Auswahl – z. B. zwei Linien oder einen Kreis wählen.",

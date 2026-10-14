@@ -91,7 +91,8 @@ class DrawVariantsTest {
         val s = e.sketch
         val c = s.circle(s.circleIds.single())
         near(10.0, c.radius); near(Vec2(0.0, 0.0), s.point(c.center), 1e-4)
-        // drei Punkte auf einer Geraden: Hinweis, kein Kreis
+        // drei Punkte auf einer Geraden: Hinweis, kein Kreis (nach der fertigen Form ist das Werkzeug beendet: neu wählen)
+        e.setTool(Tool.CIRCLE)
         e.click(0.0, 20.0); e.click(5.0, 20.0); e.click(10.0, 20.0)
         assertEquals(1, s.circleIds.size)
         assertTrue(e.message!!.contains("Geraden"))

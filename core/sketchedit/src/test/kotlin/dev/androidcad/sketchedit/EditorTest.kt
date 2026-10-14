@@ -147,6 +147,8 @@ class EditorTest {
         e.click(10.0, 10.0); e.click(50.0, 40.0)
         assertEquals(4, e.sketch.lineIds.size)
         near(1200.0, e.sketch.regions().regions.single().area)
+        assertEquals(Tool.SELECT, e.tool, "nach einer fertigen Form zurück zum Auswählen")
+        e.setTool(Tool.RECTANGLE)
         e.drag(70.0, 10.0, 90.0, 30.0)
         assertEquals(8, e.sketch.lineIds.size)
         assertEquals(2, e.sketch.regions().regions.size)
@@ -454,6 +456,7 @@ class EditorTest {
     fun hoverReportsSnapTargetAndHitElement() {
         val e = editor()
         e.setTool(Tool.RECTANGLE); e.click(10.0, 10.0); e.click(50.0, 40.0)
+        e.setTool(Tool.RECTANGLE)
         e.hover(e.px(10.3, 10.2))
         assertEquals(SnapKind.POINT, e.hover!!.kind)
         e.setTool(Tool.SELECT)
@@ -461,6 +464,17 @@ class EditorTest {
         assertTrue(e.hoverHit is Sel.L)
         e.hover(e.px(30.0, 25.0))
         assertNull(e.hoverHit)
+    }
+
+    @Test
+    fun aLineChainStaysUntilItClosesThenTheToolEnds() {
+        val e = editor()
+        e.setTool(Tool.LINE)
+        e.click(10.0, 10.0); e.click(40.0, 10.0); e.click(40.0, 30.0)
+        assertEquals(Tool.LINE, e.tool, "Zug läuft weiter")
+        e.click(10.0, 10.0) // zurück zum Anfang: Zug geschlossen
+        assertEquals(Tool.SELECT, e.tool)
+        assertEquals(3, e.sketch.lineIds.size)
     }
 
     @Test
