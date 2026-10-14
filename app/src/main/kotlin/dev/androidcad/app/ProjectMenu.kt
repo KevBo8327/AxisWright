@@ -61,12 +61,7 @@ internal fun ProjectMenu(hub: ProjectHub) {
     var showExamples by remember { mutableStateOf(false) }
     var showLicenses by remember { mutableStateOf(false) }
     var showHelp by remember { mutableStateOf(false) }
-    val importer = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-        if (uri != null) scope.launch {
-            val text = withContext(Dispatchers.IO) { context.contentResolver.openInputStream(uri)?.use { it.readBytes().toString(Charsets.UTF_8) } }
-            if (text != null) hub.import(displayName(context, uri)?.removeSuffix(".partwright") ?: "Import", text)
-        }
-    }
+    val import = rememberImporter(hub)
     val entries = hub.entries
     val current = entries.firstOrNull { hub.isCurrent(it) }
 
@@ -77,11 +72,12 @@ internal fun ProjectMenu(hub: ProjectHub) {
             Text("${hub.currentName} ▾", maxLines = 1, style = MaterialTheme.typography.titleMedium, color = colors.onSurface)
         }
         DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+            MenuItem("Startseite") { open = false; hub.showHome() }
             MenuItem("Neues Modell", CadIcon.SKETCH) { open = false; hub.newModel() }
             MenuItem("Neues Skript (OpenSCAD)", CadIcon.SCRIPT) { open = false; hub.newScript() }
             MenuItem("Beispiele …") { open = false; showExamples = true }
             MenuItem("Hilfe & Gesten …") { open = false; showHelp = true }
-            MenuItem("Importieren (Modell, .scad) …") { open = false; importer.launch(arrayOf("*/*")) }
+            MenuItem("Importieren (Modell, .scad) …") { open = false; import() }
             HorizontalDivider()
             Text(
                 "Zuletzt bearbeitet", Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
@@ -173,7 +169,7 @@ private fun AllProjectsDialog(hub: ProjectHub, onDelete: (ProjectEntry) -> Unit,
 
 /** Beispiele beider Arten: das parametrische Modell und die mitgelieferten OpenSCAD-Skripte. */
 @Composable
-private fun ExamplesDialog(hub: ProjectHub, onDismiss: () -> Unit) {
+internal fun ExamplesDialog(hub: ProjectHub, onDismiss: () -> Unit) {
     val context = LocalContext.current
     val scripts = remember { context.assets.list("examples")?.filter { it.endsWith(".scad") }?.sorted() ?: emptyList() }
     val colors = MaterialTheme.colorScheme
@@ -206,6 +202,20 @@ private fun ExamplesDialog(hub: ProjectHub, onDismiss: () -> Unit) {
         },
         confirmButton = { TextButton(onClick = onDismiss) { Text("Schließen") } },
     )
+}
+
+/** Datei wählen und importieren (Modell oder .scad, siehe [ProjectHub.import]); liefert die Funktion, die die Auswahl öffnet. */
+@Composable
+internal fun rememberImporter(hub: ProjectHub): () -> Unit {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) scope.launch {
+            val text = withContext(Dispatchers.IO) { context.contentResolver.openInputStream(uri)?.use { it.readBytes().toString(Charsets.UTF_8) } }
+            if (text != null) hub.import(displayName(context, uri)?.removeSuffix(".partwright") ?: "Import", text)
+        }
+    }
+    return { launcher.launch(arrayOf("*/*")) }
 }
 
 /** Dateiname ohne Endung aus einer Dokument-URI (z. B. „Halter“ aus „Halter.scad“). */

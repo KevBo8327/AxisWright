@@ -23,6 +23,17 @@ class ProjectHub(val workspace: WorkspaceState, val script: CadState, private va
     var active by mutableStateOf(readActive())
         private set
 
+    /** Startseite statt Editor (nach dem App-Start; jedes Öffnen oder Anlegen eines Projekts verlässt sie). */
+    var home by mutableStateOf(true)
+        private set
+
+    /** Zur Startseite (offene Änderungen werden vorher gesichert). */
+    fun showHome() {
+        flushActive()
+        refreshProjects()
+        home = true
+    }
+
     /** Alle Projekte beider Arten, zuletzt geänderte zuerst. */
     val entries: List<ProjectEntry>
         get() = merge(workspace.projects, script.projects)
@@ -41,6 +52,7 @@ class ProjectHub(val workspace: WorkspaceState, val script: CadState, private va
     }
 
     fun open(e: ProjectEntry) {
+        if (isCurrent(e)) { activate(e.kind); return } // schon geladen (z. B. von der Startseite aus): nur anzeigen
         flushActive()
         when (e.kind) {
             ProjectKind.MODEL -> workspace.openProject(e.info.id)
@@ -116,6 +128,7 @@ class ProjectHub(val workspace: WorkspaceState, val script: CadState, private va
 
     private fun activate(kind: ProjectKind) {
         active = kind
+        home = false
         runCatching { stateFile.writeText(kind.name) }
     }
 

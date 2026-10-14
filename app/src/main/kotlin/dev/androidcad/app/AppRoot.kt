@@ -18,7 +18,7 @@ import androidx.compose.ui.Modifier
 /**
  * Oberste Ebene der App. Welcher Editor sichtbar ist, bestimmt die gemeinsame Projektverwaltung ([ProjectHub]): ein **Modell**
  * (Skizze → Körper, Hauptweg) öffnet den Modell-Editor, ein **Skript** den OpenSCAD-Editor (optionale Erweiterung). Gewechselt wird
- * über das Projektmenü in der App-Leiste; die Zurück-Taste führt vom Skript zum Modell.
+ * über das Projektmenü in der App-Leiste. Nach dem Start erscheint die [StartScreen]; die Zurück-Taste führt aus dem Editor dorthin.
  *
  * Die Fläche reicht bis unter die Systemleisten (Hintergrund auch dort, passend zu hell/dunkel); der Inhalt bleibt innerhalb der
  * sicheren Zeichenfläche.
@@ -31,9 +31,12 @@ fun AppRoot(hub: ProjectHub) {
     if (intro) HelpDialog(hub, firstStart = true) { intro = false; prefs.putText(INTRO_SEEN, "1") }
     Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         Box(Modifier.fillMaxSize().safeDrawingPadding()) {
-            when (hub.active) {
+            // Zurück-Taste im Editor: zur Startseite (Dialoge und Modi im Editor fangen sie vorher ab)
+            if (hub.home) StartScreen(hub) else {
+                BackHandler { hub.showHome() }
+            }
+            if (!hub.home) when (hub.active) {
                 ProjectKind.SCRIPT -> {
-                    BackHandler { hub.switchTo(ProjectKind.MODEL) }
                     Column(Modifier.fillMaxSize()) {
                         ScriptTopBar(hub)
                         HorizontalDivider()
