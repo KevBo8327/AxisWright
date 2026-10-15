@@ -27,8 +27,9 @@ android {
         applicationId = "io.github.kevbo8327.partwright"
         minSdk = 26
         targetSdk = 36
-        versionCode = 1
-        versionName = "0.1.0"
+        // versionCode = Major·1000 + Minor·100 + Patch (0.9.0 → 900, 1.0.0 → 1000); jeder Upload in Play braucht einen höheren Wert
+        versionCode = 900
+        versionName = "0.9.0-beta"
         // Googlebooks laufen auch auf Intel/AMD → x86_64 ist Pflicht neben arm64.
         ndk { abiFilters += listOf("arm64-v8a", "x86_64") }
     }

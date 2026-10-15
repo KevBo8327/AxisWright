@@ -11,6 +11,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -42,6 +44,10 @@ fun HelpDialog(hub: ProjectHub, firstStart: Boolean, onDismiss: () -> Unit) {
                 Section("3D-Ansicht")
                 Line("Ziehen dreht, zwei Finger zoomen, das Mausrad auch. „Ansicht“ wechselt zu Oben/Vorne/Rechts und passt ein.")
                 Line("Kanten und Flächen antippen, wenn ein Werkzeug danach fragt (Verrunden, Bohrung, Schale, Messen). ↶ ↷ machen Änderungen rückgängig.")
+                // Version für Rückmeldungen (welcher Stand wurde getestet)
+                val context = LocalContext.current
+                val version = remember { runCatching { context.packageManager.getPackageInfo(context.packageName, 0).versionName }.getOrNull() }
+                if (version != null) Text("Partwright $version", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         },
         confirmButton = {
