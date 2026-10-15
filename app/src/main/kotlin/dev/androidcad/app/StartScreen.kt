@@ -60,7 +60,7 @@ fun StartScreen(hub: ProjectHub) {
 
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
         LazyVerticalGrid(
-            columns = GridCells.Adaptive(220.dp),
+            columns = GridCells.Adaptive(150.dp), // Smartphone: zwei Spalten, Tablet: vier bis sechs
             modifier = Modifier.widthIn(max = 1100.dp).fillMaxSize(),
             contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 20.dp, vertical = 24.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp),

@@ -42,10 +42,11 @@ class CadState(
     private val repo: ProjectRepository,
     private val scope: CoroutineScope,
     defaultName: String,
-    defaultSource: String,
+    private val defaultSource: String,
 ) {
     var project by mutableStateOf(ProjectInfo("", "", 0))
         private set
+    /** Skript-Projekte für Listen und Startseite; das beim ersten Start angelegte, unveränderte Beispiel fehlt darin (siehe [listed]). */
     var projects by mutableStateOf(emptyList<ProjectInfo>())
         private set
     var saveState by mutableStateOf(SaveState.SAVED)
@@ -180,7 +181,7 @@ class CadState(
         if (wasCurrent) {
             val next = repo.list().firstNotNullOfOrNull { repo.load(it.id) } ?: repo.create("Neues Projekt", "cube(10);\n")
             open(next)
-        } else projects = repo.list()
+        } else projects = listed()
     }
 
     fun renameProject(name: String) {
@@ -196,7 +197,7 @@ class CadState(
         updateHistoryFlags()
         refreshParams()
         repo.lastOpenedId = data.info.id
-        projects = repo.list()
+        projects = listed()
         saveState = SaveState.SAVED
         scheduleRender(delayMs = 0)
     }
@@ -211,7 +212,7 @@ class CadState(
             delay(AUTOSAVE_DELAY_MS)
             val version = dirtyVersion
             val id = project.id; val name = project.name; val text = editor.text; val ov = overrides
-            val saved = withContext(Dispatchers.IO) { runCatching { repo.save(id, text, ov, name) to repo.list() } }
+            val saved = withContext(Dispatchers.IO) { runCatching { repo.save(id, text, ov, name) to listed() } }
             if (version != dirtyVersion || id != project.id) return@launch // inzwischen weiter geändert / Projekt gewechselt
             saved.onSuccess { (info, list) ->
                 project = info
@@ -221,12 +222,20 @@ class CadState(
         }
     }
 
+    /**
+     * Alle Projekte ohne ein unverändertes Standard-Skript: das legt die App beim ersten Start selbst an (der Editor braucht immer ein
+     * Projekt) – für neue Nutzer wäre es in „Zuletzt bearbeitet“ nur verwirrend. Nach der ersten Änderung erscheint es.
+     */
+    private fun listed(): List<ProjectInfo> = repo.list().filterNot { info ->
+        repo.load(info.id)?.let { it.source == defaultSource && it.overrides.isEmpty() } == true
+    }
+
     /** Schreibt ausstehende Änderungen sofort (synchron). Für `onStop` und Projektwechsel. */
     fun flush() {
         saveJob?.cancel()
         if (saveState == SaveState.SAVED || project.id.isEmpty()) return
         runCatching { repo.save(project.id, editor.text, overrides, project.name) }
-            .onSuccess { project = it; projects = repo.list(); saveState = SaveState.SAVED }
+            .onSuccess { project = it; projects = listed(); saveState = SaveState.SAVED }
             .onFailure { saveState = SaveState.ERROR }
     }
 

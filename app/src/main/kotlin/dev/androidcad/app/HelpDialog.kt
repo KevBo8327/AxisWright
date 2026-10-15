@@ -25,7 +25,8 @@ internal const val INTRO_SEEN = "intro.seen"
 @Composable
 fun HelpDialog(hub: ProjectHub, firstStart: Boolean, onDismiss: () -> Unit) {
     AlertDialog(
-        onDismissRequest = onDismiss,
+        // beim ersten Start nur über die Knöpfe schließen: ein Tipp daneben soll die Einführung nicht unbemerkt wegnehmen
+        onDismissRequest = { if (!firstStart) onDismiss() },
         title = { Text(if (firstStart) "Willkommen bei Partwright" else "Hilfe") },
         text = {
             Column(Modifier.heightIn(max = 460.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(6.dp)) {
