@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -352,7 +353,9 @@ private fun ToolStrip(g: ToolGroup, onDone: () -> Unit) {
     val shape = RoundedCornerShape(14.dp)
     // deckend statt Glas: die Leiste liegt über Karten und Hinweisen, deren Text sonst durchscheint
     Row(
-        Modifier.shadow(8.dp, shape).background(colors.surfaceContainerHigh, shape).border(1.dp, colors.outlineVariant, shape).padding(4.dp),
+        // scrollt seitlich, wenn die Gruppe breiter ist als der Bildschirm (Smartphone: „Zeichnen“ hat sieben Werkzeuge)
+        Modifier.shadow(8.dp, shape).background(colors.surfaceContainerHigh, shape).border(1.dp, colors.outlineVariant, shape)
+            .horizontalScroll(rememberScrollState()).padding(4.dp),
         horizontalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         g.tools.forEach { t -> ToolButton(t.label, t.icon, t.active, enabled = t.enabled, size = 56.dp) { onDone(); t.onClick() } }

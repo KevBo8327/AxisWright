@@ -481,8 +481,10 @@ class WorkspaceState(private val scope: CoroutineScope, private val session: Mod
         job?.cancel()
         replaceOutput(null)
         building = false
-        select(doc.features.last().id)
+        select(doc.features.last().id) // macht dessen Skizze aktiv
         mode = if (isPristine()) WorkMode.SKETCH else WorkMode.MODEL
+        // beim Öffnen nichts zur Bearbeitung aufklappen (sonst stünde das zuletzt verwendete Feature gleich offen da)
+        if (mode == WorkMode.MODEL) { selectedId = null; editStart = null; refreshHighlight(); refresh() }
         cameraJob?.cancel()
         camera.snapTo(ViewCamera.ISO_YAW, ViewCamera.ISO_PITCH)
         if (hasExtrusions()) scheduleBuild(0)
@@ -912,7 +914,10 @@ class WorkspaceState(private val scope: CoroutineScope, private val session: Mod
 
     fun updateFillet(size: Double, kind: EdgeKind) {
         val f = fillet ?: return
-        doc.update(f.copy(size = size, kind = kind))
+        // ein Standardname folgt der Art („Verrundung 2“ ↔ „Fase 2“), ein eigener Name bleibt
+        val defaultName = Regex("""(Verrundung|Fase) \d+""").matches(f.name)
+        val name = if (kind != f.kind && defaultName) nextName(if (kind == EdgeKind.ROUND) "Verrundung" else "Fase") else f.name
+        doc.update(f.copy(size = size, kind = kind, name = name))
         refresh()
         markDirty()
         scheduleBuild()

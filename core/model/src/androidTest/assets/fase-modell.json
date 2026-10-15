@@ -1,0 +1,195 @@
+{
+  "format": "partwright-model",
+  "version": 1,
+  "nextId": 6,
+  "features": [
+    {
+      "kind": "sketch",
+      "id": 1,
+      "name": "Skizze 1",
+      "plane": {
+        "origin": [0, 0, 0],
+        "xDir": [1, 0, 0],
+        "normal": [0, 0, 1]
+      },
+      "sketch": {
+        "nextId": 19,
+        "points": [
+          [1, -1.427432497154861E-16, -2.0644200124458978E-13],
+          [3, -125, -125.00000000000034],
+          [4, 125, -125.00000000000041],
+          [5, 125, 124.99999999999956],
+          [6, -125, 124.9999999999995]
+        ],
+        "lines": [
+          {
+            "id": 7,
+            "p1": 3,
+            "p2": 4,
+            "construction": false
+          },
+          {
+            "id": 8,
+            "p1": 4,
+            "p2": 5,
+            "construction": false
+          },
+          {
+            "id": 9,
+            "p1": 5,
+            "p2": 6,
+            "construction": false
+          },
+          {
+            "id": 10,
+            "p1": 6,
+            "p2": 3,
+            "construction": false
+          },
+          {
+            "id": 15,
+            "p1": 3,
+            "p2": 5,
+            "construction": true
+          }
+        ],
+        "circles": [],
+        "arcs": [],
+        "constraints": [
+          {
+            "id": 2,
+            "type": "Fixed",
+            "point": 1,
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": 11,
+            "type": "Horizontal",
+            "line": 7
+          },
+          {
+            "id": 12,
+            "type": "Vertical",
+            "line": 8
+          },
+          {
+            "id": 13,
+            "type": "Horizontal",
+            "line": 9
+          },
+          {
+            "id": 14,
+            "type": "Vertical",
+            "line": 10
+          },
+          {
+            "id": 16,
+            "type": "Midpoint",
+            "point": 1,
+            "line": 15
+          },
+          {
+            "id": 17,
+            "type": "LengthDim",
+            "line": 7,
+            "value": 250
+          },
+          {
+            "id": 18,
+            "type": "LengthDim",
+            "line": 8,
+            "value": 250
+          }
+        ]
+      }
+    },
+    {
+      "kind": "extrude",
+      "id": 2,
+      "name": "Extrusion 1",
+      "sketch": 1,
+      "distance": 50,
+      "op": "ADD",
+      "symmetric": false,
+      "regionPoints": []
+    },
+    {
+      "kind": "sketch",
+      "id": 3,
+      "name": "Skizze 2",
+      "plane": {
+        "origin": [0, 0, 50],
+        "xDir": [1, 0, 0],
+        "normal": [0, 0, 1]
+      },
+      "sketch": {
+        "nextId": 5,
+        "points": [
+          [1, 0, 0]
+        ],
+        "lines": [],
+        "circles": [
+          {
+            "id": 3,
+            "center": 1,
+            "radius": 74.99999999999946,
+            "construction": false
+          }
+        ],
+        "arcs": [],
+        "constraints": [
+          {
+            "id": 2,
+            "type": "Fixed",
+            "point": 1,
+            "x": 0,
+            "y": 0
+          },
+          {
+            "id": 4,
+            "type": "DiameterDim",
+            "round": "c3",
+            "value": 150
+          }
+        ]
+      },
+      "onFace": [2, 3, 0]
+    },
+    {
+      "kind": "extrude",
+      "id": 4,
+      "name": "Abtrag 1",
+      "sketch": 3,
+      "distance": -20,
+      "op": "CUT",
+      "symmetric": false,
+      "regionPoints": []
+    },
+    {
+      "kind": "fillet",
+      "id": 5,
+      "name": "Fase 1",
+      "mode": "CHAMFER",
+      "size": 5,
+      "edges": [
+        {
+          "a": [2, 1, 8],
+          "b": [2, 3, 0]
+        },
+        {
+          "a": [2, 1, 7],
+          "b": [2, 3, 0]
+        },
+        {
+          "a": [2, 1, 9],
+          "b": [2, 3, 0]
+        },
+        {
+          "a": [2, 1, 10],
+          "b": [2, 3, 0]
+        }
+      ]
+    }
+  ]
+}
