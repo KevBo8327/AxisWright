@@ -313,14 +313,9 @@ internal fun MeshViewport(
 
     AndroidView(
         factory = { ctx: Context ->
-            GLSurfaceView(ctx).apply {
-                setEGLContextClientVersion(3)
-                setEGLConfigChooser(8, 8, 8, 8, 24, 0)
-                setRenderer(renderer)
-                renderMode = GLSurfaceView.RENDERMODE_WHEN_DIRTY
-            }
+            GlTextureView(ctx, renderer) // zeichnet nur auf Anfrage (requestRender), wie zuvor RENDERMODE_WHEN_DIRTY
         },
-        onRelease = { it.onPause() },
+        onRelease = { it.release() },
         modifier = modifier
             .fillMaxSize()
             .pointerInput(mesh, pickEdges, pickFaces, sketchLines) {

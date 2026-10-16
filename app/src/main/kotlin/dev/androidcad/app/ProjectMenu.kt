@@ -1,5 +1,11 @@
 package dev.androidcad.app
 
+import android.content.ActivityNotFoundException
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
+import android.os.Build
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
@@ -120,6 +126,7 @@ internal fun ProjectMenu(hub: ProjectHub, modifier: Modifier = Modifier) {
             val theme = hub.workspace.prefs.themeMode
             MenuItem("Darstellung", CadIcon.THEME, trailing = theme.label) { hub.workspace.prefs.themeMode = ThemeMode.entries[(theme.ordinal + 1) % ThemeMode.entries.size] }
             MenuItem("Hilfe & Gesten …", CadIcon.HELP) { open = false; showHelp = true }
+            MenuItem("Feedback senden …", CadIcon.MAIL) { open = false; sendFeedback(context) }
             MenuItem("Lizenzen …", CadIcon.INFO) { open = false; showLicenses = true }
         }
     }
@@ -259,3 +266,21 @@ internal fun displayName(context: android.content.Context, uri: android.net.Uri)
     context.contentResolver.query(uri, arrayOf(android.provider.OpenableColumns.DISPLAY_NAME), null, null, null)?.use { c ->
         if (c.moveToFirst()) c.getString(0)?.substringBeforeLast('.') else null
     }
+
+private const val FEEDBACK_ADDRESS = "kb-it-services@outlook.de"
+
+/** Öffnet das E-Mail-Programm mit Adresse, Betreff und Version/Gerät (hilft beim Nachstellen); ohne E-Mail-App ein Hinweis mit der Adresse. */
+private fun sendFeedback(context: Context) {
+    val version = runCatching { context.packageManager.getPackageInfo(context.packageName, 0).versionName }.getOrNull() ?: "?"
+    val body = "\n\n---\nPartwright $version · ${Build.MANUFACTURER} ${Build.MODEL} · Android ${Build.VERSION.RELEASE}"
+    val intent = Intent(Intent.ACTION_SENDTO, Uri.parse("mailto:")).apply {
+        putExtra(Intent.EXTRA_EMAIL, arrayOf(FEEDBACK_ADDRESS))
+        putExtra(Intent.EXTRA_SUBJECT, "Partwright $version – Feedback")
+        putExtra(Intent.EXTRA_TEXT, body)
+    }
+    try {
+        context.startActivity(intent)
+    } catch (_: ActivityNotFoundException) {
+        Toast.makeText(context, "Keine E-Mail-App gefunden – Feedback bitte an $FEEDBACK_ADDRESS", Toast.LENGTH_LONG).show()
+    }
+}

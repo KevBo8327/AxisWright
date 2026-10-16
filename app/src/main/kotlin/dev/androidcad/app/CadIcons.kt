@@ -55,6 +55,7 @@ enum class CadIcon(private vararg val parts: Part) {
     COPY(Part("M8 8 H19 V20 H8 Z"), Part("M5 16 V4 H16")),
     THEME(Part("M12 4 a8 8 0 1 0 0.01 0 Z"), Part("M12 4 A8 8 0 0 1 12 20 Z", filled = true)),
     HELP(Part("M12 4 a8 8 0 1 0 0.01 0 Z"), Part("M9.5 9.5 A2.6 2.6 0 1 1 13.2 11.8 Q12 12.4 12 14"), Part("M11.2 16.8 a0.8 0.8 0 1 0 1.6 0 a0.8 0.8 0 1 0 -1.6 0", filled = true)),
+    MAIL(Part("M4 6 H20 V18 H4 Z"), Part("M4 6.5 L12 13 L20 6.5")),
     INFO(Part("M12 4 a8 8 0 1 0 0.01 0 Z"), Part("M12 11 V16.5"), Part("M11.2 7.8 a0.8 0.8 0 1 0 1.6 0 a0.8 0.8 0 1 0 -1.6 0", filled = true)),
     DELETE(Part("M4 7 H20"), Part("M9.5 7 V4.5 H14.5 V7"), Part("M6.5 7 L7.5 20 H16.5 L17.5 7"), Part("M10.5 11 V16.5"), Part("M13.5 11 V16.5")),
     GRID(Part("M4 4 H20 V20 H4 Z"), Part("M9.33 4 V20 M14.67 4 V20 M4 9.33 H20 M4 14.67 H20")),
