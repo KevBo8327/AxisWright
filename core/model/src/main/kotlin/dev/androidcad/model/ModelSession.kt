@@ -1,6 +1,5 @@
 package dev.androidcad.model
 
-import dev.androidcad.json.JsonException
 import dev.androidcad.project.ModelRepository
 import dev.androidcad.project.ProjectInfo
 
@@ -34,7 +33,7 @@ class ModelSession(private val repo: ModelRepository) {
         val label = "„${data.info.name}“"
         try {
             return adopt(data.info, DocumentCodec.decode(data.content), notice = null)
-        } catch (e: JsonException) {
+        } catch (e: Exception) { // nicht nur JSON-Fehler: ein unlesbares Modell darf die App nie beenden
             val backup = repo.loadBackup(id)?.let { runCatching { DocumentCodec.decode(it) }.getOrNull() }
                 ?: return OpenResult(null, "$label ist beschädigt und wurde nicht geöffnet (${e.message})")
             return adopt(data.info, backup, notice = "$label war beschädigt – vorheriger Stand aus der Sicherung geöffnet")

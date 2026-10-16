@@ -15,11 +15,10 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
@@ -47,7 +46,6 @@ import java.util.Date
  * Startseite nach dem Splash: Schnellstart (neues Modell oder Skript, Beispiele, Import, Hilfe) und die zuletzt bearbeiteten Projekte
  * als Karten. Ein Tipp auf ein Projekt öffnet es; zurück kommt man mit der Zurück-Taste oder über Projektmenü › Startseite.
  */
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun StartScreen(hub: ProjectHub) {
     val colors = MaterialTheme.colorScheme
@@ -72,15 +70,12 @@ fun StartScreen(hub: ProjectHub) {
                     Text("Parametrisch konstruieren – Skizze, Maße, Körper.", style = MaterialTheme.typography.bodyMedium, color = colors.onSurfaceVariant)
                 }
             }
-            item(span = { GridItemSpan(maxLineSpan) }) {
-                FlowRow(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    QuickTile("Neues Modell", "Skizze → Körper", CadIcon.SKETCH, primary = true) { hub.newModel() }
-                    QuickTile("Neues Skript", "OpenSCAD", CadIcon.SCRIPT) { hub.newScript() }
-                    QuickTile("Beispiele", "zum Ausprobieren", CadIcon.EXTRUDE) { showExamples = true }
-                    QuickTile("Importieren", "Modell oder .scad", CadIcon.PLANE) { import() }
-                    QuickTile("Hilfe & Gesten", "Einführung", CadIcon.MEASURE) { showHelp = true }
-                }
-            }
+            // Kacheln als Zellen des Rasters: gleiche Spalten wie die Projektkarten, auf schmalen Smartphones zwei nebeneinander
+            item { QuickTile("Neues Modell", "Skizze → Körper", CadIcon.SKETCH, primary = true) { hub.newModel() } }
+            item { QuickTile("Neues Skript", "OpenSCAD", CadIcon.SCRIPT) { hub.newScript() } }
+            item { QuickTile("Beispiele", "zum Ausprobieren", CadIcon.EXTRUDE) { showExamples = true } }
+            item { QuickTile("Importieren", "Modell oder .scad", CadIcon.PLANE) { import() } }
+            item { QuickTile("Hilfe & Gesten", "Einführung", CadIcon.MEASURE) { showHelp = true } }
             item(span = { GridItemSpan(maxLineSpan) }) {
                 Text("Zuletzt bearbeitet", Modifier.padding(top = 12.dp), style = MaterialTheme.typography.titleMedium, color = colors.onBackground)
             }
@@ -125,7 +120,7 @@ private fun QuickTile(title: String, subtitle: String, icon: CadIcon, primary: B
     val bg = if (primary) colors.primaryContainer else colors.surfaceContainerHigh
     val fg = if (primary) colors.onPrimaryContainer else colors.onSurface
     Column(
-        Modifier.size(width = 160.dp, height = 112.dp).background(bg, shape).border(1.dp, if (primary) colors.primary else colors.outlineVariant, shape)
+        Modifier.fillMaxWidth().height(112.dp).background(bg, shape).border(1.dp, if (primary) colors.primary else colors.outlineVariant, shape)
             .clickable(onClick = onClick).padding(14.dp),
         verticalArrangement = Arrangement.SpaceBetween,
     ) {

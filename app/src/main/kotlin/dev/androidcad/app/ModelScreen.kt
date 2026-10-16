@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
@@ -205,10 +206,11 @@ private fun ModelTopBar(hub: ProjectHub, compact: Boolean) {
     var menu by remember { mutableStateOf(false) }
     Row(
         Modifier.fillMaxWidth().height(52.dp).padding(horizontal = 4.dp),
-        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp),
+        // kompakt ohne Zwischenräume: die Knöpfe bringen eigenen Innenabstand mit, der Platz geht an den Projektnamen
+        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(if (compact) 0.dp else 8.dp),
     ) {
-        ProjectMenu(hub)
-        Spacer(Modifier.weight(1f))
+        // nimmt den freien Platz und kürzt einen langen Namen, damit ⋮ auch auf schmalen Smartphones ganz sichtbar bleibt
+        ProjectMenu(hub, Modifier.weight(1f))
         if (state.building) CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
         if (out?.mesh != null && !compact) {
             Text(
@@ -221,7 +223,7 @@ private fun ModelTopBar(hub: ProjectHub, compact: Boolean) {
         TextButton(onClick = { state.parametersOpen = !state.parametersOpen }) { Text(if (state.parametersOpen) "Parameter ✕" else "Parameter") }
         if (!compact) TextButton(onClick = { exporter.launch("${state.projectName}.stl") }, enabled = out?.mesh != null) { Text("STL exportieren") }
         Box {
-            TextButton(onClick = { menu = true }) { Text("⋮") }
+            TextButton(onClick = { menu = true }, Modifier.width(44.dp), contentPadding = PaddingValues(0.dp)) { Text("⋮") }
             DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
                 if (compact) {
                     out?.takeIf { it.mesh != null }?.let { o ->

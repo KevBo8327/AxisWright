@@ -667,7 +667,7 @@ class WorkspaceState(private val scope: CoroutineScope, private val session: Mod
     fun importModel(name: String, text: String) {
         val imported = try {
             DocumentCodec.decode(text)
-        } catch (e: dev.androidcad.json.JsonException) {
+        } catch (e: Exception) { // fremde Datei: jeder Fehler beim Einlesen ist eine Meldung, kein Absturz
             notice = "Import fehlgeschlagen: ${e.message}"
             return
         }

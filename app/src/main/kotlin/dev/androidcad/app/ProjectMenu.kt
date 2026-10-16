@@ -56,7 +56,7 @@ private const val RECENT = 4
  * zuletzt bearbeiteten Projekte, „Alle Projekte …“ und Umbenennen/Duplizieren/Löschen des aktiven Projekts.
  */
 @Composable
-internal fun ProjectMenu(hub: ProjectHub) {
+internal fun ProjectMenu(hub: ProjectHub, modifier: Modifier = Modifier) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val colors = MaterialTheme.colorScheme
@@ -71,11 +71,11 @@ internal fun ProjectMenu(hub: ProjectHub) {
     val entries = hub.entries
     val current = entries.firstOrNull { hub.isCurrent(it) }
 
-    Box {
+    Box(modifier) {
         TextButton(onClick = { hub.refreshProjects(); open = true }) {
             CadIconView(hub.active.icon(), colors.primary, 20.dp)
             Spacer(Modifier.width(8.dp))
-            Text("${hub.currentName} ▾", maxLines = 1, style = MaterialTheme.typography.titleMedium, color = colors.onSurface)
+            Text("${hub.currentName} ▾", Modifier.weight(1f, fill = false), maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.titleMedium, color = colors.onSurface)
         }
         // Menü im Stil der übrigen Flächen: abgerundet, feiner heller Rand, Abschnitte mit Überschrift, jede Zeile mit Symbol
         DropdownMenu(

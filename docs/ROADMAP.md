@@ -100,6 +100,14 @@ Spiegeln, Arbeitsebenen, Messen, Parameter, Export STEP/3MF/STL.
 - [ ] nach 1.0: Sweep, STEP-Import, Fläche ziehen/versetzen (direkte Bearbeitung), Gewinde (modelliert), mehrere Körper mit Booleschen
   Operationen und Körper teilen, Formschräge/Rippe/Aufdicken, Masse mit Dichte
 
+**3D-Druck / Slicer** (Idee vom 15.10.2026):
+- [ ] 1.1: **„Drucken …“** – 3MF über das Android-Teilen-Menü (FileProvider) direkt an eine installierte Slicer- oder Drucker-App übergeben;
+  der 3MF-Export selbst ist schon da (`ModelScreen.kt`). Aufwand ca. ein Tag.
+- [ ] später, nur mit eigenem Slicer sinnvoll: G-Code direkt an den Drucker im Netzwerk senden (Klipper/Moonraker, OctoPrint).
+- [ ] Idee: **Slicer in der App.** Erst angehen, wenn Tester es ausdrücklich wünschen. Die gängigen Kerne (CuraEngine, PrusaSlicer,
+  OrcaSlicer, Slic3r) stehen unter **AGPL-3.0**. Eingebaut würde die Lizenz für die ganze App gelten und passt nicht zum Freemium-Modell;
+  vorher rechtlich prüfen lassen. Umfang: Druckerprofile, Stützen, Schichtvorschau.
+
 ## Meilensteine
 
 ### M0 – OpenCascade-Machbarkeit  (fast abgeschlossen)

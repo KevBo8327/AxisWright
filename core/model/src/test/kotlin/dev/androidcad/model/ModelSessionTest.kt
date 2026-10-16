@@ -100,6 +100,23 @@ class ModelSessionTest {
     }
 
     @Test
+    fun anyDamageToTheFileOpensTheBackupInsteadOfCrashing() {
+        val s = ModelSession(repo())
+        s.startNew(); s.save(doc(10.0)); s.save(doc(20.0))
+        val id = s.currentId!!
+        val good = File(dir, "$id/model.json").readText()
+        val rnd = java.util.Random(7)
+        // abgeschnitten, einzelne Zeichen ersetzt, Zahlen vertauscht – wie nach einem Fehler beim Schreiben oder Kopieren
+        val damaged = (1..60).map { good.substring(0, good.length * it / 61) } +
+            (1..300).map { val c = good.toCharArray(); c[rnd.nextInt(c.size)] = "0-9\"{}[],:a.e".random(kotlin.random.Random(rnd.nextLong())); String(c) }
+        for (text in damaged) {
+            File(dir, "$id/model.json").writeText(text)
+            val r = ModelSession(repo()).open(id) // darf nicht werfen
+            assertNotNull(r.document, text)
+        }
+    }
+
+    @Test
     fun failedRestoreStartsFreshAndSavesAsNewModelWithoutTouchingTheBrokenOne() {
         val s = ModelSession(repo())
         s.startNew(); s.save(doc()); val broken = s.currentId!!
