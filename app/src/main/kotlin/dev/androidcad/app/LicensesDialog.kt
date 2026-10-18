@@ -39,13 +39,17 @@ internal val THIRD_PARTY = listOf(
     ThirdParty(
         "Open CASCADE Technology 7.9.3", "Geometriekern (B-Rep: Körper, Flächen, Kanten, Verrundungen)",
         "GNU LGPL 2.1 mit Open-CASCADE-Ausnahme", "https://github.com/Open-Cascade-SAS/OCCT (Tag V7_9_3)",
-        listOf("occt_lgpl_2.1.txt", "occt_lgpl_exception.txt"),
-        note = "Unverändert als eigene Bibliotheken (libTK*.so) mitgeliefert. Sie lassen sich gegen eine selbst gebaute Version " +
-            "austauschen; die Bauanleitung liegt im Quelltext der App (scripts/build-occt.ps1).",
+        listOf("occt_lgpl_2.1.txt", "occt_lgpl_exception.txt", "occt_delabella_mit.txt", "occt_flex_bsd.txt"),
+        // LGPL 2.1 §6: austauschbar (eigene .so) und schriftliches Angebot des Quelltexts – der App-Quelltext selbst ist nicht öffentlich
+        note = "Unverändert als eigene Bibliotheken (libTK*.so) mitgeliefert und dadurch gegen eine selbst gebaute Version austauschbar. " +
+            "Den vollständigen Quelltext dieser OCCT-Version samt Bauanleitung senden wir auf Anfrage an kb-it-services@outlook.de " +
+            "kostenlos zu (mindestens drei Jahre nach Erhalt dieser App-Version). Enthält DELABELLA (MIT) und flex (BSD).",
     ),
     ThirdParty(
         "Manifold 3", "Körperberechnung im Skript-Editor (OpenSCAD)", "Apache License 2.0",
-        "https://github.com/elalish/manifold", listOf("apache_2.0.txt"),
+        "https://github.com/elalish/manifold",
+        listOf("apache_2.0.txt", "manifold_svd_mit.txt", "physx_bsd_3.txt", "manifold_math_sun_musl.txt"),
+        note = "Enthält Code aus NVIDIA PhysX (BSD 3-Clause), musl/FreeBSD msun und eine SVD-Routine (MIT).",
     ),
     ThirdParty(
         "Clipper2", "2D-Polygonoperationen (über Manifold)", "Boost Software License 1.0",

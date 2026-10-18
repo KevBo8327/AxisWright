@@ -354,7 +354,7 @@ if __name__ == "__main__":
     write(os.path.join(RES, "mipmap-anydpi-v26", "ic_launcher.xml"), ADAPTIVE)
     write(os.path.join(RES, "mipmap-anydpi-v26", "ic_launcher_round.xml"), ADAPTIVE)
     os.makedirs(STORE, exist_ok=True)
-    store_icon().save(os.path.join(STORE, "icon-512.png"))
+    store_icon().convert("RGBA").save(os.path.join(STORE, "icon-512.png"))  # Google verlangt ein 32-Bit-PNG
     feature_graphic().save(os.path.join(STORE, "feature-graphic.png"))
     splash_preview().save(os.path.join(STORE, "splash-preview.png"))
     print(f"ok (größter Abstand zur Mitte: {worst:.1f} von 33)")
