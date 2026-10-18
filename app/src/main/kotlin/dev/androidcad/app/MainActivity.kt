@@ -45,7 +45,7 @@ class MainActivity : ComponentActivity() {
                 )
                 onDispose { }
             }
-            PartwrightTheme(mode) {
+            ParamWorkerTheme(mode) {
                 AppRoot(hub)
             }
         }

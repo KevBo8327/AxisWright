@@ -35,14 +35,15 @@ Entscheidungen: Vertrieb über **Google Play**, **Freemium** (Pro als einmaliger
 (heutiger Stand stabil + Export, Messen, Parameter), weitere Funktionen als Updates. Grobe Dauer: ca. 3–4 Monate.
 
 - [ ] **Phase 0 – Fundament:**
-  - [x] App-Name **Partwright** (Store-Titel z. B. „Partwright 3D – CAD für Tablet & Stift“), App-Kennung `io.github.kevbo8327.partwright`
-    (vorher `dev.androidcad.app`; nach dem ersten Upload nicht mehr änderbar). Geprüft: EUIPO und Play Store ohne Treffer, DPMA ohne Treffer für „Partwright“ (auch ohne „3D“); Domain vorerst nicht gesichert
+  - [x] App-Name **ParamWorker** (18.10.2026; vorher „Partwright“ – Websuche ergab doch bestehende Nutzungen), App-Kennung
+    `io.github.kevbo8327.paramworker` (vorher `…partwright`, davor `dev.androidcad.app`; nach dem ersten Upload nicht mehr änderbar).
+    Websuche ohne Treffer in Software/CAD; Prüfung in DPMA/EUIPO/Play Store und Domain durch den Nutzer. Dateiformat-Kennung bleibt `partwright-model`
   - [x] Release-Build: Signatur über nicht eingecheckte `keystore.properties` (sonst Debug-Schlüssel zum Testen), R8 + Ressourcen-Verkleinerung,
     `bundleRelease` → AAB (≈ 16 MB Download je Gerät). Release-APK auf dem Emulator geprüft (Skizze, Extrusion, Verrundung, Lizenzseite – keine
     JNI-/R8-Fehler). Offen: Upload-Schlüssel erzeugen (Nutzer, siehe README)
   - [x] **App-Icon und Startbildschirm:** Stil „Blaupause“: türkise Skizzenfläche, blauer Block mit Tasche, orangefarbener Extrusionspfeil auf Marineblau mit Raster (nach Entwurf des Nutzers); adaptives Vektor-Icon mit
     einfarbiger Ebene (Themensymbole), Startbildschirm über `androidx.core:core-splashscreen` (einheitlich ab Android 8) mit detaillierterem Motiv (Lichtschein, Skizzenlinien,
-    verdeckte Kanten) und ab Android 12 dem Schriftzug PARTWRIGHT (eigene Linienschrift, keine fremde Schriftart). Alles aus
+    verdeckte Kanten) und ab Android 12 dem Schriftzug PARAMWORKER (eigene Linienschrift, keine fremde Schriftart). Alles aus
     `scripts/make-icon.py` erzeugt, dazu Store-Symbol `docs/store/icon-512.png` und Store-Grafik `docs/store/feature-graphic.png`
   - [x] **Automatische Prüfung** (GitHub Actions): JVM-Tests, OpenCascade je ABI mit Zwischenspeicher, Debug-APK und Release-AAB;
     `scripts/build-occt.ps1` läuft dafür auch unter Linux (PowerShell 7, `ANDROID_HOME`)
@@ -61,7 +62,7 @@ Entscheidungen: Vertrieb über **Google Play**, **Freemium** (Pro als einmaliger
 - [ ] **Phase 1 – Umfang 1.0:** ~~**Drehen**~~ ✅ (Revolve, `BRepPrimAPI_MakeRevol`: Achse = Skizzenachse oder Hilfslinie, Teil-/Volldrehung,
   symmetrisch, Hinzufügen/Abtragen, als Muster-Quelle; Prüfung „Profil schneidet die Achse“) und ~~**Schale/Aushöhlen**~~ ✅ (`BRepOffsetAPI_MakeThickSolid`: Öffnungen antippen, Wandstärke; Außen-, Innen- und Randflächen
   benannt, Innenkanten verrundbar) –
-  beschlossen am 08.10.2026, Grundwerkzeuge für Wellen/Knöpfe bzw. Gehäuse; ~~**Projekt teilen/importieren**~~ ✅ (⋮ › Projekt exportieren als `.partwright.json`; Projektmenü › Projekt importieren erkennt
+  beschlossen am 08.10.2026, Grundwerkzeuge für Wellen/Knöpfe bzw. Gehäuse; ~~**Projekt teilen/importieren**~~ ✅ (⋮ › Projekt exportieren als `.paramworker.json`; Projektmenü › Projekt importieren erkennt
   Modell oder `.scad`; Formatversion wird geprüft, Dateien neuerer App-Versionen werden abgelehnt) (vor der Beta);
   ~~STEP-Export~~ ✅ (OCCT `STEPControl_Writer`, AP214 in mm; DataExchange kostet ca. 17,7 MB je ABI gestrippt), ~~3MF-Export~~ ✅ (⋮ › 3MF exportieren, Modell und Skript; geschlossenes Netz in mm), ~~Messen~~ ✅ (Länge/Radius, Flächeninhalt, kürzester Abstand mit Linie, Winkel), ~~Parameter-Tabelle~~ ✅ (benannte Parameter mit Ausdrücken; Skizzenmaße, Extrusionslänge, Drehwinkel, Wandstärke, Verrundung binden);
   kleine Lücken (Mittelebene, gedrehte Grundebene, Körperumriss direkt antippbar, zwei Layout-Punkte).

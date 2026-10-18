@@ -10,14 +10,14 @@ sonst verspricht der Eintrag eine Sprache, die die App nicht hat.
 ## Deutsch
 
 **Titel**
-Partwright – CAD für Android
+ParamWorker – CAD für Android
 
 **Kurzbeschreibung**
 Parametrische 3D-Konstruktion auf dem Tablet: skizzieren, bemaßen, drucken.
 
 **Langbeschreibung**
 
-Partwright ist ein parametrisches CAD-Programm für Android-Tablets und -Smartphones. Sie zeichnen eine Skizze, bemaßen sie und machen daraus ein Bauteil – mit echter, exakter Geometrie, die sich jederzeit über ihre Maße ändern lässt. Alles läuft direkt auf dem Gerät: ohne Konto, ohne Cloud, ohne Internet.
+ParamWorker ist ein parametrisches CAD-Programm für Android-Tablets und -Smartphones. Sie zeichnen eine Skizze, bemaßen sie und machen daraus ein Bauteil – mit echter, exakter Geometrie, die sich jederzeit über ihre Maße ändern lässt. Alles läuft direkt auf dem Gerät: ohne Konto, ohne Cloud, ohne Internet.
 
 SKIZZIEREN
 • Linie, Rechteck (Ecke, Mitte, 3 Punkte), Kreis (Mitte, 2 oder 3 Punkte, tangential), Bogen, Langloch, Vieleck
@@ -49,21 +49,21 @@ FÜR FINGER, STIFT UND MAUS
 • Tablet- und Smartphone-Layout, helles und dunkles Design
 
 IHRE DATEN BLEIBEN BEI IHNEN
-Partwright fordert keine Berechtigungen an, braucht kein Internet und enthält weder Werbung noch Tracking. Ihre Projekte liegen auf Ihrem Gerät.
+ParamWorker fordert keine Berechtigungen an, braucht kein Internet und enthält weder Werbung noch Tracking. Ihre Projekte liegen auf Ihrem Gerät.
 
-Der Geometriekern ist Open CASCADE Technology. Partwright befindet sich in aktiver Entwicklung – Rückmeldungen sind sehr willkommen.
+Der Geometriekern ist Open CASCADE Technology. ParamWorker befindet sich in aktiver Entwicklung – Rückmeldungen sind sehr willkommen.
 
 ## English
 
 **Title**
-Partwright – CAD for Android
+ParamWorker – CAD for Android
 
 **Short description**
 Parametric 3D design on your tablet: sketch, dimension, print.
 
 **Full description**
 
-Partwright is a parametric CAD app for Android tablets and phones. Draw a sketch, add dimensions and turn it into a part – with real, exact geometry that you can change at any time through its dimensions. Everything runs on your device: no account, no cloud, no internet.
+ParamWorker is a parametric CAD app for Android tablets and phones. Draw a sketch, add dimensions and turn it into a part – with real, exact geometry that you can change at any time through its dimensions. Everything runs on your device: no account, no cloud, no internet.
 
 SKETCHING
 • Line, rectangle (corner, centre, 3 points), circle (centre, 2 or 3 points, tangent), arc, slot, polygon
@@ -95,9 +95,9 @@ FOR FINGER, PEN AND MOUSE
 • Tablet and phone layouts, light and dark theme
 
 YOUR DATA STAYS WITH YOU
-Partwright requests no permissions, needs no internet and contains no ads or tracking. Your projects stay on your device.
+ParamWorker requests no permissions, needs no internet and contains no ads or tracking. Your projects stay on your device.
 
-The geometry kernel is Open CASCADE Technology. Partwright is in active development – feedback is very welcome.
+The geometry kernel is Open CASCADE Technology. ParamWorker is in active development – feedback is very welcome.
 
 ## Grafiken
 

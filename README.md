@@ -1,6 +1,6 @@
-# Partwright
+# ParamWorker
 
-Arbeitsname bis Oktober 2026: „Android CAD“. App-Kennung: `io.github.kevbo8327.partwright`.
+Arbeitsname bis Oktober 2026: „Android CAD“. Bis 18.10.2026: „Partwright“. App-Kennung: `io.github.kevbo8327.paramworker`.
 
 Parametrische CAD-App für Android-Tablets und Googlebooks: **OpenSCAD-kompatible Skriptsprache** +
 automatisch erzeugte **Customizer-Oberfläche** (Slider, Auswahl, Schalter), echte **Manifold-Geometrie**,
@@ -107,7 +107,7 @@ optimiert, damit Messungen aussagekräftig sind.
 (ohne ihn lassen sich keine Updates hochladen; bei Verlust hilft nur ein Antrag auf Schlüsseltausch bei Google):
 
 ```powershell
-& "C:\Program Files\Android\Android Studio\jbr\bin\keytool.exe" -genkeypair -v -keystore C:\Users\<Name>\Schluessel\partwright-upload.jks -alias upload -keyalg RSA -keysize 4096 -validity 10000
+& "C:\Program Files\Android\Android Studio\jbr\bin\keytool.exe" -genkeypair -v -keystore C:\Users\<Name>\Schluessel\paramworker-upload.jks -alias upload -keyalg RSA -keysize 4096 -validity 10000
 ```
 
 Dann `keystore.properties` im Projektordner anlegen (wird nicht eingecheckt) mit `storeFile`, `storePassword`, `keyAlias=upload`, `keyPassword`

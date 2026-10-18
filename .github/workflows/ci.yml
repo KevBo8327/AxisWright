@@ -104,6 +104,6 @@ jobs:
       - name: APK hochladen
         uses: actions/upload-artifact@v4
         with:
-          name: partwright-debug-apk
+          name: paramworker-debug-apk
           path: app/build/outputs/apk/debug/*.apk
           retention-days: 14

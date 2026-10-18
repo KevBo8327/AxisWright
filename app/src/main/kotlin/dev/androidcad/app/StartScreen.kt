@@ -66,7 +66,7 @@ fun StartScreen(hub: ProjectHub) {
         ) {
             item(span = { GridItemSpan(maxLineSpan) }) {
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text("Partwright", style = MaterialTheme.typography.headlineMedium, color = colors.onBackground)
+                    Text("ParamWorker", style = MaterialTheme.typography.headlineMedium, color = colors.onBackground)
                     Text("Parametrisch konstruieren – Skizze, Maße, Körper.", style = MaterialTheme.typography.bodyMedium, color = colors.onSurfaceVariant)
                 }
             }

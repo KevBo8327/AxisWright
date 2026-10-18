@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Ab Android 12: zusätzlich der Schriftzug PARTWRIGHT unten im Startbildschirm (ältere Versionen kennen kein Marken-Bild). -->
-    <style name="Theme.Partwright.Starting" parent="Theme.SplashScreen">
+    <!-- Ab Android 12: zusätzlich der Schriftzug PARAMWORKER unten im Startbildschirm (ältere Versionen kennen kein Marken-Bild). -->
+    <style name="Theme.ParamWorker.Starting" parent="Theme.SplashScreen">
         <item name="windowSplashScreenBackground">@color/splash_background</item>
         <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash</item>
-        <item name="postSplashScreenTheme">@style/Theme.Partwright</item>
+        <item name="postSplashScreenTheme">@style/Theme.ParamWorker</item>
         <item name="android:windowSplashScreenBrandingImage">@drawable/splash_branding</item>
     </style>
 </resources>

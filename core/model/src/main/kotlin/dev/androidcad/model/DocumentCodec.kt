@@ -22,6 +22,7 @@ import dev.androidcad.sketch.Vec2
  * Extrusionsparametern. Versioniert, damit spätere Features (Bohrung, Verrundung …) alte Dateien nicht entwerten.
  */
 object DocumentCodec {
+    // Kennung aus der Zeit als „Partwright“: steht in jeder gespeicherten Datei, bleibt daher trotz neuem App-Namen
     const val FORMAT = "partwright-model"
 
     /** Name des Formats vor der Umbenennung der App; solche Dateien bleiben lesbar und werden beim Speichern umgeschrieben. */

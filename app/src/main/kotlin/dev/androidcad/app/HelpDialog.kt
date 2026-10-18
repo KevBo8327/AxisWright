@@ -29,7 +29,7 @@ fun HelpDialog(hub: ProjectHub, firstStart: Boolean, onDismiss: () -> Unit) {
     AlertDialog(
         // beim ersten Start nur über die Knöpfe schließen: ein Tipp daneben soll die Einführung nicht unbemerkt wegnehmen
         onDismissRequest = { if (!firstStart) onDismiss() },
-        title = { Text(if (firstStart) "Willkommen bei Partwright" else "Hilfe") },
+        title = { Text(if (firstStart) "Willkommen bei ParamWorker" else "Hilfe") },
         text = {
             Column(Modifier.heightIn(max = 460.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Section("So entsteht ein Bauteil")
@@ -50,7 +50,7 @@ fun HelpDialog(hub: ProjectHub, firstStart: Boolean, onDismiss: () -> Unit) {
                 // Version für Rückmeldungen (welcher Stand wurde getestet)
                 val context = LocalContext.current
                 val version = remember { runCatching { context.packageManager.getPackageInfo(context.packageName, 0).versionName }.getOrNull() }
-                if (version != null) Text("Partwright $version", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                if (version != null) Text("ParamWorker $version", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         },
         confirmButton = {

@@ -121,7 +121,7 @@ fun isDarkTheme(mode: ThemeMode): Boolean = when (mode) {
 
 /** Thema „Blaupause“: Material-Farben und CAD-Farben passend zu [mode]. */
 @Composable
-fun PartwrightTheme(mode: ThemeMode, content: @Composable () -> Unit) {
+fun ParamWorkerTheme(mode: ThemeMode, content: @Composable () -> Unit) {
     val dark = isDarkTheme(mode)
     MaterialTheme(colorScheme = if (dark) DarkScheme else LightScheme, typography = AppTypography) {
         CompositionLocalProvider(LocalCadColors provides if (dark) BlueprintDark else BlueprintLight, content = content)
