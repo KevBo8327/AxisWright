@@ -105,14 +105,16 @@ The geometry kernel is Open CASCADE Technology. ParamWorker is in active develop
 |---|---|---|
 | App-Symbol | 512 × 512 PNG | `docs/store/icon-512.png` ✓ |
 | Grafik für den Eintrag | 1024 × 500 | `docs/store/feature-graphic.png` ✓ |
-| Screenshots Smartphone | mind. 2, Seitenverhältnis höchstens 2:1 | `docs/store/screenshots/phone-*.png` (1080 × 2160) ✓ |
-| Screenshots 7″-Tablet | mind. 1 | `docs/store/screenshots/tablet7-*.png` (1200 × 1920) ✓ |
-| Screenshots 10″-Tablet | mind. 1 | `docs/store/screenshots/tablet10-*.png` (2560 × 1600) ✓ |
+| Screenshots Smartphone | mind. 2, Seitenverhältnis höchstens 2:1 | `docs/store/screenshots/phone-*.png` (5 × 1080 × 2160) ✓ |
+| Screenshots 7″-Tablet | mind. 1 | `docs/store/screenshots/tablet7-*.png` (5 × 1200 × 1920) ✓ |
+| Screenshots 10″-Tablet | mind. 1 | `docs/store/screenshots/tablet10-*.png` (5 × 2560 × 1600) ✓ |
 
-Screenshots (12.10.2026, Emulator, Darstellung Dunkel, Statusleiste im Demo-Modus; 24-Bit-PNG ohne Transparenz), je Gerät in dieser Reihenfolge:
-1. `…-1-skizze` – Skizze der Montageplatte mit Maßen, „vollständig bestimmt“
-2. `…-2-modell` – Montageplatte in 3D mit Zeitleiste und Einstellungen der Verrundung
-3. `…-3-parameter` – ausgehöhltes Gehäuse mit Parameter-Tabelle (Breite, Tiefe, Höhe, Wand; Wandstärke folgt „wand“)
-4. `…-4-export` – Export-Menü (STL, STEP, 3MF, Projekt)
+Screenshots (18.10.2026, Emulator, Darstellung Dunkel, App-Sprache Deutsch, Statusleiste im Demo-Modus; 24-Bit-PNG ohne Transparenz),
+je Gerät in dieser Reihenfolge:
+1. `…-1-start` – Startseite mit Schnellstart und zuletzt bearbeiteten Modellen (Vorschaubilder)
+2. `…-2-skizze` – Skizze der Montageplatte mit Maßen, „vollständig bestimmt“
+3. `…-3-modell` – Montageplatte in 3D mit Zeitleiste und Einstellungen der Verrundung
+4. `…-4-parameter` – ausgehöhltes Gehäuse mit Parameter-Tabelle (Breite, Tiefe, Höhe, Wand; Wandstärke folgt „wand“)
+5. `…-5-export` – Export-Menü (STEP, 3MF, Projekt; auf dem Smartphone zusätzlich STL und Volumen)
 
 Noch offen (bei Bedarf): Messen mit Abstandslinie, ein Drehteil.

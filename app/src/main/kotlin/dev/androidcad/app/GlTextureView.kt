@@ -62,7 +62,8 @@ internal class GlTextureView(context: Context, private val renderer: GLSurfaceVi
     }
 
     override fun onSurfaceTextureSizeChanged(st: SurfaceTexture, w: Int, h: Int) {
-        handler.post { if (surface != EGL14.EGL_NO_SURFACE) { renderer.onSurfaceChanged(null, w, h); draw() } }
+        // zweimal: das erste Bild landet noch im Puffer der alten Größe (die neue gilt erst ab dem nächsten Puffer), sonst bliebe ein Rand leer
+        handler.post { if (surface != EGL14.EGL_NO_SURFACE) { renderer.onSurfaceChanged(null, w, h); draw(); draw() } }
     }
 
     // false: die Textur gibt der Render-Thread selbst frei, nach EGL – so muss der UI-Thread nicht auf ihn warten

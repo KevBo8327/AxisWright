@@ -133,7 +133,8 @@ def check_graphics():
         shots = sorted(glob.glob(os.path.join(STORE, "screenshots", f"{kind}-*.png")))
         problems = []
         for s in shots:
-            w, h = Image.open(s).size
+            img = Image.open(s); w, h = img.size
+            if img.mode not in ("RGB", "L"): problems.append(f"{os.path.basename(s)} mit Alphakanal")
             if not (320 <= min(w, h) and max(w, h) <= 3840 and max(w, h) <= 2 * min(w, h)):
                 problems.append(f"{os.path.basename(s)} {w}×{h}")
         if not 2 <= len(shots) <= 8: fail(f"Screenshots {kind}: {len(shots)} (2 bis 8 verlangt)")
