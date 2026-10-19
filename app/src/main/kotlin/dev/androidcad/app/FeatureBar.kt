@@ -704,8 +704,7 @@ fun ParameterDialog(state: WorkspaceState, onDismiss: () -> Unit) {
                 // Kopfzeile statt Beschriftung in jedem Feld: spart Höhe, die Spalten bleiben ausgerichtet
                 Row(Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("Name", Modifier.weight(1.2f), style = MaterialTheme.typography.labelMedium, color = colors.onSurfaceVariant)
-                    Text("Ausdruck", Modifier.weight(1.4f), style = MaterialTheme.typography.labelMedium, color = colors.onSurfaceVariant)
-                    Text("Wert", Modifier.width(PARAM_VALUE_WIDTH), style = MaterialTheme.typography.labelMedium, color = colors.onSurfaceVariant)
+                    Text("Wert oder Formel", Modifier.weight(1.6f), style = MaterialTheme.typography.labelMedium, color = colors.onSurfaceVariant)
                     Spacer(Modifier.width(PARAM_DELETE_WIDTH))
                 }
                 HorizontalDivider()
@@ -742,7 +741,6 @@ fun ParameterDialog(state: WorkspaceState, onDismiss: () -> Unit) {
     }
 }
 
-private val PARAM_VALUE_WIDTH = 72.dp
 private val PARAM_DELETE_WIDTH = 40.dp
 
 @Composable
@@ -760,16 +758,17 @@ private fun ParameterRow(state: WorkspaceState, p: dev.androidcad.model.Paramete
                 value = name, onValueChange = { name = it; if (dev.androidcad.model.Parameter.nameProblem(it) == null && state.parameters.none { o -> o !== p && o.name == it }) onChange(p.copy(name = it)) },
                 singleLine = true, modifier = Modifier.weight(1.2f), isError = nameProblem != null,
             )
-            // Ausdrücke dürfen umbrechen, damit lange Formeln lesbar bleiben
-            OutlinedTextField(
-                value = expr, onValueChange = { expr = it; onChange(p.copy(expression = it)) },
-                maxLines = 3, modifier = Modifier.weight(1.4f), isError = value == null,
-            )
-            Text(
-                value?.let { formatValue(it) } ?: "–", Modifier.width(PARAM_VALUE_WIDTH).padding(top = 16.dp),
-                style = MaterialTheme.typography.bodyLarge, color = if (value == null) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface,
-                maxLines = 1, overflow = TextOverflow.Ellipsis,
-            )
+            // Formeln dürfen umbrechen; ihr Ergebnis steht darunter – bei einer einfachen Zahl wäre es nur dieselbe Zahl noch einmal
+            Column(Modifier.weight(1.6f)) {
+                OutlinedTextField(
+                    value = expr, onValueChange = { expr = it; onChange(p.copy(expression = it)) },
+                    maxLines = 3, modifier = Modifier.fillMaxWidth(), isError = value == null,
+                )
+                if (value != null && expr.trim().replace(',', '.').toDoubleOrNull() == null) Text(
+                    "= ${formatValue(value)}", Modifier.padding(start = 4.dp, top = 2.dp),
+                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
             TextButton(onClick = onDelete, modifier = Modifier.width(PARAM_DELETE_WIDTH).padding(top = 4.dp), contentPadding = PaddingValues(0.dp)) { Text("✕") }
         }
         val problem = nameProblem ?: if (value == null) "Ausdruck ungültig – Namen und Rechenzeichen prüfen" else null
