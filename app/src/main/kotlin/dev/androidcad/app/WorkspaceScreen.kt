@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.foundation.rememberScrollState
@@ -214,6 +215,9 @@ private fun SketchTopBar(state: WorkspaceState, compact: Boolean, onPlaneDialog:
                 else if (state.sketch.onFace != null) TextButton(onClick = state::projectFaceEdges) { Text("Kanten projizieren") }
             }
         }
+        // Parameter schon beim Skizzieren anlegen und in Maßen verwenden
+        if (!compact) TextButton(onClick = { state.parametersOpen = true }) { Text("Parameter") }
+        if (state.parametersOpen) ParameterDialog(state) { state.parametersOpen = false }
         ActionButton(CadIcon.UNDO, "Rückgängig", enabled = e.canUndo) { e.undo() }
         ActionButton(CadIcon.REDO, "Wiederholen", enabled = e.canRedo) { e.redo() }
         ActionButton(CadIcon.DELETE, "Auswahl löschen", enabled = e.selection.isNotEmpty()) { e.deleteSelection() }
@@ -227,6 +231,7 @@ private fun SketchTopBar(state: WorkspaceState, compact: Boolean, onPlaneDialog:
                     DropdownMenuItem(text = { Text("Ebene: ${planeLabel(state.sketch)}") }, onClick = { menu = false }, enabled = false)
                     if (!state.sketch.planeIsDerived) DropdownMenuItem(text = { Text("Ebene ändern …") }, onClick = { menu = false; onPlaneDialog() })
                     else if (state.sketch.onFace != null) DropdownMenuItem(text = { Text("Kanten projizieren") }, onClick = { menu = false; state.projectFaceEdges() })
+                    DropdownMenuItem(text = { Text("Parameter …") }, onClick = { menu = false; state.parametersOpen = true })
                     DropdownMenuItem(text = { Text(if (e.gridSnap) "Am Raster fangen ✓" else "Am Raster fangen") }, onClick = { menu = false; e.gridSnap = !e.gridSnap })
                     DropdownMenuItem(text = { Text("Alles einpassen") }, onClick = { menu = false; fit() })
                 }
@@ -404,8 +409,10 @@ private fun BoxScope.ContextBar(handle: EditorHandle, prefs: UiPrefs, bottomGap:
         }
         Column(
             Modifier.offset { IntOffset(x.toInt(), y.toInt()) }.onSizeChanged { size = it }
-                // Tipps auf Hinweis oder Hintergrund der Leiste dürfen nicht auf der Zeichenfläche landen (sonst entstünden dort Punkte)
-                .pointerInput(Unit) { awaitPointerEventScope { while (true) awaitPointerEvent().changes.forEach { it.consume() } } }
+                // Tipps auf Hinweis oder Hintergrund der Leiste dürfen nicht auf der Zeichenfläche landen (sonst entstünden dort Punkte):
+                // eine eigene Eingabe genügt, Compose gibt die Berührung dann nicht an die Zeichenfläche darunter weiter. Nicht verbrauchen –
+                // sonst bricht das seitliche Scrollen der Chips ab (es prüft, ob die Bewegung schon verbraucht ist)
+                .pointerInput(Unit) { awaitPointerEventScope { while (true) awaitPointerEvent() } }
                 .widthIn(max = with(density) { (w - 2 * margin).toDp() })
                 .glass(shape)
                 .padding(horizontal = 8.dp, vertical = 6.dp),
@@ -622,7 +629,13 @@ private fun ToolNumberField(label: String, value: Double, onValue: (Double) -> U
 @Composable
 private fun ValueDialogs(state: WorkspaceState, e: SketchEditor, pending: PendingAction?, edit: ValueEdit?) {
     pending?.let { p ->
-        ValueDialog(state, p.title, p.initial, null, onConfirm = { v, _ -> e.confirmPendingAction(v) }, onDismiss = { e.cancelPendingAction() })
+        // neues Maß mit Ausdruck: nach dem Anlegen an den Parameter binden (das neue Maß ist die jüngste Bedingung)
+        ValueDialog(state, p.title, p.initial, null, onConfirm = { v, expr ->
+            val before = e.sketch.constraintEntries.map { it.id }.toSet()
+            if (e.confirmPendingAction(v) && expr != null && p.kind.group == dev.androidcad.sketchedit.ActionGroup.DIMENSION) {
+                e.sketch.constraintEntries.lastOrNull { it.id !in before }?.let { state.setBinding(dev.androidcad.model.ValueRef.Dim(state.sketch.id, it.id), expr) }
+            }
+        }, onDismiss = { e.cancelPendingAction() })
     }
     edit?.let { v ->
         // ein Maß darf aus einem Ausdruck der Parameter-Tabelle kommen; eine Zahl macht es wieder fest

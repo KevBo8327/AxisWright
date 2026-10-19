@@ -22,6 +22,14 @@ class ParameterTest {
     private fun Plate.widthValue() = (sketch.sketch.constraint(width) as Dimension).value
 
     @Test
+    fun namesMayContainUmlauts() {
+        assertEquals(null, Parameter.nameProblem("länge_außen"))
+        assertTrue(Parameter.nameProblem("2breite") != null)
+        val r = evaluateParameters(listOf(Parameter("länge", "40"), Parameter("höhe", "länge / 2 + 1")))
+        assertEquals(21.0, r.values["höhe"])
+    }
+
+    @Test
     fun expressionsDriveDimensionsAndFeatureValues() {
         val p = plate()
         p.doc.setParameters(listOf(Parameter("wand", "3"), Parameter("breite", "10 * wand + 2")))
@@ -35,6 +43,26 @@ class ParameterTest {
         p.doc.setParameters(listOf(Parameter("wand", "4"), Parameter("breite", "10 * wand + 2")))
         p.doc.applyParameters()
         assertEquals(42.0, p.widthValue())
+    }
+
+    @Test
+    fun renamingAParameterRenamesItEverywhere() {
+        val p = plate()
+        p.doc.setParameters(listOf(Parameter("wand", "3"), Parameter("wand2", "1"), Parameter("breite", "10 * wand + wand2")))
+        p.doc.bind(ValueRef.Dim(p.sketch.id, p.width), "breite + wand")
+        // Buchstabe für Buchstabe wie beim Tippen: jeder gültige Zwischenname wird übernommen
+        for (name in listOf("wandstärke", "wandstärke_außen")) {
+            val list = p.doc.parameters.toMutableList()
+            list[0] = list[0].copy(name = name)
+            p.doc.setParameters(list)
+        }
+        assertEquals("10 * wandstärke_außen + wand2", p.doc.parameters[2].expression, "wand2 bleibt unberührt")
+        assertEquals("breite + wandstärke_außen", p.doc.bindings[ValueRef.Dim(p.sketch.id, p.width)])
+        assertTrue(p.doc.applyParameters().errors.isEmpty())
+        assertEquals(34.0, p.widthValue())
+        // Löschen ist kein Umbenennen: der Ausdruck bleibt (und meldet dann den fehlenden Namen)
+        p.doc.setParameters(p.doc.parameters.drop(1))
+        assertEquals("10 * wandstärke_außen + wand2", p.doc.parameters[1].expression)
     }
 
     @Test

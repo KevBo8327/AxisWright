@@ -1,5 +1,7 @@
 package dev.androidcad.app
 
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Canvas
@@ -117,12 +119,12 @@ internal fun ModelScreen(hub: ProjectHub) {
                         }
                         // so hoch, dass die Einstellungen meist ganz passen; dem 3D-Bild bleiben mindestens 260 dp
                         val sheet = Modifier.fillMaxWidth().heightIn(max = maxOf(areaHeight * 0.5f, areaHeight - 260.dp)).padding(horizontal = 6.dp, vertical = 4.dp)
-                        if (state.parametersOpen) ParameterCard(state, sheet) else if (state.panelVisible) SettingsCard(state, sheet)
+                        if (state.panelVisible) SettingsCard(state, sheet)
                     }
                 } else {
                     // das Modell zentriert sich im freien Bereich neben der Werkzeugleiste und den offenen Karten
                     val cad = CadTheme.colors
-                    val left = if (state.parametersOpen) 372.dp else 76.dp
+                    val left = 76.dp
                     val right = if (state.panelVisible) CARD_WIDTH + 16.dp else 0.dp
                     Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(cad.viewportTop, cad.viewportBottom)))) {
                         ModelViewport(state, Modifier.fillMaxSize().padding(start = left, end = right))
@@ -135,7 +137,6 @@ internal fun ModelScreen(hub: ProjectHub) {
                             ViewMenu(state, Modifier.align(Alignment.BottomEnd).padding(end = cardSpace))
                             // unten: Zeitleiste zwischen Werkzeugleiste und Ansicht-Menü
                             Timeline(state, Modifier.align(Alignment.BottomStart).padding(start = 76.dp, end = cardSpace + 140.dp))
-                            if (state.parametersOpen) ParameterCard(state, Modifier.align(Alignment.TopStart).padding(start = 76.dp).width(280.dp).heightIn(max = areaHeight - 80.dp))
                             // Karte über die ganze Höhe; Zeitleiste und Ansicht-Menü liegen links davon
                             if (state.panelVisible) SettingsCard(state, Modifier.align(Alignment.TopEnd).width(CARD_WIDTH).heightIn(max = areaHeight - 16.dp))
                             DismissLayer(openGroup != null) { openGroup = null }
@@ -220,7 +221,8 @@ private fun ModelTopBar(hub: ProjectHub, compact: Boolean) {
         }
         ActionButton(CadIcon.UNDO, "Rückgängig", enabled = state.canUndo, onClick = state::undo)
         ActionButton(CadIcon.REDO, "Wiederholen", enabled = state.canRedo, onClick = state::redo)
-        TextButton(onClick = { state.parametersOpen = !state.parametersOpen }) { Text(if (state.parametersOpen) "Parameter ✕" else "Parameter") }
+        TextButton(onClick = { state.parametersOpen = true }) { Text("Parameter") }
+        if (state.parametersOpen) ParameterDialog(state) { state.parametersOpen = false }
         if (!compact) TextButton(onClick = { exporter.launch("${state.projectName}.stl") }, enabled = out?.mesh != null) { Text("STL exportieren") }
         Box {
             TextButton(onClick = { menu = true }, Modifier.width(44.dp), contentPadding = PaddingValues(0.dp)) { Text("⋮") }
@@ -256,7 +258,7 @@ internal class ToolGroup(val label: String, val icon: CadIcon, val tools: List<T
 /** Alle 3D-Befehle in vier Gruppen; nicht verfügbare sind ausgegraut, laufende Modi hervorgehoben (erneut tippen beendet sie). */
 private fun toolGroups(state: WorkspaceState, onNewSketch: () -> Unit): List<ToolGroup> {
     val hasBody = state.output?.mesh != null
-    val canExtrude = state.sketchSelected && state.regionCount > 0
+    val canExtrude = state.extrudeReady
     val canPattern = hasBody && state.canPattern
     return listOf(
         ToolGroup("Skizze", CadIcon.SKETCH, listOf(
@@ -364,14 +366,6 @@ private fun ToolStrip(g: ToolGroup, onDone: () -> Unit) {
     }
 }
 
-/** Die Parameter-Tabelle als Karte (nur auf Wunsch). */
-@Composable
-private fun ParameterCard(state: WorkspaceState, modifier: Modifier) {
-    FloatingCard(modifier, title = "Parameter · ${state.parameters.size}", icon = null, onClose = { state.parametersOpen = false }) {
-        ParameterTable(state)
-    }
-}
-
 // ---- Einstellungen ----------------------------------------------------------------------------------
 
 /** Einstellungen des gewählten Features bzw. des laufenden Werkzeugs als schwebende, einklappbare Karte. */
@@ -417,7 +411,10 @@ private fun FloatingCard(
         ) {
             if (icon != null) CadIconView(icon, colors.primary, 18.dp)
             Text(title, Modifier.weight(1f), style = MaterialTheme.typography.titleSmall, color = colors.primary, maxLines = 1)
-            if (onToggle != null) Text(if (collapsed) "▸" else "▾", color = colors.primary)
+            // groß genug zum Treffen: eigener Bereich von 40 dp, Zeichen in Titelgröße (die ganze Kopfzeile klappt ohnehin)
+            if (onToggle != null) Box(Modifier.size(40.dp).semantics { contentDescription = if (collapsed) "Ausklappen" else "Einklappen" }, contentAlignment = Alignment.Center) {
+                Text(if (collapsed) "▸" else "▾", color = colors.primary, style = MaterialTheme.typography.titleLarge)
+            }
             if (onConfirm == null) TextButton(onClick = onClose) { Text("✕") }
         }
         if (!collapsed) {
@@ -466,19 +463,25 @@ private fun ModelViewport(state: WorkspaceState, modifier: Modifier) {
                 onPickFace = state::pickFace,
             )
         }
-        if (mesh == null) {
+        // ohne Körper ein Hinweis – nicht, wenn eine Karte offen ist (sie sagt, was als Nächstes geht)
+        if (mesh == null && !state.panelVisible) {
+            val withSketch = state.sketchOverlay != null
             Text(
                 when {
+                    state.extrudeReady && state.features.none { it is dev.androidcad.model.ExtrudeFeature || it is dev.androidcad.model.RevolveFeature } ->
+                        "Skizze fertig – weiter mit Körper › Extrudieren oder Drehen."
                     state.features.none { it is dev.androidcad.model.ExtrudeFeature || it is dev.androidcad.model.RevolveFeature } ->
                         "Noch kein Körper – wähle eine Skizze, dann Körper › Extrudieren oder Drehen."
                     // erster Aufbau läuft noch (z. B. gleich nach dem Öffnen): nicht von einem Fehler sprechen
                     state.building || out == null -> "Körper wird berechnet …"
                     else -> "Kein Körper – siehe die Meldung oben."
                 },
-                // mit Skizzenlinien im Bild unten (über der Zeitleiste), damit der Hinweis sie nicht überdeckt
-                Modifier.align(if (state.sketchOverlay != null) Alignment.BottomCenter else Alignment.Center)
-                    .padding(start = 24.dp, end = 24.dp, top = 24.dp, bottom = if (state.sketchOverlay != null) 72.dp else 24.dp),
+                // mit Skizzenlinien oben unter dem Ansicht-Menü auf eigener Fläche: lesbar und ohne die Linien zu überdecken
+                if (withSketch) Modifier.align(Alignment.TopCenter).padding(start = 16.dp, end = 16.dp, top = 76.dp)
+                    .background(colors.surfaceContainerHigh.copy(alpha = 0.85f), RoundedCornerShape(12.dp)).padding(horizontal = 14.dp, vertical = 8.dp)
+                else Modifier.align(Alignment.Center).padding(24.dp),
                 color = colors.onSurfaceVariant, textAlign = TextAlign.Center,
+                style = if (withSketch) MaterialTheme.typography.bodyMedium else MaterialTheme.typography.bodyLarge,
             )
         }
         // über der Zeitleiste

@@ -56,12 +56,27 @@ class Document {
     var bindings: Map<ValueRef, String> = emptyMap()
         private set
 
-    /** Ersetzt die Parameter-Tabelle; ungültige oder doppelte Namen werfen [IllegalArgumentException]. */
+    /**
+     * Ersetzt die Parameter-Tabelle; ungültige oder doppelte Namen werfen [IllegalArgumentException]. Ein umbenannter Parameter (gleiche
+     * Stelle, neuer Name, der alte kommt nicht mehr vor) wird in allen Ausdrücken mit umbenannt – in der Tabelle und in den Bindungen.
+     */
     fun setParameters(list: List<Parameter>) {
         list.forEach { p -> Parameter.nameProblem(p.name)?.let { throw IllegalArgumentException(it) } }
         require(list.map { it.name }.toSet().size == list.size) { "Parameternamen müssen eindeutig sein" }
-        parameters = list
+        val names = list.map { it.name }.toSet()
+        val renames = if (list.size != parameters.size) emptyList()
+        else parameters.zip(list).filter { (old, new) -> old.name != new.name && old.name !in names }.map { it.first.name to it.second.name }
+        var result = list
+        for ((old, new) in renames) {
+            result = result.map { it.copy(expression = renameIn(it.expression, old, new)) }
+            bindings = bindings.mapValues { renameIn(it.value, old, new) }
+        }
+        parameters = result
     }
+
+    /** Ersetzt den Namen [old] in [expression] durch [new] – nur als ganzes Wort (`p1` ja, `p10` nein). */
+    private fun renameIn(expression: String, old: String, new: String): String =
+        Regex("""(?<![\p{L}0-9_$])${Regex.escape(old)}(?![\p{L}0-9_$])""").replace(expression, Regex.escapeReplacement(new))
 
     /** Lässt den Wert [ref] aus [expression] kommen (`null` = wieder fester Wert). Wirkt mit dem nächsten [applyParameters]. */
     fun bind(ref: ValueRef, expression: String?) {

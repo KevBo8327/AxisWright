@@ -180,6 +180,15 @@ class WorkspaceState(private val scope: CoroutineScope, private val session: Mod
 
     val handle = EditorHandle(SketchEditor(activeSketch.sketch))
 
+    // vor dem init-Block: select() setzt ihn schon beim Anlegen
+    /**
+     * Einstellungskarte des gewählten Features offen? Neu angelegte Features öffnen sie (Werte gleich einstellen); ein Tipp in der
+     * Zeitleiste wählt nur aus – bearbeitet wird erst auf Wunsch ([openCard]).
+     */
+    var cardOpen by mutableStateOf(true)
+        private set
+
+
     /** Alle Features in Aufbau-Reihenfolge (für die Feature-Leiste). */
     var features by mutableStateOf<List<Feature>>(emptyList())
         private set
@@ -315,6 +324,14 @@ class WorkspaceState(private val scope: CoroutineScope, private val session: Mod
     /** Ist gerade eine Skizze gewählt (Voraussetzung für „Extrudieren“ und „Abtragen“)? */
     val sketchSelected: Boolean get() = features.firstOrNull { it.id == selectedId } is SketchFeature
 
+    /**
+     * Körper › Extrudieren/Drehen sind möglich: eine gewählte Skizze mit Fläche – oder, ohne Auswahl, die eben fertig gewordene
+     * (aktive Skizze, noch ohne Körper), damit nach „Fertig“ nicht erst die Skizze angetippt werden muss.
+     */
+    val extrudeReady: Boolean get() = regionCount > 0 && (sketchSelected || (selectedId == null && features.none {
+        (it as? ExtrudeFeature)?.sketch == activeSketch.id || (it as? RevolveFeature)?.sketch == activeSketch.id
+    }))
+
     /** Schwenkt die 3D-Ansicht in eine Standardansicht (der Zoom wird dabei auf „eingepasst“ zurückgesetzt). */
     fun showView(view: StdView) {
         val (yaw, pitch) = when (view) {
@@ -406,12 +423,12 @@ class WorkspaceState(private val scope: CoroutineScope, private val session: Mod
     /**
      * Merkt eine Änderung zum Speichern vor und nimmt den Stand in den Verlauf (schnelle Folgen wie Schieberegler-Ziehen werden ein
      * Schritt). [record] = `false` für Änderungen, die der Aufbau nur nachführt (Ebenen, projizierte Kanten) – die rückgängig zu machen
-     * wäre sinnlos, der nächste Aufbau stellte sie wieder her.
+     * wäre sinnlos, der nächste Aufbau stellte sie wieder her. Folgen mit gleichem [coalesceKey] (sonst: am selben Feature) werden ein Schritt.
      */
-    private fun markDirty(record: Boolean = true) {
+    private fun markDirty(record: Boolean = true, coalesceKey: Any? = selectedId) {
         if (record) {
             val text = DocumentCodec.encode(doc)
-            if (text != history.current) history.record(text, coalesceKey = selectedId) // Folgen am selben Feature werden ein Schritt
+            if (text != history.current) history.record(text, coalesceKey = coalesceKey)
             canUndo = history.canUndo; canRedo = history.canRedo
         }
         editVersion++
@@ -534,9 +551,12 @@ class WorkspaceState(private val scope: CoroutineScope, private val session: Mod
         refreshReference()
     }
 
-    /** Ob die Einstellungskarte gebraucht wird: ein Feature ist gewählt oder ein Werkzeug läuft. */
+    /** Öffnet die Einstellungen des gewählten Features. */
+    fun openCard() { if (selectedId != null) cardOpen = true }
+
+    /** Ob die Einstellungskarte gebraucht wird: ein Feature ist gewählt und zum Bearbeiten geöffnet, oder ein Werkzeug läuft. */
     val panelVisible: Boolean
-        get() = selectedId != null || edgeMode != null || holeMode != null || shellMode != null || measureMode != null || planePick || faceSketchPick
+        get() = (selectedId != null && cardOpen) || edgeMode != null || holeMode != null || shellMode != null || measureMode != null || planePick || faceSketchPick
 
     /** Schließt die Einstellungskarte: bricht ein laufendes Werkzeug ab, sonst hebt es die Auswahl auf. */
     /**
@@ -575,8 +595,9 @@ class WorkspaceState(private val scope: CoroutineScope, private val session: Mod
         }
     }
 
-    fun select(id: FeatureId) {
+    fun select(id: FeatureId, openCard: Boolean = true) {
         selectedId = id
+        cardOpen = openCard
         editStart = history.current // ein anderes Feature wählen übernimmt die laufende Bearbeitung
         edgeMode = null
         holeMode = null
@@ -791,6 +812,9 @@ class WorkspaceState(private val scope: CoroutineScope, private val session: Mod
     fun finishSketch() {
         if (mode != WorkMode.SKETCH) return
         handle.editor.cancelOperation()
+        // die Skizze bleibt aktiv (Körper › Extrudieren nimmt sie), aber ihre Karte klappt nicht von selbst auf – „Skizze bearbeiten“
+        // gibt es nach einem Tipp auf die Skizze in der Zeitleiste
+        selectedId = null; editStart = null; refreshHighlight(); refresh()
         refreshOverlay()
         mode = WorkMode.MODEL
         val (yaw, pitch) = ViewCamera.planeView(activeSketch.plane)
@@ -811,7 +835,8 @@ class WorkspaceState(private val scope: CoroutineScope, private val session: Mod
         // Gitter so groß wie Körper und sichtbare Skizzen zusammen (ohne Körper sonst nur die 40-mm-Vorgabe)
         val scene = sceneBounds(parts)
         grid = if (gridOn) gridLines(
-            (features.firstOrNull { it.id == selectedId } as? SketchFeature)?.let { output?.sketchPlanes?.get(it.id) ?: it.plane } ?: Workplane.XY,
+            // festes Bodengitter: folgte es der gewählten Skizze, läge es bei einer Skizze auf einer Körperfläche über dem Körper
+            Workplane.XY,
             scene?.let { (lo, hi) -> Vec3((lo.x + hi.x) / 2, (lo.y + hi.y) / 2, (lo.z + hi.z) / 2) } ?: Vec3(0.0, 0.0, 0.0),
             scene?.let { (lo, hi) -> maxOf(hi.x - lo.x, hi.y - lo.y, hi.z - lo.z).coerceAtLeast(10.0) } ?: 40.0,
         ) else null
@@ -1257,7 +1282,7 @@ class WorkspaceState(private val scope: CoroutineScope, private val session: Mod
             refresh()
             return
         }
-        applyParameters()
+        applyParameters(coalesceKey = PARAMETER_EDIT) // Tippen in der Tabelle: ein Schritt statt einer je Taste
     }
 
     /** Lässt [ref] aus [expression] kommen (`null` = wieder fester Wert) und überträgt die Ausdrücke. */
@@ -1276,7 +1301,7 @@ class WorkspaceState(private val scope: CoroutineScope, private val session: Mod
 
     private var parameterNotice: String? = null
 
-    private fun applyParameters() {
+    private fun applyParameters(coalesceKey: Any? = selectedId) {
         val r = doc.applyParameters()
         // Fehler in der Tabelle selbst zeigt ihre Zeile („ungültig“); oben nur Fehler an gebundenen Werten – und nur, solange sie bestehen
         val text = r.errors.filterNot { it.startsWith("Parameter ") }.joinToString("\n").ifEmpty { null }
@@ -1285,7 +1310,7 @@ class WorkspaceState(private val scope: CoroutineScope, private val session: Mod
         activeSketch = doc.sketch(activeSketch.id)
         handle.editor.refreshExternal() // Maße der offenen Skizze haben sich womöglich geändert
         refresh()
-        markDirty()
+        markDirty(coalesceKey = coalesceKey)
         if (hasExtrusions()) scheduleBuild()
     }
 
@@ -1696,6 +1721,9 @@ class WorkspaceState(private val scope: CoroutineScope, private val session: Mod
 }
 
 private const val AUTOSAVE_DELAY_MS = 700L
+
+/** Schlüssel für den Verlauf: Änderungen an der Parameter-Tabelle kurz hintereinander werden ein Rückgängig-Schritt. */
+private const val PARAMETER_EDIT = "parameters"
 private const val GRID_OFF = "view.grid.off"
 private const val EXAMPLE_NAME = "Platte mit vier Bohrungen"
 

@@ -36,7 +36,7 @@ fun HelpDialog(hub: ProjectHub, firstStart: Boolean, onDismiss: () -> Unit) {
                 Line("1. Skizze zeichnen: Linie, Rechteck, Kreis … – Linien enden an Punkten, geschlossene Umrisse werden zur Fläche.")
                 Line("2. Bemaßen: eine Linie antippen ergibt ihre Länge, ein Kreis den Durchmesser, zwei Elemente Abstand oder Winkel. Ein Maß antippen ändert es.")
                 Line("3. „Fertig“, dann Körper › Extrudieren (oder Drehen). Danach Bohrungen, Verrundungen, Muster, Schale …")
-                Line("Jeder Schritt bleibt änderbar: in der Zeitleiste unten antippen, Werte ändern – das Modell baut sich neu. Parameter machen Maße zu Formeln.")
+                Line("Jeder Schritt bleibt änderbar: in der Zeitleiste unten antippen wählt ihn aus, nochmal antippen bearbeitet ihn, lange drücken öffnet Umbenennen und Löschen. Das Modell baut sich neu; Parameter machen Maße zu Formeln.")
                 Section("Start und Projekte")
                 Line("Die Startseite zeigt Schnellstart und die zuletzt bearbeiteten Projekte. Zurück dorthin: Zurück-Taste oder Projektmenü › Startseite. Gespeichert wird automatisch.")
                 Section("Skizze")

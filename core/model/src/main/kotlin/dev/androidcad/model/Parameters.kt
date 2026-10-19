@@ -8,7 +8,8 @@ import dev.androidcad.sketch.Dimension
 /** Ein Eintrag der Parameter-Tabelle: Name und Ausdruck; der Ausdruck darf Parameter verwenden, die davor stehen. */
 data class Parameter(val name: String, val expression: String) {
     companion object {
-        private val NAME = Regex("[A-Za-z_][A-Za-z0-9_]*")
+        // alle Buchstaben (auch ä, ö, ü, ß): der Ausdrucks-Leser in :core:lang erkennt sie ebenfalls
+        private val NAME = Regex("""[\p{L}_][\p{L}0-9_]*""")
 
         /** Warum [name] kein Parametername sein kann (`null` = gültig). */
         fun nameProblem(name: String): String? = if (NAME.matches(name)) null else "„$name“: nur Buchstaben, Ziffern und _, nicht mit einer Ziffer beginnend"

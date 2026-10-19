@@ -1,5 +1,11 @@
 package dev.androidcad.app
 
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.background
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.border
@@ -118,8 +124,9 @@ internal fun Feature.label(): String = when (this) {
 }
 
 /**
- * Zeitleiste des Modellaufbaus: alle Schritte waagrecht in Aufbau-Reihenfolge (scrollt). Antippen wählt einen Schritt (eine gewählte
- * Skizze erneut antippen öffnet sie zum Zeichnen); am gewählten Schritt öffnet „⋯“ Umbenennen, Löschen usw. ⚠ = Fehler beim Aufbau.
+ * Zeitleiste des Modellaufbaus: alle Schritte waagrecht in Aufbau-Reihenfolge (scrollt). Antippen wählt einen Schritt und hebt ihn
+ * hervor; erneutes Antippen bearbeitet ihn (Skizze: zum Zeichnen öffnen, sonst die Einstellungskarte). Langes Drücken oder „⋯“ am
+ * gewählten Schritt: Bearbeiten, Umbenennen, Löschen usw. ⚠ = Fehler beim Aufbau.
  */
 @Composable
 fun Timeline(state: WorkspaceState, modifier: Modifier) {
@@ -127,6 +134,7 @@ fun Timeline(state: WorkspaceState, modifier: Modifier) {
     val errors = state.output?.errorIds ?: emptySet()
     val scroll = rememberScrollState()
     val shape = RoundedCornerShape(14.dp)
+    var menuFor by remember { mutableStateOf<dev.androidcad.model.FeatureId?>(null) }
     // neuer Schritt (kommt ans Ende): dorthin scrollen, damit er sichtbar ist
     LaunchedEffect(state.features.size) { scroll.animateScrollTo(scroll.maxValue) }
     Row(
@@ -140,7 +148,17 @@ fun Timeline(state: WorkspaceState, modifier: Modifier) {
                 Modifier
                     .height(40.dp)
                     .background(if (selected) colors.primaryContainer else androidx.compose.ui.graphics.Color.Transparent, shapeItem)
-                    .clickable { if (selected && f is SketchFeature) state.editSketch() else state.select(f.id) }
+                    .combinedClickable(
+                        onClickLabel = if (selected) "Bearbeiten" else "Auswählen", onLongClickLabel = "Menü",
+                        onClick = {
+                            when {
+                                !selected -> state.select(f.id, openCard = false)
+                                f is SketchFeature -> state.editSketch()
+                                else -> state.openCard()
+                            }
+                        },
+                        onLongClick = { state.select(f.id, openCard = false); menuFor = f.id },
+                    )
                     .padding(start = 8.dp, end = if (selected) 0.dp else 10.dp),
                 verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp),
             ) {
@@ -150,28 +168,27 @@ fun Timeline(state: WorkspaceState, modifier: Modifier) {
                     style = MaterialTheme.typography.labelLarge, color = if (selected) colors.onPrimaryContainer else colors.onSurface,
                 )
                 if (f.id in errors) Text("⚠", color = colors.error)
-                if (selected) FeatureMenu(state, f)
+                if (selected) FeatureMenu(state, f, expanded = menuFor == f.id, onExpand = { menuFor = f.id }, onDismiss = { menuFor = null })
             }
         }
     }
 }
 
-/** Menü „⋯“ eines Eintrags im Feature-Baum: Skizze bearbeiten, Ebene ändern, Umbenennen, Löschen. */
+/** Menü „⋯“ (oder langes Drücken) eines Schritts der Zeitleiste: Bearbeiten, Ebene ändern, Umbenennen, Löschen. */
 @Composable
-private fun FeatureMenu(state: WorkspaceState, f: Feature) {
-    var menu by remember { mutableStateOf(false) }
+private fun FeatureMenu(state: WorkspaceState, f: Feature, expanded: Boolean, onExpand: () -> Unit, onDismiss: () -> Unit) {
     var renaming by remember { mutableStateOf(false) }
     var deleting by remember { mutableStateOf(false) }
     var changingPlane by remember { mutableStateOf(false) }
     Box {
-        TextButton(onClick = { state.select(f.id); menu = true }) { Text("⋯") }
-        DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+        TextButton(onClick = onExpand, modifier = Modifier.semantics { contentDescription = "Menü zu ${f.name}" }) { Text("⋯") }
+        DropdownMenu(expanded = expanded, onDismissRequest = onDismiss) {
             if (f is SketchFeature) {
-                DropdownMenuItem(text = { Text("Skizze bearbeiten") }, onClick = { menu = false; state.editSketch() })
-                if (!f.planeIsDerived) DropdownMenuItem(text = { Text("Ebene ändern …") }, onClick = { menu = false; changingPlane = true })
-            }
-            DropdownMenuItem(text = { Text("Umbenennen …") }, onClick = { menu = false; renaming = true })
-            DropdownMenuItem(text = { Text("Löschen …") }, onClick = { menu = false; deleting = true })
+                DropdownMenuItem(text = { Text("Skizze bearbeiten") }, onClick = { onDismiss(); state.editSketch() })
+                if (!f.planeIsDerived) DropdownMenuItem(text = { Text("Ebene ändern …") }, onClick = { onDismiss(); changingPlane = true })
+            } else DropdownMenuItem(text = { Text("Bearbeiten") }, onClick = { onDismiss(); state.openCard() })
+            DropdownMenuItem(text = { Text("Umbenennen …") }, onClick = { onDismiss(); renaming = true })
+            DropdownMenuItem(text = { Text("Löschen …") }, onClick = { onDismiss(); deleting = true })
         }
     }
     if (renaming) {
@@ -666,32 +683,67 @@ private fun ExprField(state: WorkspaceState, label: String, value: Double, ref: 
     return expr != null
 }
 
-/** Parameter-Tabelle: Name = Ausdruck, darunter der Wert; spätere Parameter dürfen frühere verwenden. */
+/**
+ * Parameter als eigenes Fenster mit Tabelle (Name | Ausdruck | Wert): genug Platz für lange Namen und Ausdrücke. Spätere Parameter dürfen
+ * frühere verwenden; Modell bzw. Skizze dahinter rechnen bei jeder Änderung mit. Auf dem Smartphone fast bildschirmfüllend.
+ */
 @Composable
-fun ParameterTable(state: WorkspaceState) {
+fun ParameterDialog(state: WorkspaceState, onDismiss: () -> Unit) {
     val list = state.parameters
-    Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        if (list.isEmpty()) Text(
-            "Noch keine Parameter. Lege z. B. „wand = 2“ an und schreibe dann in ein Maß oder eine Länge „wand * 3“ – " +
-                "ändert sich der Parameter, folgt das Modell.",
-            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        list.forEachIndexed { i, p ->
-            androidx.compose.runtime.key(i) {
-                ParameterRow(state, p, state.parameterValues[p.name], onChange = { q -> state.updateParameters(list.toMutableList().also { it[i] = q }) }) {
-                    state.updateParameters(list.filterIndexed { k, _ -> k != i })
+    val colors = MaterialTheme.colorScheme
+    androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss, properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false)) {
+        androidx.compose.material3.Surface(
+            Modifier.fillMaxWidth(0.94f).widthIn(max = 760.dp).fillMaxHeight(0.88f),
+            shape = RoundedCornerShape(20.dp), color = colors.surfaceContainerHigh,
+        ) {
+            Column(Modifier.padding(horizontal = 20.dp, vertical = 16.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("Parameter", Modifier.weight(1f), style = MaterialTheme.typography.titleLarge)
+                    TextButton(onClick = onDismiss) { Text("✕") }
+                }
+                // Kopfzeile statt Beschriftung in jedem Feld: spart Höhe, die Spalten bleiben ausgerichtet
+                Row(Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Name", Modifier.weight(1.2f), style = MaterialTheme.typography.labelMedium, color = colors.onSurfaceVariant)
+                    Text("Ausdruck", Modifier.weight(1.4f), style = MaterialTheme.typography.labelMedium, color = colors.onSurfaceVariant)
+                    Text("Wert", Modifier.width(PARAM_VALUE_WIDTH), style = MaterialTheme.typography.labelMedium, color = colors.onSurfaceVariant)
+                    Spacer(Modifier.width(PARAM_DELETE_WIDTH))
+                }
+                HorizontalDivider()
+                Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    if (list.isEmpty()) Text(
+                        "Noch keine Parameter. Lege z. B. „wand = 2“ an und schreibe dann in ein Maß oder eine Länge „wand * 3“ – " +
+                            "ändert sich der Parameter, folgt das Modell.",
+                        style = MaterialTheme.typography.bodyMedium, color = colors.onSurfaceVariant,
+                    )
+                    list.forEachIndexed { i, p ->
+                        androidx.compose.runtime.key(i) {
+                            ParameterRow(state, p, state.parameterValues[p.name], onChange = { q -> state.updateParameters(list.toMutableList().also { it[i] = q }) }) {
+                                state.updateParameters(list.filterIndexed { k, _ -> k != i })
+                            }
+                        }
+                    }
+                }
+                HorizontalDivider()
+                Row(Modifier.fillMaxWidth().padding(top = 12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    OutlinedButton(onClick = {
+                        var n = list.size + 1
+                        while (list.any { it.name == "p$n" }) n++
+                        state.updateParameters(list + dev.androidcad.model.Parameter("p$n", "10"))
+                    }) { Text("+ Parameter") }
+                    val used = state.bindings.size
+                    Text(
+                        if (used > 0) "$used ${if (used == 1) "Wert folgt" else "Werte folgen"} den Parametern" else "", Modifier.weight(1f),
+                        style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant,
+                    )
+                    Button(onClick = onDismiss) { Text("Fertig") }
                 }
             }
         }
-        OutlinedButton(onClick = {
-            var n = list.size + 1
-            while (list.any { it.name == "p$n" }) n++
-            state.updateParameters(list + dev.androidcad.model.Parameter("p$n", "10"))
-        }, modifier = Modifier.fillMaxWidth()) { Text("+ Parameter") }
-        val used = state.bindings.size
-        if (used > 0) Text("$used ${if (used == 1) "Wert folgt" else "Werte folgen"} den Parametern.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
+
+private val PARAM_VALUE_WIDTH = 72.dp
+private val PARAM_DELETE_WIDTH = 40.dp
 
 @Composable
 private fun ParameterRow(state: WorkspaceState, p: dev.androidcad.model.Parameter, value: Double?, onChange: (dev.androidcad.model.Parameter) -> Unit, onDelete: () -> Unit) {
@@ -701,18 +753,27 @@ private fun ParameterRow(state: WorkspaceState, p: dev.androidcad.model.Paramete
     var expr by remember { mutableStateOf(p.expression) }
     LaunchedEffect(p.name) { if (p.name != name && dev.androidcad.model.Parameter.nameProblem(name) == null) name = p.name }
     LaunchedEffect(p.expression) { if (p.expression != expr) expr = p.expression }
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-        OutlinedTextField(
-            value = name, onValueChange = { name = it; if (dev.androidcad.model.Parameter.nameProblem(it) == null && state.parameters.none { o -> o !== p && o.name == it }) onChange(p.copy(name = it)) },
-            singleLine = true, modifier = Modifier.weight(1f), label = { Text("Name") },
-            isError = dev.androidcad.model.Parameter.nameProblem(name) != null,
-        )
-        OutlinedTextField(
-            value = expr, onValueChange = { expr = it; onChange(p.copy(expression = it)) },
-            singleLine = true, modifier = Modifier.weight(1.4f), label = { Text("= Ausdruck") },
-            isError = value == null, supportingText = { Text(value?.let { formatValue(it) } ?: "ungültig") },
-        )
-        TextButton(onClick = onDelete) { Text("✕") }
+    val nameProblem = dev.androidcad.model.Parameter.nameProblem(name) ?: if (state.parameters.any { o -> o !== p && o.name == name }) "„$name“ gibt es schon" else null
+    Column {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.Top) {
+            OutlinedTextField(
+                value = name, onValueChange = { name = it; if (dev.androidcad.model.Parameter.nameProblem(it) == null && state.parameters.none { o -> o !== p && o.name == it }) onChange(p.copy(name = it)) },
+                singleLine = true, modifier = Modifier.weight(1.2f), isError = nameProblem != null,
+            )
+            // Ausdrücke dürfen umbrechen, damit lange Formeln lesbar bleiben
+            OutlinedTextField(
+                value = expr, onValueChange = { expr = it; onChange(p.copy(expression = it)) },
+                maxLines = 3, modifier = Modifier.weight(1.4f), isError = value == null,
+            )
+            Text(
+                value?.let { formatValue(it) } ?: "–", Modifier.width(PARAM_VALUE_WIDTH).padding(top = 16.dp),
+                style = MaterialTheme.typography.bodyLarge, color = if (value == null) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface,
+                maxLines = 1, overflow = TextOverflow.Ellipsis,
+            )
+            TextButton(onClick = onDelete, modifier = Modifier.width(PARAM_DELETE_WIDTH).padding(top = 4.dp), contentPadding = PaddingValues(0.dp)) { Text("✕") }
+        }
+        val problem = nameProblem ?: if (value == null) "Ausdruck ungültig – Namen und Rechenzeichen prüfen" else null
+        if (problem != null) Text(problem, Modifier.padding(start = 4.dp, top = 2.dp), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
     }
 }
 

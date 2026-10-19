@@ -23,6 +23,20 @@ class EditSessionTest {
     private fun WorkspaceState.extrusion() = features.filterIsInstance<ExtrudeFeature>().singleOrNull()
 
     @Test
+    fun aTapInTheTimelineSelectsWithoutOpeningTheCard() {
+        val ws = workspaceWithRectangle()
+        ws.createExtrusion()
+        assertTrue(ws.panelVisible, "ein neuer Schritt öffnet seine Einstellungen")
+        ws.closePanel()
+        val id = ws.extrusion()!!.id
+        ws.select(id, openCard = false)
+        assertEquals(id, ws.selectedId)
+        assertTrue(!ws.panelVisible, "nur gewählt, nicht zum Bearbeiten geöffnet")
+        ws.openCard()
+        assertTrue(ws.panelVisible)
+    }
+
+    @Test
     fun cancellingANewFeatureRemovesIt() {
         val ws = workspaceWithRectangle()
         ws.createExtrusion()
