@@ -39,11 +39,13 @@ internal val THIRD_PARTY = listOf(
     ThirdParty(
         "Open CASCADE Technology 7.9.3", "Geometriekern (B-Rep: Körper, Flächen, Kanten, Verrundungen)",
         "GNU LGPL 2.1 mit Open-CASCADE-Ausnahme", "https://github.com/Open-Cascade-SAS/OCCT (Tag V7_9_3)",
-        listOf("occt_lgpl_2.1.txt", "occt_lgpl_exception.txt", "occt_delabella_mit.txt", "occt_flex_bsd.txt"),
+        listOf("occt_lgpl_2.1.txt", "occt_lgpl_exception.txt", "occt_delabella_mit.txt", "occt_flex_bsd.txt", "occt_strtod_lucent.txt", "occt_unicode.txt"),
         // LGPL 2.1 §6: austauschbar (eigene .so) und schriftliches Angebot des Quelltexts – der App-Quelltext selbst ist nicht öffentlich
         note = "Unverändert als eigene Bibliotheken (libTK*.so) mitgeliefert und dadurch gegen eine selbst gebaute Version austauschbar. " +
             "Den vollständigen Quelltext dieser OCCT-Version samt Bauanleitung senden wir auf Anfrage an kb-it-services@outlook.de " +
-            "kostenlos zu (mindestens drei Jahre nach Erhalt dieser App-Version). Enthält DELABELLA (MIT) und flex (BSD).",
+            "kostenlos zu (mindestens drei Jahre nach Erhalt dieser App-Version). Diese Bibliotheken dürfen für den eigenen Gebrauch " +
+            "verändert und zur Fehlersuche an solchen Änderungen zurückentwickelt werden (LGPL 2.1 § 6). " +
+            "Enthält DELABELLA (MIT), flex (BSD), strtod von David M. Gay/Lucent und Unicode-Code (Unicode, Inc.).",
     ),
     ThirdParty(
         "Manifold 3", "Körperberechnung im Skript-Editor (OpenSCAD)", "Apache License 2.0",
@@ -54,6 +56,10 @@ internal val THIRD_PARTY = listOf(
     ThirdParty(
         "Clipper2", "2D-Polygonoperationen (über Manifold)", "Boost Software License 1.0",
         "https://github.com/AngusJohnson/Clipper2", listOf("clipper2_bsl_1.0.txt"),
+    ),
+    ThirdParty(
+        "LLVM libc++", "C++-Standardbibliothek der nativen Teile (libc++_shared.so aus dem Android NDK)",
+        "Apache License 2.0 mit LLVM-Ausnahmen", "© LLVM Project · https://libcxx.llvm.org", listOf("apache_2.0.txt", "llvm_libcxx_exception.txt"),
     ),
     ThirdParty(
         "Haze", "Glas-Effekt (Unschärfe hinter schwebenden Flächen)", "Apache License 2.0",

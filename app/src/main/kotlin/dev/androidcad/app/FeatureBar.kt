@@ -202,11 +202,18 @@ private fun FeatureMenu(state: WorkspaceState, f: Feature, expanded: Boolean, on
         )
     }
     if (deleting) {
-        val dependents = if (f is SketchFeature) state.features.count { (it is ExtrudeFeature && it.sketch == f.id) || (it is RevolveFeature && it.sketch == f.id) } else 0
+        // alles, was mitgeht – auch über mehrere Stufen (Extrusion → Bohrung → Muster); dieselbe Regel wie beim Löschen selbst
+        val dependents = remember(f.id) { state.dependentNames(f.id) }
         AlertDialog(
             onDismissRequest = { deleting = false },
             title = { Text("„${f.name}“ löschen?") },
-            text = { Text(if (dependents > 0) "Die Skizze und die $dependents Körper-Features, die auf ihr aufbauen, werden entfernt." else "Das Feature und alles, was darauf aufbaut, wird entfernt.") },
+            text = {
+                Text(
+                    if (dependents.isEmpty()) "Nichts sonst baut auf diesem Schritt auf. Rückgängig macht das Löschen wieder rückgängig."
+                    else "Mit gelöscht ${if (dependents.size == 1) "wird" else "werden"}, weil ${if (dependents.size == 1) "es" else "sie"} darauf aufbau${if (dependents.size == 1) "t" else "en"}: " +
+                        dependents.joinToString(", ") { "„$it“" } + ". Rückgängig holt alles wieder zurück.",
+                )
+            },
             confirmButton = { TextButton(onClick = { deleting = false; state.select(f.id); state.deleteSelected() }) { Text("Löschen") } },
             dismissButton = { TextButton(onClick = { deleting = false }) { Text("Abbrechen") } },
         )

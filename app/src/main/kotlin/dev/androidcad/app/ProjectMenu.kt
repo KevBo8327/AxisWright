@@ -72,6 +72,7 @@ internal fun ProjectMenu(hub: ProjectHub, modifier: Modifier = Modifier) {
     var showAll by remember { mutableStateOf(false) }
     var showExamples by remember { mutableStateOf(false) }
     var showLicenses by remember { mutableStateOf(false) }
+    var showImprint by remember { mutableStateOf(false) }
     var showHelp by remember { mutableStateOf(false) }
     val import = rememberImporter(hub)
     val entries = hub.entries
@@ -127,6 +128,7 @@ internal fun ProjectMenu(hub: ProjectHub, modifier: Modifier = Modifier) {
             MenuItem("Darstellung", CadIcon.THEME, trailing = theme.label) { hub.workspace.prefs.themeMode = ThemeMode.entries[(theme.ordinal + 1) % ThemeMode.entries.size] }
             MenuItem("Hilfe & Gesten …", CadIcon.HELP) { open = false; showHelp = true }
             MenuItem("Feedback senden …", CadIcon.MAIL) { open = false; sendFeedback(context) }
+            MenuItem("Impressum & Datenschutz …", CadIcon.INFO) { open = false; showImprint = true }
             MenuItem("Lizenzen …", CadIcon.INFO) { open = false; showLicenses = true }
         }
     }
@@ -154,6 +156,7 @@ internal fun ProjectMenu(hub: ProjectHub, modifier: Modifier = Modifier) {
     if (showExamples) ExamplesDialog(hub, onDismiss = { showExamples = false })
     if (showHelp) HelpDialog(hub, firstStart = false) { showHelp = false }
     if (showLicenses) LicensesDialog(onDismiss = { showLicenses = false })
+    if (showImprint) ImprintDialog(onDismiss = { showImprint = false })
 }
 
 /** Zeile des Projektmenüs: Symbol in der Akzentfarbe, optional ein Wert rechts; [danger] für Löschen (rot). */

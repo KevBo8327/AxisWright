@@ -2,6 +2,7 @@
    UNIVERSAL-STREAMINGHALTERUNG FÜR SMARTPHONES (BRUSTGURT / CHEST MOUNT)
    ==============================================================================
    Professionelle CAD-Konstruktion in OpenSCAD
+   © 2026 Kevin Bodenstein – eigene Konstruktion, Beispiel für ParamWorker
    
    Haupteigenschaften:
    1. ERGONOMISCHE BRUSTPLATTE:

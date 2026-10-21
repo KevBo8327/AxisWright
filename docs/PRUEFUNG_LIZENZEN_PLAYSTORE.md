@@ -14,7 +14,7 @@ Automatischer Test: `python scripts/play-check.py` (nach `./gradlew :app:bundleR
 | Verkauf grundsätzlich erlaubt? | **Ja.** Alle Fremdlizenzen erlauben kommerziellen Vertrieb; keine Lizenz verlangt die Offenlegung des eigenen Codes. |
 | Lizenzpflichten erfüllt? | **Ja, nach den Korrekturen vom 18.10.2026** (5 fehlende Hinweise ergänzt, LGPL-Quelltextangebot statt Verweis auf den privaten Quelltext). |
 | Technische Play-Vorgaben | **Erfüllt** (targetSdk 36, 64 Bit, 16-KB-Seiten, keine Berechtigungen, nicht debuggable, Größe). |
-| Offen beim Entwickler | Upload-Schlüssel, Datenschutzerklärung ausfüllen + veröffentlichen, Play-Console-Formulare, Händlerstatus/Impressum, Markenprüfung „ParamWorker“, Herkunft des Beispiels „Streaminghalterung“. |
+| Offen beim Entwickler | Upload-Schlüssel, Datenschutzerklärung ausfüllen + veröffentlichen, Play-Console-Formulare, Händlerstatus/Impressum, Markenprüfung „ParamWorker“, Herkunft des Beispiels „Streaminghalterung“ (erledigt 21.10.2026: Eigenentwicklung). |
 
 ---
 
@@ -66,7 +66,7 @@ Alle Lizenztexte liegen in `app/src/main/assets/licenses/` und sind in der App u
   Eine Programmiersprache und ihr Dateiformat sind nicht urheberrechtlich geschützt. Der Name wird nur beschreibend benutzt
   („Skript-Editor für OpenSCAD-Dateien“) – so beibehalten, nicht im App-Titel oder Logo verwenden. ✅
 - **Dateiformate:** STEP (ISO 10303, Export über OCCT), STL und 3MF (offene, lizenzfreie Spezifikation) dürfen frei unterstützt werden. ✅
-- **Beispiele:** `Box.scad` ist eigener Inhalt. **`Streaminghalterung.scad` (am 07.10.2026 von dir eingecheckt): Herkunft bitte bestätigen.**
+- **Beispiele:** `Box.scad` ist eigener Inhalt. `Streaminghalterung.scad`: eigene Konstruktion (bestätigt 21.10.2026), Copyright-Kopf in der Datei.
   Stammt die Konstruktion von Thingiverse, Printables o. Ä., gilt deren Lizenz (oft CC BY-NC – dann **nicht** in einer verkauften App
   erlaubt). Ist sie eigene Arbeit oder mit einem KI-Werkzeug selbst erstellt, ist sie unproblematisch. ⚠️
 - **App-Name „ParamWorker“:** Websuche ohne Treffer in Software/CAD; die Registerprüfung (DPMA, EUIPO, Klassen 9 und 42) und die

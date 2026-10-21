@@ -31,13 +31,17 @@ sealed interface ValueRef {
 /** Ergebnis von [Document.applyParameters]: die Werte der Parameter und Fehler je Parameter bzw. Ausdruck. */
 class ParameterResult(val values: Map<String, Double>, val errors: List<String>)
 
+/** Eine reine Zahl mit Dezimalkomma („2,5“) als Zahl lesen; in Formeln trennt das Komma Argumente (`max(a, b)`) und bleibt. */
+internal fun decimalComma(expression: String): String =
+    if (Regex("""\s*[+-]?\d+,\d+\s*""").matches(expression)) expression.replace(',', '.') else expression
+
 /** Werte der Parameter der Reihe nach; ein fehlerhafter Parameter fehlt in [ParameterResult.values], spätere können weiterrechnen. */
 internal fun evaluateParameters(parameters: List<Parameter>): ParameterResult {
     val values = LinkedHashMap<String, Double>()
     val errors = ArrayList<String>()
     for (p in parameters) {
         try {
-            values[p.name] = CadLang.evalNumber(p.expression, values)
+            values[p.name] = CadLang.evalNumber(decimalComma(p.expression), values)
         } catch (e: CadLangException) {
             errors += "Parameter ${p.name}: ${e.message}"
         }

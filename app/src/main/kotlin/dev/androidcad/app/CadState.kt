@@ -79,7 +79,11 @@ class CadState(
 
     private var renderJob: Job? = null
     private var saveJob: Job? = null
+    // Stand der Bearbeitung: dirtyVersion zählt Änderungen (UI-Thread), savedVersion den zuletzt gesicherten. Verglichen und gesetzt
+    // nur unter saveLock – so überschreibt ein verspäteter Schreibvorgang im Hintergrund nie einen neueren, den flush() schon gesichert hat
     private var dirtyVersion = 0
+    @Volatile private var savedVersion = 0
+    private val saveLock = Any()
     private lateinit var history: UndoHistory<Snapshot>
 
     init {
@@ -212,9 +216,10 @@ class CadState(
             delay(AUTOSAVE_DELAY_MS)
             val version = dirtyVersion
             val id = project.id; val name = project.name; val text = editor.text; val ov = overrides
-            val saved = withContext(Dispatchers.IO) { runCatching { repo.save(id, text, ov, name) to listed() } }
+            val saved = withContext(Dispatchers.IO) { runCatching { saveIfNewer(version, id, text, ov, name)?.let { it to listed() } } }
             if (version != dirtyVersion || id != project.id) return@launch // inzwischen weiter geändert / Projekt gewechselt
-            saved.onSuccess { (info, list) ->
+            saved.onSuccess { result ->
+                val (info, list) = result ?: return@onSuccess // flush() hat schon einen neueren Stand gesichert
                 project = info
                 projects = list
                 saveState = SaveState.SAVED
@@ -234,10 +239,16 @@ class CadState(
     fun flush() {
         saveJob?.cancel()
         if (saveState == SaveState.SAVED || project.id.isEmpty()) return
-        runCatching { repo.save(project.id, editor.text, overrides, project.name) }
+        runCatching { synchronized(saveLock) { repo.save(project.id, editor.text, overrides, project.name).also { savedVersion = dirtyVersion } } }
             .onSuccess { project = it; projects = listed(); saveState = SaveState.SAVED }
             .onFailure { saveState = SaveState.ERROR }
     }
+
+    /** Sichert [text] als Stand [version] – nur, wenn noch kein neuerer gesichert ist (sonst `null`). Für das Autosave im Hintergrund. */
+    internal fun saveIfNewer(version: Int, id: String, text: String, overrides: Map<String, String>, name: String): ProjectInfo? =
+        synchronized(saveLock) {
+            if (version <= savedVersion) null else repo.save(id, text, overrides, name).also { savedVersion = version }
+        }
 
     // ---- Auswertung -----------------------------------------------------------------------------
 

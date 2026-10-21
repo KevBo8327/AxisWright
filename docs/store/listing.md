@@ -51,7 +51,11 @@ FÜR FINGER, STIFT UND MAUS
 IHRE DATEN BLEIBEN BEI IHNEN
 ParamWorker fordert keine Berechtigungen an, braucht kein Internet und enthält weder Werbung noch Tracking. Ihre Projekte liegen auf Ihrem Gerät.
 
+Hinweis: ParamWorker ist ein Konstruktionswerkzeug. Prüfen Sie Maße und Festigkeit Ihrer Teile vor der Fertigung selbst; für sicherheitsrelevante Bauteile ist die App nicht vorgesehen.
+
 Der Geometriekern ist Open CASCADE Technology. ParamWorker befindet sich in aktiver Entwicklung – Rückmeldungen sind sehr willkommen.
+
+In der Testphase sind alle Funktionen frei. Später bleibt das gesamte Modellieren kostenlos; STEP- und 3MF-Export sowie die Parameter-Tabelle werden Teil von „Pro“ (einmaliger Kauf, kein Abo).
 
 ## English
 
@@ -97,7 +101,11 @@ FOR FINGER, PEN AND MOUSE
 YOUR DATA STAYS WITH YOU
 ParamWorker requests no permissions, needs no internet and contains no ads or tracking. Your projects stay on your device.
 
+Note: ParamWorker is a design tool. Check the dimensions and strength of your parts yourself before manufacturing; the app is not intended for safety-critical components.
+
 The geometry kernel is Open CASCADE Technology. ParamWorker is in active development – feedback is very welcome.
+
+During testing, all features are free. Later, all modelling stays free; STEP and 3MF export and the parameter table become part of "Pro" (one-time purchase, no subscription).
 
 ## Grafiken
 

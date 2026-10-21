@@ -67,9 +67,7 @@ import dev.androidcad.model.EdgeKind
 import dev.androidcad.model.PlaneSpec
 import dev.androidcad.viewport.OrthoCamera
 import dev.androidcad.viewport.SceneFrame
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 /** Unter dieser Breite ist die Kopfzeile kompakt: Volumen und „STL exportieren“ wandern ins ⋮-Menü (sonst läuft sie z. B. auf dem 7″-Tablet hoch über). */
 private val COMPACT_WIDTH = 720.dp
@@ -177,31 +175,26 @@ private fun ModelTopBar(hub: ProjectHub, compact: Boolean) {
     val scope = rememberCoroutineScope()
     val exporter = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("model/stl")) { uri ->
         val mesh = state.output?.mesh
-        if (uri != null && mesh != null) scope.launch(Dispatchers.IO) { context.contentResolver.openOutputStream(uri)?.use { it.write(mesh.toBinaryStl()) } }
+        if (uri != null && mesh != null) scope.writeExport(context, uri) { mesh.toBinaryStl() }
     }
     val threeMfExporter = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("model/3mf")) { uri ->
         val mesh = state.output?.mesh
-        if (uri != null && mesh != null) scope.launch(Dispatchers.IO) { context.contentResolver.openOutputStream(uri)?.use { it.write(mesh.toThreeMf()) } }
+        if (uri != null && mesh != null) scope.writeExport(context, uri) { mesh.toThreeMf() }
     }
     val stepExporter = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("model/step")) { uri ->
-        val body = state.output?.body
-        if (uri != null && body != null) scope.launch(Dispatchers.IO) {
-            // OpenCascade schreibt nur in Dateipfade: erst in den Cache, dann an den gewählten Ort kopieren
-            val tmp = java.io.File(context.cacheDir, "export.step")
-            try {
-                body.writeStep(tmp)
-                context.contentResolver.openOutputStream(uri)?.use { out -> tmp.inputStream().use { it.copyTo(out) } }
-            } catch (e: dev.androidcad.brep.BrepException) {
-                withContext(Dispatchers.Main) { state.notice = "STEP-Export fehlgeschlagen: ${e.message}" }
-            } finally {
-                tmp.delete()
-            }
-        }
+        // eigene Kopie, hier auf dem UI-Thread gezogen: ein Neuaufbau während des Schreibens gibt sonst den Körper frei, den
+        // OpenCascade gerade liest (nativer Absturz). Die Kopie teilt die Geometrie, sie kostet kaum etwas.
+        val copy = state.output?.body?.let { runCatching { it.translate(0.0, 0.0, 0.0) }.getOrNull() }
+        if (uri != null && copy != null) {
+            // OpenCascade schreibt nur in Dateipfade: erst in den Cache, dann an den gewählten Ort
+            val tmp = java.io.File.createTempFile("export", ".step", context.cacheDir)
+            scope.writeExport(context, uri, cleanup = { copy.close(); tmp.delete() }) { copy.writeStep(tmp); tmp.readBytes() }
+        } else copy?.close()
     }
     val projectExporter = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
         if (uri != null) {
             val text = state.exportText()
-            scope.launch(Dispatchers.IO) { context.contentResolver.openOutputStream(uri)?.use { it.write(text.toByteArray(Charsets.UTF_8)) } }
+            scope.writeExport(context, uri) { text.toByteArray(Charsets.UTF_8) }
         }
     }
     var menu by remember { mutableStateOf(false) }

@@ -37,7 +37,7 @@ Entscheidungen: Vertrieb über **Google Play**, **Freemium** (Pro als einmaliger
 - [ ] **Phase 0 – Fundament:**
   - [x] App-Name **ParamWorker** (18.10.2026; vorher „Partwright“ – Websuche ergab doch bestehende Nutzungen), App-Kennung
     `io.github.kevbo8327.paramworker` (vorher `…partwright`, davor `dev.androidcad.app`; nach dem ersten Upload nicht mehr änderbar).
-    Websuche ohne Treffer in Software/CAD; Prüfung in DPMA/EUIPO/Play Store und Domain durch den Nutzer. Dateiformat-Kennung bleibt `partwright-model`
+    Websuche ohne Treffer in Software/CAD; Prüfung in DPMA/EUIPO/Play Store und Domain durch den Nutzer. Dateiformat-Kennung seit 19.10. `paramworker-model` (`partwright-model`/`androidcad-model` bleiben lesbar)
   - [x] Release-Build: Signatur über nicht eingecheckte `keystore.properties` (sonst Debug-Schlüssel zum Testen), R8 + Ressourcen-Verkleinerung,
     `bundleRelease` → AAB (≈ 16 MB Download je Gerät). Release-APK auf dem Emulator geprüft (Skizze, Extrusion, Verrundung, Lizenzseite – keine
     JNI-/R8-Fehler). Offen: Upload-Schlüssel erzeugen (Nutzer, siehe README)

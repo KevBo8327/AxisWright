@@ -68,15 +68,17 @@ class DocumentCodecTest {
 
     @Test
     fun filesFromBeforeTheRenameStayReadable() {
-        val old = DocumentCodec.encode(sample()).replace("partwright-model", "androidcad-model")
-        assertTrue(DocumentCodec.looksLikeModel(old))
-        assertSameDocument(sample(), DocumentCodec.decode(old))
+        for (name in listOf("androidcad-model", "partwright-model")) {
+            val old = DocumentCodec.encode(sample()).replace("paramworker-model", name)
+            assertTrue(DocumentCodec.looksLikeModel(old), name)
+            assertSameDocument(sample(), DocumentCodec.decode(old))
+        }
     }
 
     @Test
     fun fileIsHumanReadableAndVersioned() {
         val text = DocumentCodec.encode(sample())
-        assertTrue(text.contains("\"format\": \"partwright-model\""))
+        assertTrue(text.contains("\"format\": \"paramworker-model\""))
         assertTrue(DocumentCodec.looksLikeModel(text))
         assertTrue(!DocumentCodec.looksLikeModel("cube(10); // format"))
         assertTrue(text.contains("\"version\": 1"))

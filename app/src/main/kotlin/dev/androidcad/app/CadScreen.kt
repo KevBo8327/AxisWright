@@ -9,10 +9,8 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.rememberCoroutineScope
-import kotlinx.coroutines.withContext
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.platform.LocalContext
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -140,9 +138,7 @@ private fun Viewport(state: CadState, modifier: Modifier) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val exporter = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("model/stl")) { uri ->
-        if (uri != null && mesh != null) scope.launch(Dispatchers.IO) {
-            context.contentResolver.openOutputStream(uri)?.use { it.write(mesh.toBinaryStl()) }
-        }
+        if (uri != null && mesh != null) scope.writeExport(context, uri) { mesh.toBinaryStl() }
     }
     Box(modifier.background(colors.surfaceVariant.copy(alpha = 0.3f))) {
         if (mesh != null && !mesh.isEmpty) {
@@ -230,16 +226,16 @@ internal fun ScriptTopBar(hub: ProjectHub) {
     val colors = MaterialTheme.colorScheme
     val stlExporter = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("model/stl")) { uri ->
         val mesh = state.mesh
-        if (uri != null && mesh != null) scope.launch(Dispatchers.IO) { context.contentResolver.openOutputStream(uri)?.use { it.write(mesh.toBinaryStl()) } }
+        if (uri != null && mesh != null) scope.writeExport(context, uri) { mesh.toBinaryStl() }
     }
     val threeMfExporter = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("model/3mf")) { uri ->
         val mesh = state.mesh
-        if (uri != null && mesh != null) scope.launch(Dispatchers.IO) { context.contentResolver.openOutputStream(uri)?.use { it.write(mesh.toThreeMf()) } }
+        if (uri != null && mesh != null) scope.writeExport(context, uri) { mesh.toThreeMf() }
     }
     val scadExporter = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("text/plain")) { uri ->
         if (uri != null) {
             val text = state.editor.text
-            scope.launch(Dispatchers.IO) { context.contentResolver.openOutputStream(uri)?.use { it.write(text.toByteArray(Charsets.UTF_8)) } }
+            scope.writeExport(context, uri) { text.toByteArray(Charsets.UTF_8) }
         }
     }
     var menu by remember { mutableStateOf(false) }

@@ -30,6 +30,15 @@ class ParameterTest {
     }
 
     @Test
+    fun aPlainNumberMayUseADecimalComma() {
+        val r = evaluateParameters(listOf(Parameter("wand", "2,5"), Parameter("innen", "max(wand, 1) * 2"), Parameter("k", "-0,8")))
+        assertEquals(2.5, r.values["wand"])
+        assertEquals(5.0, r.values["innen"], "in Formeln trennt das Komma Argumente")
+        assertEquals(-0.8, r.values["k"])
+        assertTrue(r.errors.isEmpty(), r.errors.toString())
+    }
+
+    @Test
     fun expressionsDriveDimensionsAndFeatureValues() {
         val p = plate()
         p.doc.setParameters(listOf(Parameter("wand", "3"), Parameter("breite", "10 * wand + 2")))

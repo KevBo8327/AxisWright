@@ -389,11 +389,8 @@ class Document {
         return HoleFeature(FeatureId(nextId++), name, face, x, y, z, diameter, depth, anchors).also { items += it }
     }
 
-    /**
-     * Entfernt das Feature und alles, was von ihm abhängt: Extrusionen einer entfernten Skizze und Verrundungen/Fasen, die
-     * Flächen eines entfernten Features referenzieren (auch über mehrere Stufen).
-     */
-    fun remove(id: FeatureId) {
+    /** Was beim Entfernen von [id] mit entfernt würde, in Aufbau-Reihenfolge (ohne [id] selbst) – für die Warnung vor dem Löschen. */
+    fun dependents(id: FeatureId): List<FeatureId> {
         val gone = HashSet<FeatureId>().apply { add(id) }
         do {
             val before = gone.size
@@ -409,6 +406,15 @@ class Document {
                 is SketchFeature -> if ((f.onFace != null && f.onFace.feature in gone) || (f.onPlane != null && f.onPlane in gone)) gone += f.id
             }
         } while (gone.size != before)
+        return items.map { it.id }.filter { it in gone && it != id }
+    }
+
+    /**
+     * Entfernt das Feature und alles, was von ihm abhängt: Extrusionen einer entfernten Skizze und Verrundungen/Fasen, die
+     * Flächen eines entfernten Features referenzieren (auch über mehrere Stufen).
+     */
+    fun remove(id: FeatureId) {
+        val gone = dependents(id) + id
         items.removeAll { it.id in gone }
         bindings = bindings.filterKeys { r -> (if (r is ValueRef.Dim) r.sketch else (r as ValueRef.FeatureValue).feature) !in gone }
         // Projizierte Kanten entfernter Features: die Skizze bleibt, die Elemente darin bleiben als feste Konstruktionsgeometrie

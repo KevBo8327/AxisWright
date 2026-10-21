@@ -42,6 +42,7 @@ class FilletFeatureTest {
             val s = Setup()
             val f = s.doc.addFillet("R", listOf(s.edge), 2.0)
             val other = s.doc.addSketch("andere")
+            assertEquals(listOf(s.ext.id, f.id), s.doc.dependents(s.sketch.id), "die Warnung nennt genau, was mitgeht")
             s.doc.remove(s.sketch.id)
             assertEquals(listOf(other.id), s.doc.features.map { it.id }, "Verrundung ${f.id} muss mit gehen")
         }

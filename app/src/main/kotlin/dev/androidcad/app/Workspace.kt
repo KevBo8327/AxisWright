@@ -496,6 +496,7 @@ class WorkspaceState(private val scope: CoroutineScope, private val session: Mod
         history = dev.androidcad.project.UndoHistory(DocumentCodec.encode(doc))
         canUndo = false; canRedo = false
         job?.cancel()
+        thumbJob?.cancel() // sonst schriebe das Bild des vorigen Modells in den Ordner dieses (die ID wird erst beim Schreiben bestimmt)
         replaceOutput(null)
         building = false
         select(doc.features.last().id) // macht dessen Skizze aktiv
@@ -550,6 +551,9 @@ class WorkspaceState(private val scope: CoroutineScope, private val session: Mod
         refreshHighlight()
         refreshReference()
     }
+
+    /** Namen der Schritte, die beim Löschen von [id] mit verschwinden (für die Warnung). */
+    fun dependentNames(id: FeatureId): List<String> = doc.dependents(id).map { d -> doc.feature(d).name }
 
     /** Öffnet die Einstellungen des gewählten Features. */
     fun openCard() { if (selectedId != null) cardOpen = true }
