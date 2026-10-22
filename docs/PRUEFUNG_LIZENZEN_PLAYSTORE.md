@@ -14,7 +14,7 @@ Automatischer Test: `python scripts/play-check.py` (nach `./gradlew :app:bundleR
 | Verkauf grundsätzlich erlaubt? | **Ja.** Alle Fremdlizenzen erlauben kommerziellen Vertrieb; keine Lizenz verlangt die Offenlegung des eigenen Codes. |
 | Lizenzpflichten erfüllt? | **Ja, nach den Korrekturen vom 18.10.2026** (5 fehlende Hinweise ergänzt, LGPL-Quelltextangebot statt Verweis auf den privaten Quelltext). |
 | Technische Play-Vorgaben | **Erfüllt** (targetSdk 36, 64 Bit, 16-KB-Seiten, keine Berechtigungen, nicht debuggable, Größe). |
-| Offen beim Entwickler | Upload-Schlüssel, Datenschutzerklärung ausfüllen + veröffentlichen, Play-Console-Formulare, Händlerstatus/Impressum, Markenprüfung „ParamWorker“, Herkunft des Beispiels „Streaminghalterung“ (erledigt 21.10.2026: Eigenentwicklung). |
+| Offen beim Entwickler | Upload-Schlüssel, Datenschutzerklärung ausfüllen + veröffentlichen, Play-Console-Formulare, Händlerstatus/Impressum, Herkunft des Beispiels „Streaminghalterung“ (erledigt 21.10.2026: Eigenentwicklung); Markenprüfung „ParamWorker“ (erledigt 22.10.2026, keine Treffer in Klasse 9/42). |
 
 ---
 
@@ -69,8 +69,8 @@ Alle Lizenztexte liegen in `app/src/main/assets/licenses/` und sind in der App u
 - **Beispiele:** `Box.scad` ist eigener Inhalt. `Streaminghalterung.scad`: eigene Konstruktion (bestätigt 21.10.2026), Copyright-Kopf in der Datei.
   Stammt die Konstruktion von Thingiverse, Printables o. Ä., gilt deren Lizenz (oft CC BY-NC – dann **nicht** in einer verkauften App
   erlaubt). Ist sie eigene Arbeit oder mit einem KI-Werkzeug selbst erstellt, ist sie unproblematisch. ⚠️
-- **App-Name „ParamWorker“:** Websuche ohne Treffer in Software/CAD; die Registerprüfung (DPMA, EUIPO, Klassen 9 und 42) und die
-  Play-Store-Suche liegen bei dir. ⚠️
+- **App-Name „ParamWorker“:** Websuche ohne Treffer in Software/CAD; Registerprüfung DPMA, EUIPO und WIPO am 22.10.2026 durch dich:
+  keine Treffer in Klasse 9 oder 42. ✓
 - **Eigenes Repository:** privat (GitHub antwortet ohne Anmeldung mit 404). Gut so – ein öffentliches Repository ohne Lizenz wäre zwar
   rechtlich geschützt, ließe aber jeden die App selbst bauen. ✅
 
