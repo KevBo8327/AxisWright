@@ -47,9 +47,9 @@ internal fun ImprintDialog(onDismiss: () -> Unit) {
                 )
                 Heading("Datenschutz")
                 Text(
-                    "ParamWorker erhebt keine personenbezogenen Daten. Die App hat keinen Internetzugang, keine Werbung, keine Analyse- oder " +
-                        "Tracking-Werkzeuge und kein Benutzerkonto. Ihre Projekte bleiben auf Ihrem Gerät, solange Sie sie nicht selbst exportieren " +
-                        "oder teilen.",
+                    "ParamWorker selbst erhebt keine personenbezogenen Daten. Die App hat keinen Internetzugang, keine Werbung, keine Analyse- " +
+                        "oder Tracking-Werkzeuge und kein Benutzerkonto. Projekte werden lokal gespeichert; Android kann sie abhängig von " +
+                        "Ihren Systemeinstellungen in einer Gerätesicherung sichern. Beim Feedback öffnet sich Ihr E-Mail-Programm.",
                     style = MaterialTheme.typography.bodyMedium,
                 )
                 Text(
