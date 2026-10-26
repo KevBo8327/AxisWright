@@ -12,10 +12,18 @@ plugins {
  *   storePassword=…
  *   keyAlias=upload
  *   keyPassword=…
- * Fehlt die Datei, wird der Release-Build zum lokalen Testen mit dem Debug-Schlüssel signiert (Google Play lehnt solche Pakete ab).
+ * Fehlt die Datei, bricht ein Release-Build ab – außer mit -PallowDebugSignedRelease=true (CI, lokale Tests): dann Debug-Schlüssel
+ * (Google Play lehnt solche Pakete ab).
  */
 val keystoreProps = Properties().apply {
     rootProject.file("keystore.properties").takeIf { it.isFile }?.inputStream()?.use { load(it) }
+}
+
+val releaseTasks = setOf("assembleRelease", "bundleRelease", "packageRelease", "packageReleaseBundle")
+gradle.taskGraph.whenReady {
+    if (keystoreProps.getProperty("storeFile") == null && findProperty("allowDebugSignedRelease") != "true" &&
+        allTasks.any { it.project == project && it.name in releaseTasks }
+    ) throw GradleException("Kein Upload-Schlüssel: keystore.properties anlegen, siehe README (nur zum Testen: -PallowDebugSignedRelease=true).")
 }
 
 android {
@@ -28,8 +36,8 @@ android {
         minSdk = 26
         targetSdk = 36
         // versionCode = Major·1000 + Minor·100 + Patch (0.9.0 → 900, 1.0.0 → 1000); jeder Upload in Play braucht einen höheren Wert
-        versionCode = 901
-        versionName = "0.9.1-beta"
+        versionCode = 902
+        versionName = "0.9.2-beta"
         // Googlebooks laufen auch auf Intel/AMD → x86_64 ist Pflicht neben arm64.
         ndk { abiFilters += listOf("arm64-v8a", "x86_64") }
     }

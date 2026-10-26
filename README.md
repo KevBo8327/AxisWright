@@ -111,8 +111,8 @@ optimiert, damit Messungen aussagekräftig sind.
 ```
 
 Dann `keystore.properties` im Projektordner anlegen (wird nicht eingecheckt) mit `storeFile`, `storePassword`, `keyAlias=upload`, `keyPassword`
-und `./gradlew :app:bundleRelease` ausführen → `app/build/outputs/bundle/release/app-release.aab`. Ohne `keystore.properties` signiert der
-Build mit dem Debug-Schlüssel (nur zum lokalen Testen; Google Play lehnt das ab). Download je Gerät ≈ 16 MB (native Bibliotheken ≈ 15 MB).
+und `./gradlew :app:bundleRelease` ausführen → `app/build/outputs/bundle/release/app-release.aab`. Ohne `keystore.properties` bricht der
+Release-Build ab; nur zum Testen (und in CI) erlaubt `-PallowDebugSignedRelease=true` die Signatur mit dem Debug-Schlüssel (Google Play lehnt das ab). Download je Gerät ≈ 16 MB (native Bibliotheken ≈ 15 MB).
 
 **Automatische Prüfung (GitHub Actions, `.github/workflows/ci.yml`):** bei jedem Push auf `main` und jedem Pull Request laufen die
 JVM-Tests und der App-Build (Debug-APK als Artefakt, Release-AAB). OpenCascade wird nur beim ersten Lauf bzw. nach Änderungen an

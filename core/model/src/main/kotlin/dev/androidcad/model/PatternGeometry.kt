@@ -106,7 +106,7 @@ object PatternGeometry {
     /** Wie [copyTag], mit der Kopienummer aus [instances] (bei Rastern `Zeile · 256 + Spalte`). */
     fun copyTag(tag: Long, owner: FeatureId, instance: Long): Long {
         val ref = FaceRef.fromTag(tag) ?: return 0L
-        require(ref.element < BASE_LIMIT) { "Elementnummer ${ref.element} zu groß für ein Muster" }
+        if (ref.element >= BASE_LIMIT) return 0L // Skizzenelement-ID ab 2²⁰: praktisch unerreichbar; unbenannt statt Abbruch des Aufbaus
         require(instance in 1 until NEST.toLong() * NEST) { "Kopie $instance außerhalb des Bereichs" }
         return faceTag(owner, ref.role, (instance shl INSTANCE_SHIFT) or ref.element)
     }

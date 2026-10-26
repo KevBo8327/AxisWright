@@ -100,7 +100,7 @@ jobs:
           key: occt-${{ env.OCCT_TAG }}-arm64-v8a-${{ hashFiles('scripts/build-occt.ps1') }}
           fail-on-cache-miss: true
       - name: Debug-APK und Release-AAB
-        run: ./gradlew :app:assembleDebug :app:bundleRelease
+        run: ./gradlew :app:assembleDebug :app:bundleRelease -PallowDebugSignedRelease=true
       - name: APK hochladen
         uses: actions/upload-artifact@v4
         with:

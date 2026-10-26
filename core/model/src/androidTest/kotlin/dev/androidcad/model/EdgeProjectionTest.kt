@@ -154,4 +154,25 @@ class EdgeProjectionTest {
             assertEquals(8, r.projected.getValue(sk.id).size)
         }
     }
+
+    @Test
+    fun aProjectedEdgeSurvivesWhenItsFaceIsMergedWithAnother() {
+        // Block A (Höhe 10) und daneben Block B (Höhe 5); Skizze auf B oben mit der projizierten rechten Kante (x = 60)
+        val doc = Document()
+        doc.addExtrude("A", doc.addSketch("A").also { it.sketch.addRectangle(0.0, 0.0, 40.0, 20.0) }, 10.0)
+        val skB = doc.addSketch("B")
+        val rect = skB.sketch.addRectangle(40.0, 0.0, 60.0, 20.0)
+        val b = doc.addExtrude("B", skB, 5.0)
+        val topB = FaceRef(b.id, FaceRole.TOP)
+        val edge = EdgeRef.of(topB, FaceRef(b.id, FaceRole.SIDE, rect.edges[1].value))
+        val sk = doc.addSketchOnFace("Auf B", topB, Workplane.XY)
+        doc.build().use { r -> assertEquals(1, doc.addProjections(sk.id, r.projectable.getValue(sk.id).filter { it.edge == edge })) }
+        // B so hoch wie A: die Deckflächen werden eine (Hauptname von A, B oben nur noch Zweitname)
+        doc.update(b.copy(distance = 10.0))
+        doc.build().use { r ->
+            assertTrue(r.isOk, r.errors.toString())
+            assertEquals(listOf(edge), r.projected.getValue(sk.id).map { it.first.edge })
+            assertTrue(r.projectable.getValue(sk.id).isNotEmpty(), "die zusammengeführte Fläche bietet ihren Umriss an")
+        }
+    }
 }

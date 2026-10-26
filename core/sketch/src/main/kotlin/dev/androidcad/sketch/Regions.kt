@@ -63,8 +63,9 @@ private sealed interface Edge {
 /**
  * Findet die geschlossenen Konturen der Skizze und ordnet Löcher ihren Außenkonturen zu.
  *
- * Unterstützt werden einfache Konturen (jeder Knoten hat genau zwei Kanten) und Vollkreise; Verzweigungen
- * und offene Ketten werden in [RegionResult.problems] gemeldet. Konstruktionselemente zählen nicht.
+ * Einfache Konturen (jeder Knoten hat genau zwei Kanten) und Vollkreise werden direkt übernommen; Komponenten mit Verzweigungen
+ * (gemeinsame Wand, Teilungslinie) werden in ihre elementaren Teilflächen zerlegt, lose Enden dabei übergangen. Offene Enden
+ * und Verzweigungen ohne geschlossene Teilfläche werden in [RegionResult.problems] gemeldet. Konstruktionselemente zählen nicht.
  * Punkte, die über [Coincident] verbunden sind oder näher als [tolerance] beieinander liegen, gelten als ein Knoten.
  */
 public fun Sketch.regions(tolerance: Double = 1e-6): RegionResult {
@@ -104,6 +105,80 @@ public fun Sketch.regions(tolerance: Double = 1e-6): RegionResult {
     val problems = ArrayList<String>()
     val loops = ArrayList<Loop>()
     val samples = ArrayList<List<Vec2>>()
+    // Außengrenze einer verzweigten Komponente (Index in loops) → ihre Teilflächen mit Stützpunkten
+    val parts = HashMap<Int, List<Pair<Loop, List<Vec2>>>>()
+
+    fun segment(ei: Int, forward: Boolean): LoopSegment {
+        val e = edges[ei]
+        val from = pos(if (forward) e.a else e.b); val to = pos(if (forward) e.b else e.a)
+        return when (e) {
+            is Edge.L -> LoopSegment.Line(from.x, from.y, to.x, to.y, e.source)
+            is Edge.A -> pos(e.center).let { c -> LoopSegment.Arc(from.x, from.y, to.x, to.y, c.x, c.y, ccw = forward, source = e.source) }
+        }
+    }
+
+    // Halbkante h: Kante h / 2, gerade = von a nach b. Richtung (Tangente bei Bögen) und Krümmung beim Verlassen des Startknotens.
+    fun from(h: Int) = edges[h / 2].let { if (h % 2 == 0) it.a else it.b }
+    fun leave(h: Int): Pair<Double, Double> {
+        val e = edges[h / 2]; val fwd = h % 2 == 0
+        val p = pos(from(h))
+        val (ang, k) = when (e) {
+            is Edge.L -> pos(if (fwd) e.b else e.a).let { q -> atan2(q.y - p.y, q.x - p.x) } to 0.0
+            is Edge.A -> pos(e.center).let { c ->
+                val rx = p.x - c.x; val ry = p.y - c.y; val r = hypot(rx, ry)
+                if (fwd) atan2(rx, -ry) to 1 / r else atan2(-rx, ry) to -1 / r
+            }
+        }
+        return (if (ang > PI - 1e-9) ang - 2 * PI else ang) to k
+    }
+
+    /**
+     * Verzweigte Komponente zerlegen: doppelte Kanten, Bäume (lose Enden) und Brücken entfernen, dann die Teilflächen der ebenen
+     * Einbettung ablaufen (am Zielknoten die nächste Kante im Uhrzeigersinn). Je Zusammenhangsteil ist die Fläche mit negativem
+     * Umlaufsinn die unbeschränkte Außenseite: Sie geht als Außengrenze in die Verschachtelung ein, die übrigen werden Regionen.
+     */
+    fun decompose(comp: List<Int>) {
+        val live = comp.distinctBy { i -> edges[i].let { if (it is Edge.A) Triple(it.a, it.b, it.center) else setOf(it.a, it.b) } }.toMutableSet()
+        while (true) {
+            do {
+                val deg = HashMap<Int, Int>()
+                for (e in live) { deg.merge(edges[e].a, 1, Int::plus); deg.merge(edges[e].b, 1, Int::plus) }
+            } while (live.removeAll { deg[edges[it].a] == 1 || deg[edges[it].b] == 1 })
+            if (live.isEmpty()) return
+            val out = HashMap<Int, MutableList<Int>>()
+            for (e in live) for (h in intArrayOf(2 * e, 2 * e + 1)) out.getOrPut(from(h)) { ArrayList() } += h
+            // gleiche Richtung (Linie mit tangentialem Bogen): der stärker links gekrümmte liegt weiter gegen den Uhrzeigersinn
+            for (l in out.values) l.sortWith(compareBy({ Math.round(leave(it).first * 1e9) }, { leave(it).second }))
+            val face = HashMap<Int, Int>()
+            val cycles = ArrayList<List<Int>>()
+            for (h0 in out.values.flatten()) {
+                if (h0 in face) continue
+                val cyc = ArrayList<Int>()
+                var h = h0
+                do {
+                    face[h] = cycles.size; cyc += h
+                    val around = out.getValue(from(h xor 1))
+                    h = around[(around.indexOf(h xor 1) + around.size - 1) % around.size]
+                } while (h != h0)
+                cycles += cyc
+            }
+            // Brücke = auf beiden Seiten dieselbe Fläche
+            val bridges = live.filter { face[2 * it] == face[2 * it + 1] }
+            if (bridges.isNotEmpty()) { live.removeAll(bridges.toSet()); continue }
+            val pieces = UnionFind(ids.size).also { u -> for (e in live) u.union(edges[e].a, edges[e].b) }
+            for (group in cycles.groupBy { pieces.find(from(it[0])) }.values) {
+                val faces = group.map { c -> c.map { segment(it / 2, it % 2 == 0) }.let { s -> s to signedArea(s) } }
+                val outside = faces.minBy { it.second }
+                val inner = faces.filter { it !== outside && it.second > 1e-12 }
+                if (inner.isEmpty()) continue
+                if (inner.size == 1) { loops += Loop(inner[0].first, inner[0].second); samples += sample(inner[0].first); continue }
+                loops += Loop(outside.first, -outside.second)
+                samples += sample(outside.first)
+                parts[loops.lastIndex] = inner.map { Loop(it.first, it.second) to sample(it.first) }
+            }
+            return
+        }
+    }
 
     // --- Ketten aus Linien/Bögen ---
     val incident = HashMap<Int, MutableList<Int>>()
@@ -121,12 +196,15 @@ public fun Sketch.regions(tolerance: Double = 1e-6): RegionResult {
             for (n in listOf(edges[e].a, edges[e].b)) for (o in incident.getValue(n)) if (!seen[o]) { seen[o] = true; stack.add(o) }
         }
         val nodes = comp.flatMap { listOf(edges[it].a, edges[it].b) }.toSet()
-        val bad = nodes.firstOrNull { n -> incident.getValue(n).size != 2 }
-        if (bad != null) {
-            val p = pos(bad)
-            val deg = incident.getValue(bad).size
-            problems += if (deg == 1) "Offenes Ende bei (%.2f, %.2f)".format(java.util.Locale.ROOT, p.x, p.y)
-            else "Verzweigung bei (%.2f, %.2f)".format(java.util.Locale.ROOT, p.x, p.y)
+        val bad = nodes.filter { n -> incident.getValue(n).size != 2 }
+        if (bad.isNotEmpty()) {
+            // Nur hier entstehen neue Regionen: Komponenten ohne Verzweigung laufen unverändert wie bisher.
+            val before = loops.size
+            decompose(comp)
+            val open = bad.firstOrNull { incident.getValue(it).size == 1 }
+            val p = pos(open ?: bad[0])
+            if (open != null) problems += "Offenes Ende bei (%.2f, %.2f)".format(java.util.Locale.ROOT, p.x, p.y)
+            else if (loops.size == before) problems += "Verzweigung bei (%.2f, %.2f)".format(java.util.Locale.ROOT, p.x, p.y)
             continue
         }
         // Kontur ablaufen
@@ -138,16 +216,12 @@ public fun Sketch.regions(tolerance: Double = 1e-6): RegionResult {
             used[ei] = true
             val e = edges[ei]
             val forward = e.a == cur
-            val from = pos(if (forward) e.a else e.b); val to = pos(if (forward) e.b else e.a)
-            segs += when (e) {
-                is Edge.L -> LoopSegment.Line(from.x, from.y, to.x, to.y, e.source)
-                is Edge.A -> pos(e.center).let { c -> LoopSegment.Arc(from.x, from.y, to.x, to.y, c.x, c.y, ccw = forward, source = e.source) }
-            }
+            segs += segment(ei, forward)
             cur = if (forward) e.b else e.a
             ei = incident.getValue(cur).firstOrNull { !used[it] && it in comp } ?: break
         }
         if (segs.size != comp.size) { problems += "Kontur konnte nicht vollständig durchlaufen werden"; continue }
-        loops += Loop(segs, exactArea(segs))
+        loops += Loop(segs, abs(signedArea(segs)))
         samples += sample(segs)
     }
 
@@ -173,7 +247,12 @@ public fun Sketch.regions(tolerance: Double = 1e-6): RegionResult {
     fun depth(i: Int): Int { var d = 0; var p = parent[i]; while (p != -1) { d++; p = parent[p] }; return d }
 
     val regions = loops.indices.filter { depth(it) % 2 == 0 }
-        .map { o -> Region(loops[o], loops.indices.filter { parent[it] == o && depth(it) % 2 == 1 }.map { loops[it] }) }
+        .flatMap { o ->
+            val holes = loops.indices.filter { parent[it] == o && depth(it) % 2 == 1 }
+            // Teilflächen einer verzweigten Kontur: jedes Loch gehört zu der Teilfläche, in der es liegt
+            parts[o]?.map { (f, fs) -> Region(f, holes.filter { contains(fs, samples[it]) }.map { loops[it] }) }
+                ?: listOf(Region(loops[o], holes.map { loops[it] }))
+        }
         .sortedByDescending { it.outer.area }
     return RegionResult(regions, problems)
 }
@@ -207,10 +286,10 @@ private fun sample(segs: List<LoopSegment>): List<Vec2> {
 }
 
 /**
- * Exakte Fläche einer Kontur (Greensche Formel): Linien tragen ½(x₁y₂ − x₂y₁) bei, Bögen
+ * Vorzeichenbehaftete Fläche einer Kontur (Greensche Formel, positiv = gegen den Uhrzeigersinn): Linien tragen ½(x₁y₂ − x₂y₁) bei, Bögen
  * ½(r²·Δθ + cx·(y₂−y₁) − cy·(x₂−x₁)) mit Δθ als überstrichenem Winkel (positiv = gegen den Uhrzeigersinn).
  */
-private fun exactArea(segs: List<LoopSegment>): Double {
+private fun signedArea(segs: List<LoopSegment>): Double {
     var a = 0.0
     for (s in segs) when (s) {
         is LoopSegment.Line -> a += s.x1 * s.y2 - s.x2 * s.y1
@@ -222,7 +301,7 @@ private fun exactArea(segs: List<LoopSegment>): Double {
             a += r * r * delta + s.cx * (s.y2 - s.y1) - s.cy * (s.x2 - s.x1)
         }
     }
-    return abs(a) / 2
+    return a / 2
 }
 
 private fun inside(poly: List<Vec2>, x: Double, y: Double): Boolean {

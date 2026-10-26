@@ -22,29 +22,38 @@ object EdgeProjection {
     /** Die in die Ebene gelegte Kante: entweder [line] (Anfang, Ende) oder [circle] (Mittelpunkt, Radius), in Skizzenkoordinaten. */
     class Geometry(val edge: EdgeRef, val line: Pair<Vec2, Vec2>? = null, val circle: Pair<Vec2, Double>? = null)
 
-    /** Alle Kanten, die an die Fläche [face] grenzen und ganz in [plane] liegen (d. h. der Umriss der Fläche samt Löchern). */
-    fun edgesOf(body: BrepShape, plane: Workplane, face: FaceRef): List<Geometry> =
-        collect(body, plane) { a, b -> a == face.tag || b == face.tag }
+    /**
+     * Alle Kanten, die an die Fläche [face] grenzen und ganz in [plane] liegen (d. h. der Umriss der Fläche samt Löchern). [face] darf
+     * auch ein Zweitname sein (Fläche mit einer anderen zusammengeführt); die Kanten heißen nach den Hauptnamen ihrer Nachbarflächen.
+     */
+    fun edgesOf(body: BrepShape, plane: Workplane, face: FaceRef): List<Geometry> {
+        val tags = body.faceTags()
+        val names = body.facesWithTag(face.tag).map { tags[it - 1] }.toSet()
+        return collect(body, plane, body.edgeFaceTags().withIndex().mapNotNull { (i, p) ->
+            val a = FaceRef.fromTag(p.first); val b = FaceRef.fromTag(p.second)
+            if (a != null && b != null && p.first != p.second && (p.first in names || p.second in names)) i + 1 to EdgeRef.of(a, b) else null
+        })
+    }
 
-    /** Die Kante [edge] in [plane]; `null`, wenn es sie nicht (mehr) gibt, sie nicht ganz in der Ebene liegt oder nicht eindeutig ist. */
+    /**
+     * Die Kante [edge] in [plane]; `null`, wenn es sie nicht (mehr) gibt, sie nicht ganz in der Ebene liegt oder nicht eindeutig ist.
+     * Gesucht wird auch über Zweitnamen (wie bei Verrundungen): führt eine Maßänderung die Nachbarfläche mit einer anderen zusammen,
+     * bleibt die Kante auffindbar.
+     */
     fun find(body: BrepShape, plane: Workplane, edge: EdgeRef): Geometry? =
-        collect(body, plane) { a, b -> a == minOf(edge.a.tag, edge.b.tag) && b == maxOf(edge.a.tag, edge.b.tag) }.firstOrNull()
+        if (edge.a == edge.b) null else collect(body, plane, body.edgesBetween(edge.a.tag, edge.b.tag).map { it to edge }).firstOrNull()
 
-    private fun collect(body: BrepShape, plane: Workplane, wanted: (Long, Long) -> Boolean): List<Geometry> {
-        val pairs = body.edgeFaceTags()
-        val candidates = pairs.withIndex().filter { (_, p) -> p.first != 0L && p.second != 0L && p.first != p.second && wanted(p.first, p.second) }
+    /** Geometrie der Kanten [candidates] (Kanten-ID, Name), soweit sie ganz in [plane] liegen und ihr Name genau eine solche Kante trifft. */
+    private fun collect(body: BrepShape, plane: Workplane, candidates: List<Pair<Int, EdgeRef>>): List<Geometry> {
         if (candidates.isEmpty()) return emptyList()
         val infos = body.edges().associateBy { it.id }
         fun v(t: Triple<Double, Double, Double>) = Vec3(t.first, t.second, t.third)
         fun inPlane(p: Vec3) = abs((p - plane.origin).dot(plane.normal)) < TOL
         fun local(p: Vec3): Vec2 = (p - plane.origin).let { Vec2(it.dot(plane.xDir), it.dot(plane.yDir)) }
 
-        val byRef = LinkedHashMap<Pair<Long, Long>, MutableList<Geometry>>()
-        for ((index, pair) in candidates) {
-            val info = infos[index + 1] ?: continue
-            val a = FaceRef.fromTag(pair.first) ?: continue
-            val b = FaceRef.fromTag(pair.second) ?: continue
-            val edge = EdgeRef.of(a, b)
+        val byRef = LinkedHashMap<EdgeRef, MutableList<Geometry>>()
+        for ((id, edge) in candidates) {
+            val info = infos[id] ?: continue
             val s = v(info.start); val e = v(info.end)
             val center = info.center?.let(::v)
             val g = when {
@@ -57,7 +66,7 @@ object EdgeProjection {
                     Geometry(edge, circle = local(center) to info.radius)
                 else -> null
             }
-            if (g != null) byRef.getOrPut(pair) { ArrayList() } += g
+            if (g != null) byRef.getOrPut(edge) { ArrayList() } += g
         }
         // Nur eindeutige Kanten: gehören mehrere Kanten zu denselben Nachbarflächen, ließe sich nicht sagen, welche gemeint ist.
         return byRef.values.filter { it.size == 1 }.map { it.single() }
