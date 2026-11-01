@@ -1,5 +1,6 @@
 package dev.androidcad.model
 
+import dev.androidcad.text.Msg
 import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.sin
@@ -19,29 +20,29 @@ object PatternGeometry {
     const val MAX_COUNT = 200
 
     /** Fehlermeldung, wenn die Parameter unbrauchbar sind, sonst `null`. */
-    fun validate(kind: PatternKind): String? {
+    fun validate(kind: PatternKind): Msg? {
         fun finite(v: Vec3) = v.x.isFinite() && v.y.isFinite() && v.z.isFinite()
         return when (kind) {
             is PatternKind.Linear -> when {
-                kind.count !in 2..MAX_COUNT -> "Anzahl muss zwischen 2 und $MAX_COUNT liegen"
-                !kind.spacing.isFinite() || kind.spacing == 0.0 -> "Abstand darf nicht 0 sein"
-                !finite(kind.direction) || kind.direction.length < 1e-9 -> "Richtung fehlt"
+                kind.count !in 2..MAX_COUNT -> Msg(ModelText.COUNT_RANGE, MAX_COUNT)
+                !kind.spacing.isFinite() || kind.spacing == 0.0 -> Msg(ModelText.SPACING_ZERO)
+                !finite(kind.direction) || kind.direction.length < 1e-9 -> Msg(ModelText.DIRECTION_MISSING)
                 kind.direction2 == null -> null
-                kind.count2 !in 2..MAX_COUNT -> "Anzahl in zweiter Richtung muss zwischen 2 und $MAX_COUNT liegen"
-                kind.count * kind.count2 > MAX_COUNT -> "Höchstens $MAX_COUNT Exemplare (${kind.count} × ${kind.count2} = ${kind.count * kind.count2})"
-                !kind.spacing2.isFinite() || kind.spacing2 == 0.0 -> "Abstand in zweiter Richtung darf nicht 0 sein"
-                !finite(kind.direction2) || kind.direction2.length < 1e-9 -> "Zweite Richtung fehlt"
-                kind.direction.normalized().cross(kind.direction2.normalized()).length < 1e-6 -> "Die zweite Richtung muss quer zur ersten liegen"
+                kind.count2 !in 2..MAX_COUNT -> Msg(ModelText.COUNT2_RANGE, MAX_COUNT)
+                kind.count * kind.count2 > MAX_COUNT -> Msg(ModelText.MAX_INSTANCES_GRID, MAX_COUNT, kind.count, kind.count2, kind.count * kind.count2)
+                !kind.spacing2.isFinite() || kind.spacing2 == 0.0 -> Msg(ModelText.SPACING2_ZERO)
+                !finite(kind.direction2) || kind.direction2.length < 1e-9 -> Msg(ModelText.DIRECTION2_MISSING)
+                kind.direction.normalized().cross(kind.direction2.normalized()).length < 1e-6 -> Msg(ModelText.DIRECTION2_PARALLEL)
                 else -> null
             }
             is PatternKind.Circular -> when {
-                kind.count !in 2..MAX_COUNT -> "Anzahl muss zwischen 2 und $MAX_COUNT liegen"
-                !kind.angle.isFinite() || kind.angle == 0.0 || abs(kind.angle) > 360.0 -> "Winkel muss zwischen −360° und 360° liegen und darf nicht 0 sein"
-                !finite(kind.axis) || kind.axis.length < 1e-9 || !finite(kind.origin) -> "Drehachse fehlt"
+                kind.count !in 2..MAX_COUNT -> Msg(ModelText.COUNT_RANGE, MAX_COUNT)
+                !kind.angle.isFinite() || kind.angle == 0.0 || abs(kind.angle) > 360.0 -> Msg(ModelText.ANGLE_RANGE_360)
+                !finite(kind.axis) || kind.axis.length < 1e-9 || !finite(kind.origin) -> Msg(ModelText.AXIS_MISSING)
                 else -> null
             }
             is PatternKind.Mirror ->
-                if (!finite(kind.normal) || kind.normal.length < 1e-9 || !finite(kind.origin)) "Spiegelebene fehlt" else null
+                if (!finite(kind.normal) || kind.normal.length < 1e-9 || !finite(kind.origin)) Msg(ModelText.MIRROR_PLANE_MISSING) else null
         }
     }
 

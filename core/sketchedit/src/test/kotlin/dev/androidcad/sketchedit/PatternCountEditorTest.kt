@@ -35,7 +35,7 @@ class PatternCountEditorTest {
         e.requestAction(ActionKind.PATTERN_COUNT)
         assertTrue(!e.confirmPendingAction(2.5))
         assertEquals(3, e.sketch.circleIds.size)
-        assertTrue(e.message!!.startsWith("Anzahl"))
+        assertEquals(EditText.PATTERN_COUNT_RANGE, e.message?.key)
     }
 
     @Test

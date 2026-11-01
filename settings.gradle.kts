@@ -19,6 +19,7 @@ rootProject.name = "Android-CAD"
 include(":core:lang")
 include(":core:geometry")
 include(":core:json")
+include(":core:text")
 include(":core:viewport")
 include(":core:project")
 include(":core:brep")

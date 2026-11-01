@@ -16,6 +16,7 @@ kotlin {
 
 dependencies {
     api(project(":core:json"))
+    api(project(":core:text"))
     testImplementation(libs.kotlin.test)
 }
 

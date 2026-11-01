@@ -1,0 +1,78 @@
+package dev.androidcad.model
+
+import dev.androidcad.text.Msg
+
+/**
+ * Schlüssel der nutzersichtbaren Meldungen des Modells (in [Msg]); den Wortlaut liefert die App (`app/…/CoreText.kt`,
+ * `strings_core.xml`). Argumente stehen in der Reihenfolge der Platzhalter; bei Pluralen zuerst die Anzahl.
+ */
+enum class ModelText {
+    FEATURE_FAILED,
+    SKETCH_PLANE_MISSING,
+    SKETCH_FACE_MISSING,
+    SKETCH_CONFLICTING,
+    PLANE_SOURCE_MISSING,
+    PATTERN_FILLETS_FAILED,
+    PROJECTIONS_MISSING,
+    NO_BODY,
+    NO_BODY_TO_MIRROR,
+    NO_BODY_TO_CUT,
+    PATTERN_SOURCE_GONE,
+    PATTERN_NO_COPIES,
+    MIRROR_PLANE_GONE,
+    THROUGH_ALL_NEEDS_BODY,
+    REVOLVE_AXIS_GONE,
+    NO_CLOSED_REGION,
+    FACE_GONE,
+    FACE_NOT_PLANAR,
+    HOLE_REF_EDGE_GONE,
+    HOLE_REF_EDGE_NOT_IN_FACE,
+    HOLE_REF_EDGE_NOT_STRAIGHT,
+    HOLE_REF_EDGES_PARALLEL,
+    A_FACE_GONE,
+    AN_EDGE_GONE,
+    PATTERN_NESTING,
+    GRID_NOT_PATTERNABLE,
+    PATTERN_OF_PATTERN_ONE_WAY,
+    NOT_PATTERNABLE,
+    DIMENSION_NOT_POSITIVE,
+    LENGTH_NOT_POSITIVE,
+    REVOLVE_ANGLE_RANGE,
+    THICKNESS_NOT_POSITIVE,
+    SIZE_NOT_POSITIVE,
+    DIAMETER_NOT_POSITIVE,
+    DEPTH_NOT_POSITIVE,
+    PARAMETER_NAME_INVALID,
+    PARAMETER_NAMES_NOT_UNIQUE,
+    PARAMETER_ERROR,
+    EXPRESSION_VALUE_ERROR,
+    EXPRESSION_ERROR,
+    COUNT_RANGE,
+    SPACING_ZERO,
+    DIRECTION_MISSING,
+    COUNT2_RANGE,
+    MAX_INSTANCES_GRID,
+    SPACING2_ZERO,
+    DIRECTION2_MISSING,
+    DIRECTION2_PARALLEL,
+    ANGLE_RANGE_360,
+    AXIS_MISSING,
+    MIRROR_PLANE_MISSING,
+    DISTANCE_INVALID,
+    PLANE_ANGLE_RANGE,
+    MIRROR_ORIGIN_MISSING,
+    MIRROR_NORMAL_MISSING,
+    REGION_CROSSES_AXIS,
+    REGION_ON_AXIS,
+    MODEL_NOT_FOUND,
+    MODEL_DAMAGED,
+    MODEL_RESTORED_FROM_BACKUP,
+    SAVE_FIRST,
+    COPY_FAILED,
+}
+
+/**
+ * Ein Feature oder eine Eingabe ist ungültig, mit Meldung für die Oberfläche. Erbt von [IllegalArgumentException], damit
+ * vorhandene Aufrufer, die ungültige Eingaben so abfangen, unverändert funktionieren.
+ */
+class ModelException(val msg: Msg) : IllegalArgumentException(msg.toString())

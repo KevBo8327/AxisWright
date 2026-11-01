@@ -1,5 +1,6 @@
 package dev.androidcad.lang
 
+import dev.androidcad.text.Msg
 internal class Parser(private val toks: List<Token>) {
     private var p = 0
 
@@ -9,12 +10,15 @@ internal class Parser(private val toks: List<Token>) {
     private fun next(): Token = toks[p++]
     private fun accept(t: T): Boolean = if (at(t)) { p++; true } else false
 
-    private fun expect(t: T, what: String): Token {
-        if (!at(t)) fail("'$what' erwartet, gefunden '${cur.text.ifEmpty { "Dateiende" }}'")
+    /** [what]: das erwartete Zeichen (Text) oder ein [LangText] wie [LangText.MODULE_NAME]. */
+    private fun expect(t: T, what: Any): Token {
+        if (!at(t)) fail(Msg(LangText.EXPECTED_FOUND, what, found()))
         return next()
     }
 
-    private fun fail(msg: String): Nothing = throw CadLangException(msg, cur.line)
+    private fun fail(msg: Msg): Nothing = throw CadLangException(msg, cur.line)
+
+    private fun found(): Any = cur.text.ifEmpty { LangText.END_OF_FILE }
 
     fun parseProgram(): List<Stmt> {
         val out = ArrayList<Stmt>()
@@ -24,7 +28,7 @@ internal class Parser(private val toks: List<Token>) {
 
     fun parseSingleExpr(): Expr {
         val e = expr()
-        if (!at(T.EOF)) fail("Unerwartete Zeichen nach dem Ausdruck")
+        if (!at(T.EOF)) fail(Msg(LangText.TRAILING_CHARS))
         return e
     }
 
@@ -35,7 +39,7 @@ internal class Parser(private val toks: List<Token>) {
         when (t.type) {
             T.SEMI -> { next(); return EmptyStmt }
             T.LBRACE -> return block()
-            T.INCLUDE_PATH -> fail("Unerwarteter Pfad")
+            T.INCLUDE_PATH -> fail(Msg(LangText.UNEXPECTED_PATH))
             else -> Unit
         }
         if (t.type == T.ID) {
@@ -44,7 +48,7 @@ internal class Parser(private val toks: List<Token>) {
                 "function" -> return functionDef()
                 "include", "use" -> {
                     next()
-                    val path = expect(T.INCLUDE_PATH, "<pfad>")
+                    val path = expect(T.INCLUDE_PATH, LangText.PATH)
                     return IncludeStmt(path.text, t.text == "use", t.line)
                 }
                 "for" -> {
@@ -73,7 +77,7 @@ internal class Parser(private val toks: List<Token>) {
         expect(T.LBRACE, "{")
         val body = ArrayList<Stmt>()
         while (!at(T.RBRACE)) {
-            if (at(T.EOF)) fail("'}' fehlt")
+            if (at(T.EOF)) fail(Msg(LangText.MISSING_BRACE))
             body += statement()
         }
         next()
@@ -92,14 +96,14 @@ internal class Parser(private val toks: List<Token>) {
 
     private fun moduleDef(): Stmt {
         next()
-        val name = expect(T.ID, "Modulname").text
+        val name = expect(T.ID, LangText.MODULE_NAME).text
         val params = paramList()
         return ModuleDef(name, params, statement())
     }
 
     private fun functionDef(): Stmt {
         next()
-        val name = expect(T.ID, "Funktionsname").text
+        val name = expect(T.ID, LangText.FUNCTION_NAME).text
         val params = paramList()
         expect(T.ASSIGN, "=")
         val body = expr()
@@ -111,7 +115,7 @@ internal class Parser(private val toks: List<Token>) {
         expect(T.LPAREN, "(")
         val out = ArrayList<Param>()
         while (!at(T.RPAREN)) {
-            val n = expect(T.ID, "Parametername").text
+            val n = expect(T.ID, LangText.PARAMETER_NAME).text
             out += Param(n, if (accept(T.ASSIGN)) expr() else null)
             if (!accept(T.COMMA)) break
         }
@@ -123,7 +127,7 @@ internal class Parser(private val toks: List<Token>) {
         expect(T.LPAREN, "(")
         val out = ArrayList<Assignment>()
         while (!at(T.RPAREN)) {
-            val n = expect(T.ID, "Variablenname").text
+            val n = expect(T.ID, LangText.VARIABLE_NAME).text
             expect(T.ASSIGN, "=")
             out += Assignment(n, expr())
             if (!accept(T.COMMA)) break
@@ -143,7 +147,7 @@ internal class Parser(private val toks: List<Token>) {
                 else -> break
             }
         }
-        val name = expect(T.ID, "Modulname").text
+        val name = expect(T.ID, LangText.MODULE_NAME).text
         val line = toks[p - 1].line
         val args = argList()
         val children = ArrayList<Stmt>()
@@ -226,7 +230,7 @@ internal class Parser(private val toks: List<Token>) {
                     expect(T.RBRACK, "]")
                     Index(e, i)
                 }
-                at(T.DOT) -> { next(); Member(e, expect(T.ID, "Name").text) }
+                at(T.DOT) -> { next(); Member(e, expect(T.ID, LangText.NAME).text) }
                 at(T.LPAREN) && e is Ident -> Call(e.name, argList(), e.line)
                 else -> return e
             }
@@ -258,7 +262,7 @@ internal class Parser(private val toks: List<Token>) {
                     else -> Ident(t.text, t.line)
                 }
             }
-            else -> fail("Ausdruck erwartet, gefunden '${t.text.ifEmpty { "Dateiende" }}'")
+            else -> fail(Msg(LangText.EXPRESSION_EXPECTED, found()))
         }
     }
 

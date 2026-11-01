@@ -1,0 +1,154 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Skizzen-Arbeitsbereich (WorkspaceScreen, SketchCanvas, Workspace). Englisch = Grundsprache in values/. -->
+<resources>
+
+    <!-- Fangmarken auf der Zeichenfläche -->
+    <string name="ws_snap_point">Punkt</string>
+    <string name="ws_snap_midpoint">Mitte</string>
+    <string name="ws_snap_on_line">Auf Linie</string>
+    <string name="ws_snap_on_curve">Auf Kurve</string>
+    <string name="ws_snap_axis">Achse</string>
+
+    <!-- Ebenen-Dialog der Skizze -->
+    <string name="ws_plane_title_start">Auf welcher Ebene beginnen?</string>
+    <string name="ws_plane_title_change">Ebene der Skizze ändern</string>
+
+    <!-- Kopfzeile der Skizze -->
+    <string name="ws_top_plane_button">Ebene …</string>
+    <string name="ws_top_project_edges">Kanten projizieren</string>
+    <string name="ws_top_undo">Rückgängig</string>
+    <string name="ws_top_redo">Wiederholen</string>
+    <string name="ws_top_delete_selection">Auswahl löschen</string>
+    <string name="ws_top_grid_snap">Am Raster fangen</string>
+    <string name="ws_top_fit_all">Alles einpassen</string>
+    <string name="ws_top_plane_current">Ebene: %1$s</string>
+    <string name="ws_top_change_plane">Ebene ändern …</string>
+    <string name="ws_top_parameters_menu">Parameter …</string>
+
+    <!-- Werkzeuggruppen und Werkzeuge -->
+    <string name="ws_group_dimension">Bemaßen</string>
+    <string name="ws_group_draw">Zeichnen</string>
+    <string name="ws_group_edit">Bearbeiten</string>
+    <string name="ws_group_pattern">Muster</string>
+    <string name="ws_tool_line">Linie</string>
+    <string name="ws_tool_rectangle">Rechteck</string>
+    <string name="ws_tool_circle">Kreis</string>
+    <string name="ws_tool_arc">Bogen</string>
+    <string name="ws_tool_slot">Langloch</string>
+    <string name="ws_tool_polygon">Vieleck</string>
+    <string name="ws_tool_point">Punkt</string>
+    <string name="ws_tool_trim">Trimmen</string>
+    <string name="ws_tool_split">Teilen</string>
+    <string name="ws_tool_extend">Verlängern</string>
+    <string name="ws_tool_offset">Versatz</string>
+    <string name="ws_tool_corner">Ecke</string>
+    <string name="ws_tool_mirror">Spiegeln</string>
+    <string name="ws_tool_pattern_linear">Reihe</string>
+    <string name="ws_tool_pattern_circular">Kreis</string>
+
+    <!-- Kontextleiste -->
+    <string name="ws_ctx_cd_end_tool">Werkzeug beenden</string>
+    <string name="ws_ctx_field_distance">Abstand (mm)</string>
+    <string name="ws_ctx_field_spacing">Abstand (mm)</string>
+    <string name="ws_ctx_field_radius">Radius (mm)</string>
+    <string name="ws_ctx_field_count">Anzahl</string>
+    <string name="ws_ctx_field_angle">Winkel (°)</string>
+    <string name="ws_ctx_field_sides">Ecken</string>
+    <string name="ws_ctx_mirror_x">⇋ an der X-Achse</string>
+    <string name="ws_ctx_mirror_y">⇋ an der Y-Achse</string>
+    <string name="ws_ctx_pattern_along_x">→ entlang X</string>
+    <string name="ws_ctx_pattern_along_y">↑ entlang Y</string>
+    <string name="ws_ctx_pattern_around_origin">◎ um den Ursprung</string>
+    <string name="ws_ctx_finish_chain">✓ Zug beenden</string>
+    <string name="ws_ctx_no_constraints">Keine Bedingungen für diese Auswahl – z. B. zwei Linien oder einen Kreis wählen.</string>
+    <string name="ws_ctx_align">⊕ Ausrichten ▾</string>
+
+    <!-- Hinweise zum aktiven Werkzeug -->
+    <string name="ws_hint_select">Tippe Elemente an oder ziehe ein Rechteck auf. Ziehen verschiebt – die Bedingungen bleiben erhalten.</string>
+    <string name="ws_hint_line">Linie: Punkte nacheinander antippen (Stift: ziehen). „Fertig“ oder Esc beendet den Linienzug.</string>
+    <string name="ws_hint_line_tangent">Tangente: Anfang und Ende antippen – ein Ende auf einem Kreis oder Bogen (oder beide: Tangente zwischen zwei Kreisen).</string>
+    <string name="ws_hint_rect_corners">Rechteck: zwei gegenüberliegende Ecken antippen oder aufziehen.</string>
+    <string name="ws_hint_rect_center_first">Rechteck: zuerst den Mittelpunkt antippen (z. B. den Ursprung).</string>
+    <string name="ws_hint_rect_center_corner">Rechteck: jetzt eine Ecke – die Form bleibt mittig.</string>
+    <string name="ws_hint_rect_three_start">Rechteck: Anfang einer Kante antippen.</string>
+    <string name="ws_hint_rect_three_end">Rechteck: Ende der Kante – auch schräg.</string>
+    <string name="ws_hint_rect_three_height">Rechteck: jetzt die Höhe antippen.</string>
+    <string name="ws_hint_circle_center">Kreis: Mittelpunkt, dann einen Punkt auf dem Kreis.</string>
+    <string name="ws_hint_circle_two_points">Kreis: zwei gegenüberliegende Punkte antippen (Durchmesser).</string>
+    <string name="ws_hint_circle_three_points">Kreis: drei Punkte auf dem Kreis antippen (%1$d von 3).</string>
+    <string name="ws_hint_circle_tangent2_pick">Kreis: zwei Linien, Kreise oder Bögen antippen, die er berühren soll (%1$d von 2).</string>
+    <string name="ws_hint_circle_tangent2_place">Kreis: jetzt die Lage antippen – sie bestimmt die Größe.</string>
+    <string name="ws_hint_circle_tangent3">Kreis: drei Linien, Kreise oder Bögen antippen, die er berühren soll (%1$d von 3) – nahe der Berührstelle.</string>
+    <string name="ws_hint_slot_first">Langloch: Mittelpunkt der ersten Rundung antippen.</string>
+    <string name="ws_hint_slot_second">Langloch: Mittelpunkt der zweiten Rundung.</string>
+    <string name="ws_hint_slot_width">Langloch: jetzt die Breite antippen.</string>
+    <string name="ws_hint_polygon_center">Vieleck: Mittelpunkt antippen.</string>
+    <string name="ws_hint_polygon_inscribed_corner">Vieleck: eine Ecke antippen (Größe und Drehung).</string>
+    <string name="ws_hint_polygon_circumscribed_side">Vieleck: eine Seitenmitte antippen – der Kreisdurchmesser ist die Schlüsselweite.</string>
+    <string name="ws_hint_arc_center">Bogen: Mittelpunkt, Startpunkt, dann die Richtung des Endes (gegen den Uhrzeigersinn).</string>
+    <string name="ws_hint_arc_three_start">Bogen: Startpunkt antippen.</string>
+    <string name="ws_hint_arc_three_end">Bogen: Endpunkt antippen.</string>
+    <string name="ws_hint_arc_three_through">Bogen: einen Punkt antippen, durch den er läuft.</string>
+    <string name="ws_hint_arc_tangent_start">Bogen: Ende einer Linie oder eines Bogens antippen – der Bogen setzt sie tangential fort.</string>
+    <string name="ws_hint_arc_tangent_end">Bogen: Endpunkt antippen; weitere Tipps setzen den Zug tangential fort.</string>
+    <string name="ws_hint_point">Punkt: Tippe, wo der Punkt liegen soll – auf einer Linie, einem Kreis oder einer Achse wird er dort gebunden.</string>
+    <string name="ws_hint_trim">Trimmen: Tippe auf den Teil einer Linie, eines Kreises oder Bogens, der bis zu den nächsten Schnittpunkten wegfallen soll.</string>
+    <string name="ws_hint_split">Teilen: Tippe auf eine Linie oder einen Bogen an der Stelle, an der sie geteilt werden sollen – einen Kreis teilt der Tipp in zwei Halbkreise.</string>
+    <string name="ws_hint_extend">Verlängern: Tippe auf das Ende einer Linie oder eines Bogens – es reicht dann bis zum nächsten Element.</string>
+    <string name="ws_hint_offset_element">Versatz: Tippe das Element an (bei Linien samt angrenzender Kette), dann die Seite.</string>
+    <string name="ws_hint_offset_side">Versatz: Tippe jetzt auf die Seite, auf die der Versatz soll.</string>
+    <string name="ws_hint_dimension">Bemaßen: Linie, Kreis oder Bogen antippen. Abstand oder Winkel: einen Punkt und ein zweites Element – zwei Linien: ohne Werkzeug beide antippen, dann „Abstand“ bzw. „Winkel“. Ins Leere tippen beendet.</string>
+    <string name="ws_hint_corner_chamfer">Ecke fasen: Tippe auf die Ecke – den Punkt, an dem zwei Linien enden.</string>
+    <string name="ws_hint_corner_fillet">Ecke runden: Tippe auf die Ecke – den Punkt, an dem zwei Linien enden.</string>
+    <string name="ws_hint_mirror">Spiegeln: Tippe eine Linie als Achse an oder wähle die X- bzw. Y-Achse.</string>
+    <string name="ws_hint_pattern_linear">Reihe: Tippe eine Linie als Richtung an – auf der Seite, in die die Reihe wachsen soll – oder wähle X bzw. Y.</string>
+    <string name="ws_hint_pattern_circular">Kreismuster: Tippe einen Punkt oder Kreis als Mittelpunkt an oder nimm den Ursprung. 360° = voller Kreis.</string>
+
+    <!-- Wert- oder Ausdruckseingabe -->
+    <string name="ws_value_label">Wert oder Ausdruck</string>
+    <string name="ws_value_invalid">Kein gültiger Wert – Parameter-Namen prüfen</string>
+    <string name="ws_value_follows">= %1$s (folgt den Parametern)</string>
+    <string name="ws_value_example">Auch Ausdrücke wie „%1$s / 2“</string>
+
+    <!-- Meldungen -->
+    <string name="ws_notice_save_failed">Speichern fehlgeschlagen: %1$s</string>
+    <string name="ws_notice_import_failed">Import fehlgeschlagen: %1$s</string>
+    <string name="ws_notice_edge_not_selectable">Diese Kante lässt sich nicht wählen (Naht oder noch unbenannte Fläche).</string>
+    <string name="ws_notice_project_building">Der Körper wird noch berechnet.</string>
+    <string name="ws_notice_project_none">Von dieser Fläche lassen sich keine Kanten projizieren.</string>
+    <string name="ws_notice_project_already">Alle Kanten dieser Fläche sind schon projiziert.</string>
+    <string name="ws_notice_face_unnamed">Diese Fläche hat noch keinen Namen und lässt sich nicht referenzieren.</string>
+    <string name="ws_notice_planar_only">Das geht nur mit ebenen Flächen.</string>
+    <string name="ws_notice_hole_no_edges">Keine zwei geraden Randkanten gefunden – die Position der Bohrung bleibt ein fester Punkt.</string>
+    <string name="ws_error_body_failed">Körper konnte nicht dargestellt werden: %1$s</string>
+    <string name="ws_error_too_deep">Das Modell ist zu tief verschachtelt, um es aufzubauen</string>
+
+    <!-- Messen -->
+    <string name="ws_measure_failed">Messung fehlgeschlagen: %1$s</string>
+    <string name="ws_measure_edge">Kante</string>
+    <string name="ws_measure_edge_line">Kante: Länge %1$.2f mm</string>
+    <string name="ws_measure_edge_circle">Kante: Länge %1$.2f mm · Radius %2$.2f mm · Ø %3$.2f mm</string>
+    <string name="ws_measure_face">Fläche: %1$.2f mm²</string>
+    <string name="ws_measure_face_curved">Fläche: %1$.2f mm² (gekrümmt)</string>
+    <string name="ws_measure_distance">Abstand: %1$.2f mm</string>
+    <string name="ws_measure_angle">Winkel: %1$.2f°</string>
+
+    <!-- Standardnamen neuer Features (werden beim Anlegen gespeichert: „Skizze 1“, „Extrusion 2“ …) -->
+    <string name="ws_name_sketch">Skizze</string>
+    <string name="ws_name_extrusion">Extrusion</string>
+    <string name="ws_name_cut">Abtrag</string>
+    <string name="ws_name_revolve">Drehung</string>
+    <string name="ws_name_revolve_cut">Drehabtrag</string>
+    <string name="ws_name_fillet">Verrundung</string>
+    <string name="ws_name_chamfer">Fase</string>
+    <string name="ws_name_mirror_body">Körperspiegelung</string>
+    <string name="ws_name_mirror">Spiegelung</string>
+    <string name="ws_name_pattern">Muster</string>
+    <string name="ws_name_plane">Ebene</string>
+    <string name="ws_name_shell">Schale</string>
+    <string name="ws_name_hole">Bohrung</string>
+
+    <!-- Modellnamen -->
+    <string name="ws_import_name">%1$s (Import)</string>
+    <string name="ws_example_name">Platte mit vier Bohrungen</string>
+</resources>

@@ -1,5 +1,6 @@
 package dev.androidcad.model
 
+import dev.androidcad.text.Msg
 import dev.androidcad.brep.BrepShape
 import dev.androidcad.brep.PlanarFace
 import kotlin.math.abs
@@ -9,9 +10,9 @@ import kotlin.math.sin
 /** Geometrie der Arbeitsebenen ([PlaneFeature]): reine Mathematik plus Auflösung gegen einen Körper. */
 object DatumPlane {
     /** Fehlermeldung, wenn die Werte unbrauchbar sind, sonst `null`. */
-    fun validate(def: PlaneDef): String? = when (def) {
-        is PlaneDef.Offset -> if (!def.distance.isFinite()) "Abstand ungültig" else null
-        is PlaneDef.AtEdge -> if (!def.angle.isFinite() || abs(def.angle) >= 180.0) "Winkel muss zwischen −180° und 180° liegen" else null
+    fun validate(def: PlaneDef): Msg? = when (def) {
+        is PlaneDef.Offset -> if (!def.distance.isFinite()) Msg(ModelText.DISTANCE_INVALID) else null
+        is PlaneDef.AtEdge -> if (!def.angle.isFinite() || abs(def.angle) >= 180.0) Msg(ModelText.PLANE_ANGLE_RANGE) else null
     }
 
     /** Ebene der Fläche, um [distance] entlang der Außennormalen verschoben (gleiche Achsen wie die Flächenskizze, [FacePlane]). */

@@ -181,7 +181,7 @@ class DragAndRegionsTest {
         s.remove(q.edges[3])                     // linke Kante entfernen → offen
         val open = s.regions()
         assertTrue(open.regions.isEmpty())
-        assertTrue(open.problems.any { it.startsWith("Offenes Ende") }, open.problems.toString())
+        assertTrue(open.problems.any { it.key == SketchText.OPEN_END }, open.problems.toString())
 
         val t = Sketch()
         val r = t.addRectangle(0.0, 0.0, 10.0, 10.0)

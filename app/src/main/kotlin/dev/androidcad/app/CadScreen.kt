@@ -45,6 +45,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalResources
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.isCtrlPressed
@@ -97,7 +100,7 @@ fun CadScreen(state: CadState) {
                 maxWidth >= 600.dp -> Row(Modifier.fillMaxSize()) {
                     var tab by remember { mutableIntStateOf(0) }
                     Column(Modifier.weight(1f).fillMaxHeight()) {
-                        Tabs(listOf("Code", "Parameter"), tab) { tab = it }
+                        Tabs(listOf(stringResource(R.string.script_tab_code), stringResource(R.string.common_parameters)), tab) { tab = it }
                         if (tab == 0) EditorPane(state, Modifier.weight(1f)) else CustomizerPanel(state, Modifier.weight(1f))
                     }
                     VerticalRule()
@@ -105,7 +108,7 @@ fun CadScreen(state: CadState) {
                 }
                 else -> Column(Modifier.fillMaxSize()) {
                     var tab by remember { mutableIntStateOf(2) }
-                    Tabs(listOf("Code", "Parameter", "3D"), tab) { tab = it }
+                    Tabs(listOf(stringResource(R.string.script_tab_code), stringResource(R.string.common_parameters), stringResource(R.string.script_tab_3d)), tab) { tab = it }
                     Box(Modifier.weight(1f)) {
                         when (tab) {
                             0 -> EditorPane(state, Modifier.fillMaxSize())
@@ -155,12 +158,12 @@ private fun Viewport(state: CadState, modifier: Modifier) {
         Row(Modifier.align(Alignment.TopStart).padding(8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
             if (state.rendering) CircularProgressIndicator(Modifier.padding(4.dp), strokeWidth = 2.dp)
             if (mesh != null && !mesh.isEmpty) {
-                AssistChip(onClick = {}, label = { Text("%,d Dreiecke".format(mesh.triangleCount)) })
-                AssistChip(onClick = {}, label = { Text("%.2f cm³".format(mesh.volume() / 1000.0)) })
+                AssistChip(onClick = {}, label = { Text(pluralStringResource(R.plurals.script_triangles, mesh.triangleCount, mesh.triangleCount)) })
+                AssistChip(onClick = {}, label = { Text(stringResource(R.string.script_volume, mesh.volume() / 1000.0)) })
             }
         }
         state.meshError?.let {
-            Text("Geometrie: $it", Modifier.align(Alignment.BottomStart).padding(8.dp), style = MaterialTheme.typography.labelMedium, color = colors.error)
+            Text(stringResource(R.string.script_geometry_error, it), Modifier.align(Alignment.BottomStart).padding(8.dp), style = MaterialTheme.typography.labelMedium, color = colors.error)
         }
     }
 }
@@ -183,7 +186,7 @@ private fun EditorPane(state: CadState, modifier: Modifier) {
                 },
             textStyle = androidx.compose.ui.text.TextStyle(fontFamily = FontFamily.Monospace, fontSize = 13.sp),
             keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.None, autoCorrectEnabled = false),
-            label = { Text("OpenSCAD-Code") },
+            label = { Text(stringResource(R.string.script_editor_label)) },
         )
         // Snippet-Leiste: Sonderzeichen sind auf der Bildschirmtastatur mühsam.
         Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 8.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -196,20 +199,22 @@ private fun EditorPane(state: CadState, modifier: Modifier) {
 
 @Composable
 private fun Console(state: CadState, modifier: Modifier) {
+    val res = LocalResources.current
+    // Paare (Text, ist Fehler)
     val lines = buildList {
-        state.error?.let { add("Fehler: $it") }
+        state.error?.let { add(res.getString(R.string.script_console_error, res.text(it)) to true) }
         state.result?.let { r ->
-            addAll(r.warnings.map { "Warnung: $it" })
-            addAll(r.echoes)
+            addAll(r.warnings.map { res.getString(R.string.script_console_warning, res.text(it)) to false })
+            addAll(r.echoes.map { it to false })
         }
     }
     Column(modifier.verticalScroll(rememberScrollState())) {
-        if (lines.isEmpty()) Text("Bereit.", style = MaterialTheme.typography.bodySmall)
-        for (l in lines) Text(
+        if (lines.isEmpty()) Text(stringResource(R.string.script_console_ready), style = MaterialTheme.typography.bodySmall)
+        for ((l, isError) in lines) Text(
             l,
             style = MaterialTheme.typography.bodySmall,
             fontFamily = FontFamily.Monospace,
-            color = if (l.startsWith("Fehler")) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface,
+            color = if (isError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface,
         )
     }
 }
@@ -224,6 +229,7 @@ internal fun ScriptTopBar(hub: ProjectHub) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val colors = MaterialTheme.colorScheme
+    val res = LocalResources.current
     val stlExporter = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("model/stl")) { uri ->
         val mesh = state.mesh
         if (uri != null && mesh != null) scope.writeExport(context, uri) { mesh.toBinaryStl() }
@@ -246,24 +252,24 @@ internal fun ScriptTopBar(hub: ProjectHub) {
         ProjectMenu(hub)
         Text(
             when (state.saveState) {
-                SaveState.SAVED -> "Gespeichert"
-                SaveState.PENDING -> "Speichert …"
-                SaveState.ERROR -> "Speichern fehlgeschlagen"
+                SaveState.SAVED -> stringResource(R.string.script_save_saved)
+                SaveState.PENDING -> stringResource(R.string.script_save_pending)
+                SaveState.ERROR -> stringResource(R.string.script_save_error)
             },
             style = MaterialTheme.typography.labelMedium,
             color = if (state.saveState == SaveState.ERROR) colors.error else colors.onSurfaceVariant,
         )
         Spacer(Modifier.weight(1f))
         if (state.rendering) CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
-        ActionButton(CadIcon.UNDO, "Rückgängig (Strg+Z)", enabled = state.canUndo) { state.undo() }
-        ActionButton(CadIcon.REDO, "Wiederholen (Strg+Umschalt+Z)", enabled = state.canRedo) { state.redo() }
-        TextButton(onClick = { stlExporter.launch("${state.project.name.ifBlank { "modell" }}.stl") }, enabled = state.mesh?.isEmpty == false) { Text("STL exportieren") }
+        ActionButton(CadIcon.UNDO, stringResource(R.string.script_undo), enabled = state.canUndo) { state.undo() }
+        ActionButton(CadIcon.REDO, stringResource(R.string.script_redo), enabled = state.canRedo) { state.redo() }
+        TextButton(onClick = { stlExporter.launch("${state.project.name.ifBlank { res.getString(R.string.script_file_default_model) }}.stl") }, enabled = state.mesh?.isEmpty == false) { Text(stringResource(R.string.script_export_stl)) }
         Box {
             TextButton(onClick = { menu = true }) { Text("⋮") }
             DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
-                DropdownMenuItem(text = { Text("3MF exportieren (3D-Druck)") }, trailingIcon = { ProMark() }, onClick = { menu = false; if (Pro.allows()) threeMfExporter.launch("${state.project.name.ifBlank { "modell" }}.3mf") }, enabled = state.mesh?.isEmpty == false)
-                DropdownMenuItem(text = { Text("Quelltext exportieren (.scad) …") }, onClick = { menu = false; scadExporter.launch("${state.project.name.ifBlank { "projekt" }}.scad") })
-                DropdownMenuItem(text = { Text("Zum Modell-Editor") }, onClick = { menu = false; hub.switchTo(ProjectKind.MODEL) })
+                DropdownMenuItem(text = { Text(stringResource(R.string.script_export_3mf)) }, trailingIcon = { ProMark() }, onClick = { menu = false; if (Pro.allows()) threeMfExporter.launch("${state.project.name.ifBlank { res.getString(R.string.script_file_default_model) }}.3mf") }, enabled = state.mesh?.isEmpty == false)
+                DropdownMenuItem(text = { Text(stringResource(R.string.script_export_source)) }, onClick = { menu = false; scadExporter.launch("${state.project.name.ifBlank { res.getString(R.string.script_file_default_project) }}.scad") })
+                DropdownMenuItem(text = { Text(stringResource(R.string.script_to_model_editor)) }, onClick = { menu = false; hub.switchTo(ProjectKind.MODEL) })
             }
         }
     }

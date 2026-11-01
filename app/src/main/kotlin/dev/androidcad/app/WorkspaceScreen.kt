@@ -62,6 +62,8 @@ import androidx.compose.foundation.layout.BoxScope
 import dev.androidcad.sketchedit.ActionKind
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.KeyboardType
@@ -115,8 +117,8 @@ fun WorkspaceScreen(hub: ProjectHub) {
 internal fun NoticeRow(state: WorkspaceState) {
     state.notice?.let { n ->
         Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text(n, Modifier.weight(1f), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
-            TextButton(onClick = { state.notice = null }) { Text("OK") }
+            Text(n.text(), Modifier.weight(1f), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+            TextButton(onClick = { state.notice = null }) { Text(stringResource(R.string.common_ok)) }
         }
     }
 }
@@ -152,7 +154,7 @@ private fun SketchPanel(state: WorkspaceState, modifier: Modifier) {
         handle.insetLeft = if (compact) 0.0 else with(density) { 80.dp.toPx().toDouble() }
         val e = handle.editor
         handle.version // Beobachtung
-        val groups = sketchToolGroups(e)
+        val groups = sketchToolGroups(e, LocalResources.current)
         Column(Modifier.fillMaxSize()) {
             SketchTopBar(state, narrow, onPlaneDialog = { planeDialog = true })
             HorizontalDivider()
@@ -182,7 +184,7 @@ private fun SketchPanel(state: WorkspaceState, modifier: Modifier) {
     ValueDialogs(state, handle.editor, handle.editor.pendingAction, handle.editor.valueEdit)
     if (planeDialog || state.askPlane) {
         PlaneDialog(
-            title = if (state.askPlane) "Auf welcher Ebene beginnen?" else "Ebene der Skizze ändern",
+            title = stringResource(if (state.askPlane) R.string.ws_plane_title_start else R.string.ws_plane_title_change),
             initial = PlaneSpec.from(state.sketch.plane) ?: PlaneSpec(BasePlane.XY),
             onConfirm = { planeDialog = false; state.askPlane = false; state.changePlane(it) },
             onDismiss = { planeDialog = false; state.askPlane = false },
@@ -208,6 +210,7 @@ private fun SketchTopBar(state: WorkspaceState, compact: Boolean, onPlaneDialog:
     val colors = MaterialTheme.colorScheme
     var menu by remember { mutableStateOf(false) }
     val fit = { handle.fit(referencePoints(state.referenceLines)) }
+    val doneText = stringResource(R.string.common_done)
     Row(
         Modifier.fillMaxWidth().height(52.dp).padding(horizontal = 8.dp),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp),
@@ -217,37 +220,37 @@ private fun SketchTopBar(state: WorkspaceState, compact: Boolean, onPlaneDialog:
             Text(state.sketch.name, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
             if (!compact) {
                 Text(planeLabel(state.sketch), style = MaterialTheme.typography.bodyMedium, color = colors.onSurfaceVariant, maxLines = 1)
-                if (!state.sketch.planeIsDerived) TextButton(onClick = onPlaneDialog) { Text("Ebene …") }
-                else if (state.sketch.onFace != null) TextButton(onClick = state::projectFaceEdges) { Text("Kanten projizieren") }
+                if (!state.sketch.planeIsDerived) TextButton(onClick = onPlaneDialog) { Text(stringResource(R.string.ws_top_plane_button)) }
+                else if (state.sketch.onFace != null) TextButton(onClick = state::projectFaceEdges) { Text(stringResource(R.string.ws_top_project_edges)) }
             }
         }
         // Parameter schon beim Skizzieren anlegen und in Maßen verwenden
-        if (!compact) TextButton(onClick = { if (Pro.allows()) state.parametersOpen = true }) { Text("Parameter"); ProMark() }
+        if (!compact) TextButton(onClick = { if (Pro.allows()) state.parametersOpen = true }) { Text(stringResource(R.string.common_parameters)); ProMark() }
         if (state.parametersOpen) ParameterDialog(state) { state.parametersOpen = false }
-        ActionButton(CadIcon.UNDO, "Rückgängig", enabled = e.canUndo) { e.undo() }
-        ActionButton(CadIcon.REDO, "Wiederholen", enabled = e.canRedo) { e.redo() }
-        ActionButton(CadIcon.DELETE, "Auswahl löschen", enabled = e.selection.isNotEmpty()) { e.deleteSelection() }
+        ActionButton(CadIcon.UNDO, stringResource(R.string.ws_top_undo), enabled = e.canUndo) { e.undo() }
+        ActionButton(CadIcon.REDO, stringResource(R.string.ws_top_redo), enabled = e.canRedo) { e.redo() }
+        ActionButton(CadIcon.DELETE, stringResource(R.string.ws_top_delete_selection), enabled = e.selection.isNotEmpty()) { e.deleteSelection() }
         if (!compact) {
-            ActionButton(CadIcon.GRID, "Am Raster fangen", selected = e.gridSnap) { e.gridSnap = !e.gridSnap }
-            ActionButton(CadIcon.FIT, "Alles einpassen") { fit() }
+            ActionButton(CadIcon.GRID, stringResource(R.string.ws_top_grid_snap), selected = e.gridSnap) { e.gridSnap = !e.gridSnap }
+            ActionButton(CadIcon.FIT, stringResource(R.string.ws_top_fit_all)) { fit() }
         } else {
             Box {
                 TextButton(onClick = { menu = true }) { Text("⋮") }
                 DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
-                    DropdownMenuItem(text = { Text("Ebene: ${planeLabel(state.sketch)}") }, onClick = { menu = false }, enabled = false)
-                    if (!state.sketch.planeIsDerived) DropdownMenuItem(text = { Text("Ebene ändern …") }, onClick = { menu = false; onPlaneDialog() })
-                    else if (state.sketch.onFace != null) DropdownMenuItem(text = { Text("Kanten projizieren") }, onClick = { menu = false; state.projectFaceEdges() })
-                    DropdownMenuItem(text = { Text("Parameter …") }, trailingIcon = { ProMark() }, onClick = { menu = false; if (Pro.allows()) state.parametersOpen = true })
-                    DropdownMenuItem(text = { Text(if (e.gridSnap) "Am Raster fangen ✓" else "Am Raster fangen") }, onClick = { menu = false; e.gridSnap = !e.gridSnap })
-                    DropdownMenuItem(text = { Text("Alles einpassen") }, onClick = { menu = false; fit() })
+                    DropdownMenuItem(text = { Text(stringResource(R.string.ws_top_plane_current, planeLabel(state.sketch))) }, onClick = { menu = false }, enabled = false)
+                    if (!state.sketch.planeIsDerived) DropdownMenuItem(text = { Text(stringResource(R.string.ws_top_change_plane)) }, onClick = { menu = false; onPlaneDialog() })
+                    else if (state.sketch.onFace != null) DropdownMenuItem(text = { Text(stringResource(R.string.ws_top_project_edges)) }, onClick = { menu = false; state.projectFaceEdges() })
+                    DropdownMenuItem(text = { Text(stringResource(R.string.ws_top_parameters_menu)) }, trailingIcon = { ProMark() }, onClick = { menu = false; if (Pro.allows()) state.parametersOpen = true })
+                    DropdownMenuItem(text = { Text(stringResource(R.string.ws_top_grid_snap) + if (e.gridSnap) " ✓" else "") }, onClick = { menu = false; e.gridSnap = !e.gridSnap })
+                    DropdownMenuItem(text = { Text(stringResource(R.string.ws_top_fit_all)) }, onClick = { menu = false; fit() })
                 }
             }
         }
         Spacer(Modifier.width(4.dp))
         // kompakt nur das Häkchen: der Name kommt dann aus der Beschreibung (Screenreader)
-        Button(onClick = state::finishSketch, modifier = if (compact) Modifier.semantics { contentDescription = "Fertig" } else Modifier) {
+        Button(onClick = state::finishSketch, modifier = if (compact) Modifier.semantics { contentDescription = doneText } else Modifier) {
             CadIconView(CadIcon.DONE, colors.onPrimary, 18.dp)
-            if (!compact) { Spacer(Modifier.width(6.dp)); Text("Fertig") }
+            if (!compact) { Spacer(Modifier.width(6.dp)); Text(doneText) }
         }
     }
 }
@@ -256,9 +259,9 @@ private fun SketchTopBar(state: WorkspaceState, compact: Boolean, onPlaneDialog:
  * Werkzeuge der Skizze in Gruppen: **Bemaßen** als direkter Knopf, **Zeichnen** (Linie, Rechteck, Kreis, Bogen),
  * **Bearbeiten** (Trimmen, Verlängern, Versatz, Ecke, Spiegeln) und **Muster** (Reihe, Kreis) zum Aufklappen.
  */
-private fun sketchToolGroups(e: SketchEditor): List<ToolGroup> {
+private fun sketchToolGroups(e: SketchEditor, res: android.content.res.Resources): List<ToolGroup> {
     // das aktive Werkzeug erneut antippen beendet es (zurück zum Auswählen)
-    fun tool(label: String, icon: CadIcon, t: Tool) = ToolDef(label, icon, e.tool == t, true) { e.setTool(if (e.tool == t) Tool.SELECT else t) }
+    fun tool(label: Int, icon: CadIcon, t: Tool) = ToolDef(res.getString(label), icon, e.tool == t, true) { e.setTool(if (e.tool == t) Tool.SELECT else t) }
     val drawIcon = when (e.tool) {
         Tool.RECTANGLE -> CadIcon.RECTANGLE
         Tool.CIRCLE -> CadIcon.CIRCLE
@@ -269,25 +272,25 @@ private fun sketchToolGroups(e: SketchEditor): List<ToolGroup> {
         else -> CadIcon.LINE
     }
     return listOf(
-        ToolGroup("Bemaßen", CadIcon.DIMENSION, listOf(tool("Bemaßen", CadIcon.DIMENSION, Tool.DIMENSION)), direct = true),
-        ToolGroup("Zeichnen", drawIcon, listOf(
-            tool("Linie", CadIcon.LINE, Tool.LINE), tool("Rechteck", CadIcon.RECTANGLE, Tool.RECTANGLE),
-            tool("Kreis", CadIcon.CIRCLE, Tool.CIRCLE), tool("Bogen", CadIcon.ARC, Tool.ARC),
-            tool("Langloch", CadIcon.SLOT, Tool.SLOT), tool("Vieleck", CadIcon.POLYGON, Tool.POLYGON),
-            tool("Punkt", CadIcon.POINT, Tool.POINT),
+        ToolGroup(res.getString(R.string.ws_group_dimension), CadIcon.DIMENSION, listOf(tool(R.string.ws_group_dimension, CadIcon.DIMENSION, Tool.DIMENSION)), direct = true),
+        ToolGroup(res.getString(R.string.ws_group_draw), drawIcon, listOf(
+            tool(R.string.ws_tool_line, CadIcon.LINE, Tool.LINE), tool(R.string.ws_tool_rectangle, CadIcon.RECTANGLE, Tool.RECTANGLE),
+            tool(R.string.ws_tool_circle, CadIcon.CIRCLE, Tool.CIRCLE), tool(R.string.ws_tool_arc, CadIcon.ARC, Tool.ARC),
+            tool(R.string.ws_tool_slot, CadIcon.SLOT, Tool.SLOT), tool(R.string.ws_tool_polygon, CadIcon.POLYGON, Tool.POLYGON),
+            tool(R.string.ws_tool_point, CadIcon.POINT, Tool.POINT),
         )),
-        ToolGroup("Bearbeiten", CadIcon.TRIM, listOf(
-            tool("Trimmen", CadIcon.TRIM, Tool.TRIM), tool("Teilen", CadIcon.SPLIT, Tool.SPLIT), tool("Verlängern", CadIcon.EXTEND, Tool.EXTEND),
-            tool("Versatz", CadIcon.OFFSET, Tool.OFFSET), tool("Ecke", CadIcon.FILLET, Tool.FILLET),
-            ToolDef("Spiegeln", CadIcon.MIRROR, e.tool == Tool.MIRROR, e.selection.isNotEmpty() || e.mirrorPending) {
+        ToolGroup(res.getString(R.string.ws_group_edit), CadIcon.TRIM, listOf(
+            tool(R.string.ws_tool_trim, CadIcon.TRIM, Tool.TRIM), tool(R.string.ws_tool_split, CadIcon.SPLIT, Tool.SPLIT), tool(R.string.ws_tool_extend, CadIcon.EXTEND, Tool.EXTEND),
+            tool(R.string.ws_tool_offset, CadIcon.OFFSET, Tool.OFFSET), tool(R.string.ws_tool_corner, CadIcon.FILLET, Tool.FILLET),
+            ToolDef(res.getString(R.string.ws_tool_mirror), CadIcon.MIRROR, e.tool == Tool.MIRROR, e.selection.isNotEmpty() || e.mirrorPending) {
                 if (e.mirrorPending) e.cancelOperation() else e.startMirror()
             },
         )),
-        ToolGroup("Muster", CadIcon.PATTERN_LINEAR, listOf(
-            ToolDef("Reihe", CadIcon.PATTERN_LINEAR, e.tool == Tool.PATTERN_LINEAR, e.selection.isNotEmpty() || e.tool == Tool.PATTERN_LINEAR) {
+        ToolGroup(res.getString(R.string.ws_group_pattern), CadIcon.PATTERN_LINEAR, listOf(
+            ToolDef(res.getString(R.string.ws_tool_pattern_linear), CadIcon.PATTERN_LINEAR, e.tool == Tool.PATTERN_LINEAR, e.selection.isNotEmpty() || e.tool == Tool.PATTERN_LINEAR) {
                 if (e.tool == Tool.PATTERN_LINEAR) e.cancelOperation() else e.startPattern(circular = false)
             },
-            ToolDef("Kreis", CadIcon.PATTERN_CIRCULAR, e.tool == Tool.PATTERN_CIRCULAR, e.selection.isNotEmpty() || e.tool == Tool.PATTERN_CIRCULAR) {
+            ToolDef(res.getString(R.string.ws_tool_pattern_circular), CadIcon.PATTERN_CIRCULAR, e.tool == Tool.PATTERN_CIRCULAR, e.selection.isNotEmpty() || e.tool == Tool.PATTERN_CIRCULAR) {
                 if (e.tool == Tool.PATTERN_CIRCULAR) e.cancelOperation() else e.startPattern(circular = true)
             },
         )),
@@ -300,8 +303,7 @@ private fun StatusPill(handle: EditorHandle, modifier: Modifier) {
     val e = handle.editor
     handle.version // Beobachtung: der Editor bleibt dasselbe Objekt, nur sein Zustand ändert sich
     val colors = MaterialTheme.colorScheme
-    val text = e.statusText()
-    if (text.isEmpty()) return
+    val text = e.statusText()?.text() ?: return
     val conflict = e.status?.isSolved == false
     val shape = RoundedCornerShape(50)
     Text(
@@ -317,7 +319,7 @@ private fun MessageBand(handle: EditorHandle, modifier: Modifier) {
     val e = handle.editor
     handle.version // Beobachtung
     val colors = MaterialTheme.colorScheme
-    val m = e.message ?: return
+    val m = e.message?.text() ?: return
     val info = e.messageIsInfo
     Text(
         m, modifier.background((if (info) colors.secondaryContainer else colors.errorContainer).copy(alpha = 0.92f)).padding(horizontal = 12.dp, vertical = 6.dp),
@@ -387,6 +389,7 @@ private fun BoxScope.ContextBar(handle: EditorHandle, prefs: UiPrefs, bottomGap:
     val e = handle.editor
     handle.version // Beobachtung
     val colors = MaterialTheme.colorScheme
+    val endToolText = stringResource(R.string.ws_ctx_cd_end_tool)
     val options = e.actionOptions()
     val selecting = e.tool == Tool.SELECT
     if (selecting && e.selection.isEmpty()) return
@@ -416,34 +419,34 @@ private fun BoxScope.ContextBar(handle: EditorHandle, prefs: UiPrefs, bottomGap:
             if (!selecting) Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(hintFor(e), Modifier.weight(1f, fill = false), style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant, maxLines = 2)
                 // Werkzeug beenden (zurück zum Auswählen); bricht auch ein wartendes Spiegeln/Muster ab
-                TextButton(onClick = { e.cancelOperation(); e.setTool(Tool.SELECT) }, modifier = Modifier.semantics { contentDescription = "Werkzeug beenden" }) { Text("✕") }
+                TextButton(onClick = { e.cancelOperation(); e.setTool(Tool.SELECT) }, modifier = Modifier.semantics { contentDescription = endToolText }) { Text("✕") }
             }
             Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
                 when {
                     e.tool.isModify -> when (e.tool) {
-                        Tool.OFFSET -> ToolNumberField("Abstand (mm)", e.offsetDistance) { e.offsetDistance = it }
+                        Tool.OFFSET -> ToolNumberField(stringResource(R.string.ws_ctx_field_distance), e.offsetDistance) { e.offsetDistance = it }
                         Tool.FILLET -> {
                             DrawVariants(handle, prefs)
-                            if (e.cornerMode == CornerMode.CHAMFER) ToolNumberField("Abstand (mm)", e.chamferDistance) { e.chamferDistance = it }
-                            else ToolNumberField("Radius (mm)", e.filletRadius) { e.filletRadius = it }
+                            if (e.cornerMode == CornerMode.CHAMFER) ToolNumberField(stringResource(R.string.ws_ctx_field_distance), e.chamferDistance) { e.chamferDistance = it }
+                            else ToolNumberField(stringResource(R.string.ws_ctx_field_radius), e.filletRadius) { e.filletRadius = it }
                         }
                         Tool.MIRROR -> {
-                            OutlinedButton(onClick = { e.mirrorAcrossAxis(horizontal = true) }) { Text("⇋ an der X-Achse") }
-                            OutlinedButton(onClick = { e.mirrorAcrossAxis(horizontal = false) }) { Text("⇋ an der Y-Achse") }
-                            OutlinedButton(onClick = { e.cancelOperation() }) { Text("Abbrechen") }
+                            OutlinedButton(onClick = { e.mirrorAcrossAxis(horizontal = true) }) { Text(stringResource(R.string.ws_ctx_mirror_x)) }
+                            OutlinedButton(onClick = { e.mirrorAcrossAxis(horizontal = false) }) { Text(stringResource(R.string.ws_ctx_mirror_y)) }
+                            OutlinedButton(onClick = { e.cancelOperation() }) { Text(stringResource(R.string.common_cancel)) }
                         }
                         Tool.PATTERN_LINEAR -> {
-                            ToolNumberField("Anzahl", e.patternCount.toDouble()) { e.patternCount = Math.round(it).toInt() }
-                            ToolNumberField("Abstand (mm)", e.patternSpacing) { e.patternSpacing = it }
-                            OutlinedButton(onClick = { e.patternAlongAxis(horizontal = true) }) { Text("→ entlang X") }
-                            OutlinedButton(onClick = { e.patternAlongAxis(horizontal = false) }) { Text("↑ entlang Y") }
-                            OutlinedButton(onClick = { e.cancelOperation() }) { Text("Abbrechen") }
+                            ToolNumberField(stringResource(R.string.ws_ctx_field_count), e.patternCount.toDouble()) { e.patternCount = Math.round(it).toInt() }
+                            ToolNumberField(stringResource(R.string.ws_ctx_field_spacing), e.patternSpacing) { e.patternSpacing = it }
+                            OutlinedButton(onClick = { e.patternAlongAxis(horizontal = true) }) { Text(stringResource(R.string.ws_ctx_pattern_along_x)) }
+                            OutlinedButton(onClick = { e.patternAlongAxis(horizontal = false) }) { Text(stringResource(R.string.ws_ctx_pattern_along_y)) }
+                            OutlinedButton(onClick = { e.cancelOperation() }) { Text(stringResource(R.string.common_cancel)) }
                         }
                         Tool.PATTERN_CIRCULAR -> {
-                            ToolNumberField("Anzahl", e.patternCount.toDouble()) { e.patternCount = Math.round(it).toInt() }
-                            ToolNumberField("Winkel (°)", e.patternAngle) { if (it <= 360.0) e.patternAngle = it }
-                            OutlinedButton(onClick = { e.patternAroundOrigin() }) { Text("◎ um den Ursprung") }
-                            OutlinedButton(onClick = { e.cancelOperation() }) { Text("Abbrechen") }
+                            ToolNumberField(stringResource(R.string.ws_ctx_field_count), e.patternCount.toDouble()) { e.patternCount = Math.round(it).toInt() }
+                            ToolNumberField(stringResource(R.string.ws_ctx_field_angle), e.patternAngle) { if (it <= 360.0) e.patternAngle = it }
+                            OutlinedButton(onClick = { e.patternAroundOrigin() }) { Text(stringResource(R.string.ws_ctx_pattern_around_origin)) }
+                            OutlinedButton(onClick = { e.cancelOperation() }) { Text(stringResource(R.string.common_cancel)) }
                         }
                         else -> Unit
                     }
@@ -452,10 +455,10 @@ private fun BoxScope.ContextBar(handle: EditorHandle, prefs: UiPrefs, bottomGap:
                         if (e.drawingInProgress) OutlinedButton(onClick = {
                             e.cancelOperation()
                             if (e.drawingChain) e.setTool(Tool.SELECT) // Zug beendet = Linie fertig
-                        }) { Text(if (e.drawingChain) "✓ Zug beenden" else "Abbrechen") }
+                        }) { Text(stringResource(if (e.drawingChain) R.string.ws_ctx_finish_chain else R.string.common_cancel)) }
                     }
                     options.isEmpty() -> Text(
-                        "Keine Bedingungen für diese Auswahl – z. B. zwei Linien oder einen Kreis wählen.",
+                        stringResource(R.string.ws_ctx_no_constraints),
                         style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant,
                     )
                     else -> {
@@ -463,7 +466,7 @@ private fun BoxScope.ContextBar(handle: EditorHandle, prefs: UiPrefs, bottomGap:
                             options.filter { it.kind.group == group && it.kind !in ALIGN_ACTIONS }.forEach { opt ->
                                 AssistChip(
                                     onClick = { e.requestAction(opt.kind) },
-                                    label = { Text("${opt.kind.symbol} ${opt.kind.label}" + (opt.defaultValue?.let { "  ${formatValue(it)}" } ?: "")) },
+                                    label = { Text("${opt.kind.symbol} ${coreLabel(opt.kind)}" + (opt.defaultValue?.let { "  ${formatValue(it)}" } ?: "")) },
                                 )
                             }
                         }
@@ -549,58 +552,55 @@ private val ALIGN_ACTIONS = setOf(
 private fun AlignChip(kinds: List<ActionKind>, onPick: (ActionKind) -> Unit) {
     var open by remember { mutableStateOf(false) }
     Box {
-        AssistChip(onClick = { open = true }, label = { Text("⊕ Ausrichten ▾") })
+        AssistChip(onClick = { open = true }, label = { Text(stringResource(R.string.ws_ctx_align)) })
         DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
             kinds.forEach { k ->
-                DropdownMenuItem(text = { Text("${k.symbol}  ${k.label}") }, onClick = { open = false; onPick(k) })
+                DropdownMenuItem(text = { Text("${k.symbol}  ${coreLabel(k)}") }, onClick = { open = false; onPick(k) })
             }
         }
     }
 }
 
+@Composable
 private fun hintFor(e: SketchEditor): String = when (e.tool) {
-    Tool.SELECT -> "Tippe Elemente an oder ziehe ein Rechteck auf. Ziehen verschiebt – die Bedingungen bleiben erhalten."
+    Tool.SELECT -> stringResource(R.string.ws_hint_select)
     Tool.LINE -> when (e.lineMode) {
-        LineMode.NORMAL -> "Linie: Punkte nacheinander antippen (Stift: ziehen). „Fertig“ oder Esc beendet den Linienzug."
-        LineMode.TANGENT -> "Tangente: Anfang und Ende antippen – ein Ende auf einem Kreis oder Bogen (oder beide: Tangente zwischen zwei Kreisen)."
+        LineMode.NORMAL -> stringResource(R.string.ws_hint_line)
+        LineMode.TANGENT -> stringResource(R.string.ws_hint_line_tangent)
     }
     Tool.RECTANGLE -> when (e.rectMode) {
-        RectMode.CORNERS -> "Rechteck: zwei gegenüberliegende Ecken antippen oder aufziehen."
-        RectMode.CENTER -> if (e.drawStep == 0) "Rechteck: zuerst den Mittelpunkt antippen (z. B. den Ursprung)." else "Rechteck: jetzt eine Ecke – die Form bleibt mittig."
-        RectMode.THREE_POINTS -> listOf("Rechteck: Anfang einer Kante antippen.", "Rechteck: Ende der Kante – auch schräg.", "Rechteck: jetzt die Höhe antippen.")[e.drawStep]
+        RectMode.CORNERS -> stringResource(R.string.ws_hint_rect_corners)
+        RectMode.CENTER -> stringResource(if (e.drawStep == 0) R.string.ws_hint_rect_center_first else R.string.ws_hint_rect_center_corner)
+        RectMode.THREE_POINTS -> stringResource(listOf(R.string.ws_hint_rect_three_start, R.string.ws_hint_rect_three_end, R.string.ws_hint_rect_three_height)[e.drawStep])
     }
     Tool.CIRCLE -> when (e.circleMode) {
-        CircleMode.CENTER -> "Kreis: Mittelpunkt, dann einen Punkt auf dem Kreis."
-        CircleMode.TWO_POINTS -> "Kreis: zwei gegenüberliegende Punkte antippen (Durchmesser)."
-        CircleMode.THREE_POINTS -> "Kreis: drei Punkte auf dem Kreis antippen (${e.drawStep} von 3)."
-        CircleMode.TANGENT2 -> if (e.drawStep < 2) "Kreis: zwei Linien, Kreise oder Bögen antippen, die er berühren soll (${e.drawStep} von 2)."
-        else "Kreis: jetzt die Lage antippen – sie bestimmt die Größe."
-        CircleMode.TANGENT3 -> "Kreis: drei Linien, Kreise oder Bögen antippen, die er berühren soll (${e.drawStep} von 3) – nahe der Berührstelle."
+        CircleMode.CENTER -> stringResource(R.string.ws_hint_circle_center)
+        CircleMode.TWO_POINTS -> stringResource(R.string.ws_hint_circle_two_points)
+        CircleMode.THREE_POINTS -> stringResource(R.string.ws_hint_circle_three_points, e.drawStep)
+        CircleMode.TANGENT2 -> if (e.drawStep < 2) stringResource(R.string.ws_hint_circle_tangent2_pick, e.drawStep)
+        else stringResource(R.string.ws_hint_circle_tangent2_place)
+        CircleMode.TANGENT3 -> stringResource(R.string.ws_hint_circle_tangent3, e.drawStep)
     }
-    Tool.SLOT -> listOf("Langloch: Mittelpunkt der ersten Rundung antippen.", "Langloch: Mittelpunkt der zweiten Rundung.", "Langloch: jetzt die Breite antippen.")[e.drawStep]
+    Tool.SLOT -> stringResource(listOf(R.string.ws_hint_slot_first, R.string.ws_hint_slot_second, R.string.ws_hint_slot_width)[e.drawStep])
     Tool.POLYGON -> when (e.polygonMode) {
-        PolygonMode.INSCRIBED -> if (e.drawStep == 0) "Vieleck: Mittelpunkt antippen." else "Vieleck: eine Ecke antippen (Größe und Drehung)."
-        PolygonMode.CIRCUMSCRIBED -> if (e.drawStep == 0) "Vieleck: Mittelpunkt antippen." else "Vieleck: eine Seitenmitte antippen – der Kreisdurchmesser ist die Schlüsselweite."
+        PolygonMode.INSCRIBED -> stringResource(if (e.drawStep == 0) R.string.ws_hint_polygon_center else R.string.ws_hint_polygon_inscribed_corner)
+        PolygonMode.CIRCUMSCRIBED -> stringResource(if (e.drawStep == 0) R.string.ws_hint_polygon_center else R.string.ws_hint_polygon_circumscribed_side)
     }
     Tool.ARC -> when (e.arcMode) {
-        ArcMode.CENTER -> "Bogen: Mittelpunkt, Startpunkt, dann die Richtung des Endes (gegen den Uhrzeigersinn)."
-        ArcMode.THREE_POINTS -> listOf("Bogen: Startpunkt antippen.", "Bogen: Endpunkt antippen.", "Bogen: einen Punkt antippen, durch den er läuft.")[e.drawStep]
-        ArcMode.TANGENT -> if (e.drawStep == 0) "Bogen: Ende einer Linie oder eines Bogens antippen – der Bogen setzt sie tangential fort."
-        else "Bogen: Endpunkt antippen; weitere Tipps setzen den Zug tangential fort."
+        ArcMode.CENTER -> stringResource(R.string.ws_hint_arc_center)
+        ArcMode.THREE_POINTS -> stringResource(listOf(R.string.ws_hint_arc_three_start, R.string.ws_hint_arc_three_end, R.string.ws_hint_arc_three_through)[e.drawStep])
+        ArcMode.TANGENT -> stringResource(if (e.drawStep == 0) R.string.ws_hint_arc_tangent_start else R.string.ws_hint_arc_tangent_end)
     }
-    Tool.POINT -> "Punkt: Tippe, wo der Punkt liegen soll – auf einer Linie, einem Kreis oder einer Achse wird er dort gebunden."
-    Tool.TRIM -> "Trimmen: Tippe auf den Teil einer Linie, eines Kreises oder Bogens, der bis zu den nächsten Schnittpunkten wegfallen soll."
-    Tool.SPLIT -> "Teilen: Tippe auf eine Linie oder einen Bogen an der Stelle, an der sie geteilt werden sollen – einen Kreis teilt der Tipp in zwei Halbkreise."
-    Tool.EXTEND -> "Verlängern: Tippe auf das Ende einer Linie oder eines Bogens – es reicht dann bis zum nächsten Element."
-    Tool.OFFSET ->
-        if (e.offsetSource == null) "Versatz: Tippe das Element an (bei Linien samt angrenzender Kette), dann die Seite."
-        else "Versatz: Tippe jetzt auf die Seite, auf die der Versatz soll."
-    Tool.DIMENSION -> "Bemaßen: Linie, Kreis oder Bogen antippen. Abstand oder Winkel: einen Punkt und ein zweites Element – zwei Linien: ohne Werkzeug beide antippen, dann „Abstand“ bzw. „Winkel“. Ins Leere tippen beendet."
-    Tool.FILLET -> if (e.cornerMode == CornerMode.CHAMFER) "Ecke fasen: Tippe auf die Ecke – den Punkt, an dem zwei Linien enden."
-        else "Ecke runden: Tippe auf die Ecke – den Punkt, an dem zwei Linien enden."
-    Tool.MIRROR -> "Spiegeln: Tippe eine Linie als Achse an oder wähle die X- bzw. Y-Achse."
-    Tool.PATTERN_LINEAR -> "Reihe: Tippe eine Linie als Richtung an – auf der Seite, in die die Reihe wachsen soll – oder wähle X bzw. Y."
-    Tool.PATTERN_CIRCULAR -> "Kreismuster: Tippe einen Punkt oder Kreis als Mittelpunkt an oder nimm den Ursprung. 360° = voller Kreis."
+    Tool.POINT -> stringResource(R.string.ws_hint_point)
+    Tool.TRIM -> stringResource(R.string.ws_hint_trim)
+    Tool.SPLIT -> stringResource(R.string.ws_hint_split)
+    Tool.EXTEND -> stringResource(R.string.ws_hint_extend)
+    Tool.OFFSET -> stringResource(if (e.offsetSource == null) R.string.ws_hint_offset_element else R.string.ws_hint_offset_side)
+    Tool.DIMENSION -> stringResource(R.string.ws_hint_dimension)
+    Tool.FILLET -> stringResource(if (e.cornerMode == CornerMode.CHAMFER) R.string.ws_hint_corner_chamfer else R.string.ws_hint_corner_fillet)
+    Tool.MIRROR -> stringResource(R.string.ws_hint_mirror)
+    Tool.PATTERN_LINEAR -> stringResource(R.string.ws_hint_pattern_linear)
+    Tool.PATTERN_CIRCULAR -> stringResource(R.string.ws_hint_pattern_circular)
 }
 
 /** Auswahl der Variante bei Linie, Rechteck, Kreis, Bogen und Ecke; die Wahl bleibt über einen Neustart erhalten ([applyDrawModes]). */
@@ -609,18 +609,18 @@ private fun DrawVariants(handle: EditorHandle, prefs: UiPrefs) {
     val e = handle.editor
     handle.version // Beobachtung: der Editor bleibt dasselbe Objekt, nur die gewählte Variante ändert sich
     @Composable
-    fun <T> chips(modes: List<T>, current: T, label: (T) -> String, onPick: (T) -> Unit) = modes.forEach { m ->
-        FilterChip(selected = m == current, onClick = { onPick(m) }, label = { Text(label(m)) })
+    fun <T : Enum<T>> chips(modes: List<T>, current: T, onPick: (T) -> Unit) = modes.forEach { m ->
+        FilterChip(selected = m == current, onClick = { onPick(m) }, label = { Text(coreLabel(m)) })
     }
     when (e.tool) {
-        Tool.LINE -> chips(LineMode.entries, e.lineMode, { it.label }) { e.lineMode = it; prefs.putText(PREF_LINE, it.name) }
-        Tool.RECTANGLE -> chips(RectMode.entries, e.rectMode, { it.label }) { e.rectMode = it; prefs.putText(PREF_RECT, it.name) }
-        Tool.CIRCLE -> chips(CircleMode.entries, e.circleMode, { it.label }) { e.circleMode = it; prefs.putText(PREF_CIRCLE, it.name) }
-        Tool.ARC -> chips(ArcMode.entries, e.arcMode, { it.label }) { e.arcMode = it; prefs.putText(PREF_ARC, it.name) }
-        Tool.FILLET -> chips(CornerMode.entries, e.cornerMode, { it.label }) { e.cornerMode = it; prefs.putText(PREF_CORNER, it.name) }
+        Tool.LINE -> chips(LineMode.entries, e.lineMode) { e.lineMode = it; prefs.putText(PREF_LINE, it.name) }
+        Tool.RECTANGLE -> chips(RectMode.entries, e.rectMode) { e.rectMode = it; prefs.putText(PREF_RECT, it.name) }
+        Tool.CIRCLE -> chips(CircleMode.entries, e.circleMode) { e.circleMode = it; prefs.putText(PREF_CIRCLE, it.name) }
+        Tool.ARC -> chips(ArcMode.entries, e.arcMode) { e.arcMode = it; prefs.putText(PREF_ARC, it.name) }
+        Tool.FILLET -> chips(CornerMode.entries, e.cornerMode) { e.cornerMode = it; prefs.putText(PREF_CORNER, it.name) }
         Tool.POLYGON -> {
-            ToolNumberField("Ecken", e.polygonSides.toDouble()) { e.polygonSides = Math.round(it).toInt(); prefs.putText(PREF_POLYGON_SIDES, e.polygonSides.toString()) }
-            chips(PolygonMode.entries, e.polygonMode, { it.label }) { e.polygonMode = it; prefs.putText(PREF_POLYGON, it.name) }
+            ToolNumberField(stringResource(R.string.ws_ctx_field_sides), e.polygonSides.toDouble()) { e.polygonSides = Math.round(it).toInt(); prefs.putText(PREF_POLYGON_SIDES, e.polygonSides.toString()) }
+            chips(PolygonMode.entries, e.polygonMode) { e.polygonMode = it; prefs.putText(PREF_POLYGON, it.name) }
         }
         else -> Unit
     }
@@ -663,7 +663,7 @@ private fun ToolNumberField(label: String, value: Double, onValue: (Double) -> U
 private fun ValueDialogs(state: WorkspaceState, e: SketchEditor, pending: PendingAction?, edit: ValueEdit?) {
     pending?.let { p ->
         // neues Maß mit Ausdruck: nach dem Anlegen an den Parameter binden (das neue Maß ist die jüngste Bedingung)
-        ValueDialog(state, p.title, p.initial, null, onConfirm = { v, expr ->
+        ValueDialog(state, p.title.text(), p.initial, null, onConfirm = { v, expr ->
             val before = e.sketch.constraintEntries.map { it.id }.toSet()
             if (e.confirmPendingAction(v) && expr != null && p.kind.group == dev.androidcad.sketchedit.ActionGroup.DIMENSION) {
                 e.sketch.constraintEntries.lastOrNull { it.id !in before }?.let { state.setBinding(dev.androidcad.model.ValueRef.Dim(state.sketch.id, it.id), expr) }
@@ -673,7 +673,7 @@ private fun ValueDialogs(state: WorkspaceState, e: SketchEditor, pending: Pendin
     edit?.let { v ->
         // ein Maß darf aus einem Ausdruck der Parameter-Tabelle kommen; eine Zahl macht es wieder fest
         val ref = dev.androidcad.model.ValueRef.Dim(state.sketch.id, v.constraint)
-        ValueDialog(state, v.title, v.initial, state.bindings[ref], onConfirm = { value, expr ->
+        ValueDialog(state, v.title.text(), v.initial, state.bindings[ref], onConfirm = { value, expr ->
             if (e.confirmValueEdit(value)) state.setBinding(ref, expr)
         }, onDismiss = { e.cancelValueEdit() })
     }
@@ -694,21 +694,21 @@ private fun ValueDialog(state: WorkspaceState, title: String, initial: Double, e
         text = {
             OutlinedTextField(
                 value = text, onValueChange = { text = it }, singleLine = true,
-                isError = value == null, label = { Text("Wert oder Ausdruck") },
+                isError = value == null, label = { Text(stringResource(R.string.ws_value_label)) },
                 supportingText = {
                     Text(
                         when {
-                            value == null -> "Kein gültiger Wert – Parameter-Namen prüfen"
-                            number == null -> "= ${formatValue(value)} (folgt den Parametern)"
-                            state.parameters.isNotEmpty() -> "Auch Ausdrücke wie „${state.parameters.first().name} / 2“"
+                            value == null -> stringResource(R.string.ws_value_invalid)
+                            number == null -> stringResource(R.string.ws_value_follows, formatValue(value))
+                            state.parameters.isNotEmpty() -> stringResource(R.string.ws_value_example, state.parameters.first().name)
                             else -> ""
                         },
                     )
                 },
             )
         },
-        confirmButton = { TextButton(onClick = { value?.let { onConfirm(it, if (number == null) text else null) } }, enabled = value != null) { Text("OK") } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Abbrechen") } },
+        confirmButton = { TextButton(onClick = { value?.let { onConfirm(it, if (number == null) text else null) } }, enabled = value != null) { Text(stringResource(R.string.common_ok)) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.common_cancel)) } },
     )
 }
 

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="model_default_name">Modell</string>
+
+    <string name="common_ok">OK</string>
+    <string name="common_cancel">Abbrechen</string>
+    <string name="common_close">Schließen</string>
+    <string name="common_done">Fertig</string>
+    <string name="common_apply">Anwenden</string>
+    <string name="common_delete">Löschen</string>
+    <string name="common_rename">Umbenennen</string>
+    <string name="common_edit">Bearbeiten</string>
+    <string name="common_back">Zurück</string>
+    <string name="common_reset">Zurücksetzen</string>
+    <string name="common_name">Name</string>
+    <string name="common_parameters">Parameter</string>
+</resources>

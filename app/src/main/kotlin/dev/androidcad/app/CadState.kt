@@ -43,6 +43,8 @@ class CadState(
     private val scope: CoroutineScope,
     defaultName: String,
     private val defaultSource: String,
+    /** Name des Projekts, das nach dem Löschen des letzten neu entsteht (wird in der aktuellen Sprache festgeschrieben). */
+    private val newProjectName: String = "New project",
 ) {
     var project by mutableStateOf(ProjectInfo("", "", 0))
         private set
@@ -64,7 +66,7 @@ class CadState(
         private set
     var result by mutableStateOf<RenderResult?>(null)
         private set
-    var error by mutableStateOf<String?>(null)
+    var error by mutableStateOf<dev.androidcad.text.Msg?>(null)
         private set
     var rendering by mutableStateOf(false)
         private set
@@ -183,7 +185,7 @@ class CadState(
         } else flush()
         repo.delete(id)
         if (wasCurrent) {
-            val next = repo.list().firstNotNullOfOrNull { repo.load(it.id) } ?: repo.create("Neues Projekt", "cube(10);\n")
+            val next = repo.list().firstNotNullOfOrNull { repo.load(it.id) } ?: repo.create(newProjectName, "cube(10);\n")
             open(next)
         } else projects = listed()
     }
@@ -273,7 +275,7 @@ class CadState(
                 val (r, m) = withContext(Dispatchers.Default) {
                     val r = CadLang.render(src, ov, isCancelled = { self?.isActive == false })
                     // Der native Aufruf ist nicht unterbrechbar; vorher noch einmal auf Abbruch prüfen.
-                    if (self?.isActive == false) throw CadLangException("Abgebrochen")
+                    if (self?.isActive == false) throw CadLangException(dev.androidcad.text.Msg(dev.androidcad.lang.LangText.CANCELLED))
                     r to runCatching { GeometryKernel.build(r.root) }
                 }
                 result = r
@@ -282,7 +284,7 @@ class CadState(
                 meshError = m.exceptionOrNull()?.message
                 lastRenderMillis = (System.nanoTime() - started) / 1_000_000
             } catch (e: CadLangException) {
-                if (self?.isActive == true) error = e.message
+                if (self?.isActive == true) error = e.toMsg()
             } finally {
                 if (self?.isActive == true) rendering = false
             }

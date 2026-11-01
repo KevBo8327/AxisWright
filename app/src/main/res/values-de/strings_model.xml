@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Modell-Ansicht (3D): App-Leiste, Werkzeuge, Einstellungskarte, Ansicht-Menü. -->
+<resources>
+    <!-- Neue Skizze -->
+    <string name="model_new_sketch_title">Neue Skizze – Ebene wählen</string>
+
+    <!-- App-Leiste -->
+    <plurals name="model_stats">
+        <item quantity="one">%1$.2f cm³ · %2$d Fläche</item>
+        <item quantity="other">%1$.2f cm³ · %2$d Flächen</item>
+    </plurals>
+    <string name="model_undo">Rückgängig</string>
+    <string name="model_redo">Wiederholen</string>
+    <string name="model_export_stl">STL exportieren</string>
+    <string name="model_export_step">STEP exportieren (CAD-Austausch)</string>
+    <string name="model_export_3mf">3MF exportieren (3D-Druck)</string>
+    <string name="model_export_project">Projekt exportieren …</string>
+    <string name="model_to_script">Zum Skript-Editor (OpenSCAD)</string>
+
+    <!-- Werkzeuggruppen -->
+    <string name="model_group_sketch">Skizze</string>
+    <string name="model_group_body">Körper</string>
+    <string name="model_group_edges">Kanten</string>
+    <string name="model_group_measure">Messen</string>
+    <string name="model_group_pattern">Muster</string>
+    <string name="model_tool_new">Neu</string>
+    <string name="model_tool_on_face">Auf Fläche</string>
+    <string name="model_tool_plane">Ebene</string>
+    <string name="model_tool_extrude">Extrudieren</string>
+    <string name="model_tool_cut">Abtragen</string>
+    <string name="model_tool_revolve">Drehen</string>
+    <string name="model_tool_shell">Schale</string>
+    <string name="model_tool_hole">Bohrung</string>
+    <string name="model_tool_fillet">Verrunden</string>
+    <string name="model_tool_chamfer">Fase</string>
+    <string name="model_tool_linear">Reihe</string>
+    <string name="model_tool_circular">Kreis</string>
+    <string name="model_tool_mirror">Spiegeln</string>
+
+    <!-- Einstellungskarte -->
+    <string name="model_card_face_sketch">Skizze auf Fläche</string>
+    <string name="model_card_plane">Neue Arbeitsebene</string>
+    <string name="model_card_hole">Bohrung setzen</string>
+    <string name="model_card_properties">Eigenschaften</string>
+    <string name="model_cd_expand">Ausklappen</string>
+    <string name="model_cd_collapse">Einklappen</string>
+
+    <!-- Hinweise im leeren 3D-Bild -->
+    <string name="model_hint_sketch_ready">Skizze fertig – weiter mit Körper › Extrudieren oder Drehen.</string>
+    <string name="model_hint_no_body">Noch kein Körper – wähle eine Skizze, dann Körper › Extrudieren oder Drehen.</string>
+    <string name="model_hint_building">Körper wird berechnet …</string>
+    <string name="model_hint_see_message">Kein Körper – siehe die Meldung oben.</string>
+
+    <!-- Ansicht-Menü -->
+    <string name="model_view_menu">Ansicht</string>
+    <string name="model_view_iso">Iso</string>
+    <string name="model_view_top">Oben</string>
+    <string name="model_view_front">Vorne</string>
+    <string name="model_view_right">Rechts</string>
+    <string name="model_fit_all">Alles einpassen</string>
+    <string name="model_grid">Gitter</string>
+</resources>

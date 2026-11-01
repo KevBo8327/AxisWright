@@ -23,6 +23,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import dev.androidcad.lang.ParamKind
 import dev.androidcad.lang.ParamSpec
@@ -34,7 +35,7 @@ fun CustomizerPanel(state: CadState, modifier: Modifier = Modifier) {
     val params = state.params
     if (params.isEmpty()) {
         Text(
-            "Keine Parameter. Deklariere Variablen mit Kommentar, z. B.\nbreite = 40; // [10:5:100]",
+            stringResource(R.string.script_params_empty),
             modifier.padding(16.dp),
             style = MaterialTheme.typography.bodyMedium,
         )
@@ -44,8 +45,8 @@ fun CustomizerPanel(state: CadState, modifier: Modifier = Modifier) {
     LazyColumn(modifier, contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Text("Parameter", style = MaterialTheme.typography.titleMedium)
-                TextButton(onClick = state::resetParams, enabled = state.overrides.isNotEmpty()) { Text("Zurücksetzen") }
+                Text(stringResource(R.string.common_parameters), style = MaterialTheme.typography.titleMedium)
+                TextButton(onClick = state::resetParams, enabled = state.overrides.isNotEmpty()) { Text(stringResource(R.string.common_reset)) }
             }
         }
         for ((group, list) in grouped) {

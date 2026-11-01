@@ -1,4 +1,26 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  Allgemeine Texte (Englisch = Grundsprache; Deutsch in values-de/). Bereichsdateien: strings_core.xml (Kernmodule),
+  strings_start.xml, strings_workspace.xml, strings_model.xml, strings_script.xml, strings_dialogs.xml, strings_legal.xml.
+  Hier nur App-Name und gemeinsame Wörter, die in mehreren Bereichen vorkommen.
+-->
 <resources>
-    <string name="app_name">ParamWorker</string>
+    <string name="app_name" translatable="false">ParamWorker</string>
+
+    <!-- Grundname neuer Modelle: „Model 1“, „Model 2“ … -->
+    <string name="model_default_name">Model</string>
+
+    <!-- Gemeinsame Schaltflächen -->
+    <string name="common_ok">OK</string>
+    <string name="common_cancel">Cancel</string>
+    <string name="common_close">Close</string>
+    <string name="common_done">Done</string>
+    <string name="common_apply">Apply</string>
+    <string name="common_delete">Delete</string>
+    <string name="common_rename">Rename</string>
+    <string name="common_edit">Edit</string>
+    <string name="common_back">Back</string>
+    <string name="common_reset">Reset</string>
+    <string name="common_name">Name</string>
+    <string name="common_parameters">Parameters</string>
 </resources>

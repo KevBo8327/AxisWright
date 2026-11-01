@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Impressum & Datenschutz -->
+    <string name="legal_imprint_title">Impressum &amp; Datenschutz</string>
+    <string name="legal_imprint_heading">Impressum</string>
+    <string name="legal_imprint_info">Angaben gemäß § 5 DDG</string>
+    <string name="legal_imprint_contact">%1$s\n%2$s\nTelefon: %3$s\nE-Mail: %4$s</string>
+    <string name="legal_liability_heading">Haftung</string>
+    <string name="legal_liability_text">ParamWorker ist ein Werkzeug zum Konstruieren. Prüfen Sie Maße, Toleranzen und Festigkeit Ihrer Teile vor der Fertigung selbst; für sicherheitsrelevante Bauteile ist die App nicht vorgesehen. Die gesetzliche Haftung bei Vorsatz, grober Fahrlässigkeit und für Schäden an Leben, Körper oder Gesundheit bleibt unberührt.</string>
+    <string name="legal_privacy_heading">Datenschutz</string>
+    <string name="legal_privacy_text">ParamWorker hat keine eigenen Server, keine Werbung, keine Analyse- oder Tracking-Werkzeuge und kein Benutzerkonto. Der Internetzugriff dient nur dem Kauf von ParamWorker Pro über Google Play (Google Play Billing). Ihre Projekte verlassen das Gerät nicht, außer Sie exportieren oder teilen sie. Sie werden lokal gespeichert; Android kann sie abhängig von Ihren Systemeinstellungen in einer Gerätesicherung sichern. Beim Feedback öffnet sich Ihr E-Mail-Programm.</string>
+    <string name="legal_privacy_purchase">Beim Kauf verarbeitet Google (Google Ireland / Google Commerce) Zahlungs- und Kaufdaten als eigener Verantwortlicher nach seiner Datenschutzerklärung. Die App erhält nur den Kaufstatus und den Kaufbeleg (Bestellnummer, Kauftoken) zur Freischaltung und speichert ihn lokal. Die Billing-Bibliothek von Google kann technische Diagnosedaten an Google übermitteln.</string>
+    <string name="legal_privacy_feedback">„Feedback senden“ öffnet nur Ihr E-Mail-Programm mit einer vorbereiteten Nachricht (App-Version, Gerät, Android-Version); gesendet wird sie erst, wenn Sie sie selbst abschicken.</string>
+    <string name="legal_privacy_full">Vollständige Datenschutzerklärung: %1$s</string>
+
+    <!-- Lizenzen: Dialog -->
+    <string name="legal_licenses_title">Lizenzen</string>
+    <string name="legal_licenses_intro">Diese App nutzt folgende freie Software. Danke an alle Beteiligten!</string>
+    <string name="legal_licenses_show_text">Lizenztext anzeigen ›</string>
+    <string name="legal_licenses_loading">Lädt …</string>
+    <string name="legal_licenses_file_missing">(%1$s fehlt)</string>
+
+    <!-- Lizenzen: Bibliotheken -->
+    <string name="legal_lib_occt_use">Geometriekern (B-Rep: Körper, Flächen, Kanten, Verrundungen)</string>
+    <string name="legal_lib_occt_license">GNU LGPL 2.1 mit Open-CASCADE-Ausnahme</string>
+    <string name="legal_lib_occt_source">https://github.com/Open-Cascade-SAS/OCCT (Tag V7_9_3)</string>
+    <string name="legal_lib_occt_note">Unverändert als eigene Bibliotheken (libTK*.so) mitgeliefert und dadurch gegen eine selbst gebaute Version austauschbar. Den vollständigen Quelltext dieser OCCT-Version samt Bauanleitung senden wir auf Anfrage an kb-it-services@outlook.de kostenlos zu (mindestens drei Jahre nach Erhalt dieser App-Version). Diese Bibliotheken dürfen für den eigenen Gebrauch verändert und zur Fehlersuche an solchen Änderungen zurückentwickelt werden (LGPL 2.1 § 6). Enthält DELABELLA (MIT), flex (BSD), strtod von David M. Gay/Lucent und Unicode-Code (Unicode, Inc.).</string>
+
+    <string name="legal_lib_manifold_use">Körperberechnung im Skript-Editor (OpenSCAD)</string>
+    <string name="legal_lib_manifold_note">Enthält Code aus NVIDIA PhysX (BSD 3-Clause), musl/FreeBSD msun und eine SVD-Routine (MIT).</string>
+
+    <string name="legal_lib_clipper_use">2D-Polygonoperationen (über Manifold)</string>
+
+    <string name="legal_lib_libcxx_use">C++-Standardbibliothek der nativen Teile (libc++_shared.so aus dem Android NDK)</string>
+    <string name="legal_lib_libcxx_license">Apache License 2.0 mit LLVM-Ausnahmen</string>
+
+    <string name="legal_lib_haze_use">Glas-Effekt (Unschärfe hinter schwebenden Flächen)</string>
+
+    <string name="legal_lib_kotlin_name">Kotlin-Standardbibliothek und kotlinx.coroutines</string>
+    <string name="legal_lib_kotlin_use">Programmiersprache und nebenläufige Abläufe</string>
+    <string name="legal_lib_kotlin_source">© JetBrains s.r.o. und Mitwirkende · https://github.com/JetBrains/kotlin</string>
+
+    <string name="legal_lib_androidx_use">Oberfläche</string>
+
+    <string name="legal_lib_billing_name">Google Play Billing Library und Google Play Services</string>
+    <string name="legal_lib_billing_use">Kauf von ParamWorker Pro</string>
+    <string name="legal_lib_billing_license">Android Software Development Kit License; enthaltene Open-Source-Komponenten siehe Hinweise</string>
+    <string name="legal_lib_billing_note">Enthält u. a. Guava, Protocol Buffers, Dagger und Error Prone.</string>
+</resources>

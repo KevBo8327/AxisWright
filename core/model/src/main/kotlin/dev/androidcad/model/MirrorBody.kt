@@ -1,5 +1,6 @@
 package dev.androidcad.model
 
+import dev.androidcad.text.Msg
 /**
  * Namen der Flächen im Spiegelbild eines [MirrorBodyFeature]: Die Rolle bleibt, das Feature wird die Spiegelung, und im Element
  * stehen Feature und Element des Originals – `(Feature des Originals shl 25) or Element`. So bleibt jede gespiegelte Fläche
@@ -42,12 +43,12 @@ object MirrorNaming {
     }
 
     /** Fehlermeldung, wenn die Ebene unbrauchbar ist, sonst `null`. */
-    fun validate(f: MirrorBodyFeature): String? {
+    fun validate(f: MirrorBodyFeature): Msg? {
         val o = f.origin; val n = f.normal
         return when {
             f.datum != null -> null
-            !(o.x.isFinite() && o.y.isFinite() && o.z.isFinite()) -> "Lage der Spiegelebene fehlt"
-            !(n.x.isFinite() && n.y.isFinite() && n.z.isFinite()) || n.length < 1e-9 -> "Richtung der Spiegelebene fehlt"
+            !(o.x.isFinite() && o.y.isFinite() && o.z.isFinite()) -> Msg(ModelText.MIRROR_ORIGIN_MISSING)
+            !(n.x.isFinite() && n.y.isFinite() && n.z.isFinite()) || n.length < 1e-9 -> Msg(ModelText.MIRROR_NORMAL_MISSING)
             else -> null
         }
     }

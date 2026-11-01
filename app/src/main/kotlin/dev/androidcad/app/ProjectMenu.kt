@@ -43,6 +43,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import android.provider.Settings
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.Dispatchers
@@ -75,6 +77,7 @@ internal fun ProjectMenu(hub: ProjectHub, modifier: Modifier = Modifier) {
     var showImprint by remember { mutableStateOf(false) }
     var showHelp by remember { mutableStateOf(false) }
     val import = rememberImporter(hub)
+    val scriptName = stringResource(R.string.menu_script_default_name)
     val entries = hub.entries
     val current = entries.firstOrNull { hub.isCurrent(it) }
 
@@ -91,14 +94,14 @@ internal fun ProjectMenu(hub: ProjectHub, modifier: Modifier = Modifier) {
             shape = RoundedCornerShape(16.dp), containerColor = colors.surfaceContainerHigh,
             border = BorderStroke(1.dp, CadTheme.colors.glassBorder), shadowElevation = 12.dp,
         ) {
-            Section("Start")
-            MenuItem("Startseite", CadIcon.HOME) { open = false; hub.showHome() }
-            MenuItem("Neues Modell", CadIcon.SKETCH) { open = false; hub.newModel() }
-            MenuItem("Neues Skript (OpenSCAD)", CadIcon.SCRIPT) { open = false; hub.newScript() }
-            MenuItem("Beispiele …", CadIcon.EXAMPLES) { open = false; showExamples = true }
-            MenuItem("Importieren (Modell, .scad) …", CadIcon.IMPORT) { open = false; import() }
+            Section(stringResource(R.string.menu_section_start))
+            MenuItem(stringResource(R.string.menu_home), CadIcon.HOME) { open = false; hub.showHome() }
+            MenuItem(stringResource(R.string.start_tile_new_model), CadIcon.SKETCH) { open = false; hub.newModel() }
+            MenuItem(stringResource(R.string.menu_new_script), CadIcon.SCRIPT) { open = false; hub.newScript(scriptName) }
+            MenuItem(stringResource(R.string.menu_examples), CadIcon.EXAMPLES) { open = false; showExamples = true }
+            MenuItem(stringResource(R.string.menu_import), CadIcon.IMPORT) { open = false; import() }
             MenuDivider()
-            Section("Zuletzt bearbeitet")
+            Section(stringResource(R.string.start_recent))
             entries.take(RECENT).forEach { e ->
                 val isOpen = hub.isCurrent(e)
                 val thumb = if (e.kind == ProjectKind.MODEL) hub.workspace.thumbnailFile(e.info.id).let { f -> rememberThumbnail(f, f?.lastModified() ?: 0L) } else null
@@ -110,27 +113,31 @@ internal fun ProjectMenu(hub: ProjectHub, modifier: Modifier = Modifier) {
                             if (thumb != null) Image(thumb, null, Modifier.size(26.dp)) else CadIconView(e.kind.icon(), colors.primary, 18.dp)
                         }
                     },
-                    trailingIcon = if (isOpen) ({ Text("geöffnet", style = MaterialTheme.typography.labelSmall, color = colors.onPrimaryContainer) }) else null,
+                    trailingIcon = if (isOpen) ({ Text(stringResource(R.string.menu_open_badge), style = MaterialTheme.typography.labelSmall, color = colors.onPrimaryContainer) }) else null,
                     modifier = if (isOpen) Modifier.padding(horizontal = 6.dp).background(colors.primaryContainer.copy(alpha = 0.55f), RoundedCornerShape(10.dp)) else Modifier,
                     onClick = { open = false; if (!isOpen) hub.open(e) },
                 )
             }
-            MenuItem("Alle Projekte …", CadIcon.LIST, trailing = "${entries.size}") { open = false; showAll = true }
+            MenuItem(stringResource(R.string.menu_all_projects), CadIcon.LIST, trailing = "${entries.size}") { open = false; showAll = true }
             MenuDivider()
-            Section("Dieses Projekt")
-            MenuItem("Umbenennen …", CadIcon.RENAME) { open = false; renaming = true }
-            MenuItem("Duplizieren", CadIcon.COPY, enabled = current != null) { open = false; current?.let(hub::duplicate) }
-            MenuItem("Löschen …", CadIcon.DELETE, enabled = current != null, danger = true) { open = false; deleting = current }
+            Section(stringResource(R.string.menu_section_project))
+            MenuItem(stringResource(R.string.menu_rename), CadIcon.RENAME) { open = false; renaming = true }
+            MenuItem(stringResource(R.string.menu_duplicate), CadIcon.COPY, enabled = current != null) { open = false; current?.let(hub::duplicate) }
+            MenuItem(stringResource(R.string.menu_delete), CadIcon.DELETE, enabled = current != null, danger = true) { open = false; deleting = current }
             MenuDivider()
-            Section("App")
+            Section(stringResource(R.string.menu_section_app))
             // eine Zeile statt drei: Tippen wechselt zur nächsten Darstellung, das Menü bleibt offen
             val theme = hub.workspace.prefs.themeMode
-            MenuItem("Darstellung", CadIcon.THEME, trailing = theme.label) { hub.workspace.prefs.themeMode = ThemeMode.entries[(theme.ordinal + 1) % ThemeMode.entries.size] }
-            MenuItem("ParamWorker Pro …", CadIcon.PRO, trailing = when { Pro.isPro -> "aktiv"; Pro.FREE_DURING_TEST -> "Testphase frei"; else -> Pro.price }) { open = false; Pro.dialogOpen = true }
-            MenuItem("Hilfe & Gesten …", CadIcon.HELP) { open = false; showHelp = true }
-            MenuItem("Feedback senden …", CadIcon.MAIL) { open = false; sendFeedback(context) }
-            MenuItem("Impressum & Datenschutz …", CadIcon.INFO) { open = false; showImprint = true }
-            MenuItem("Lizenzen …", CadIcon.INFO) { open = false; showLicenses = true }
+            MenuItem(stringResource(R.string.menu_appearance), CadIcon.THEME, trailing = stringResource(theme.label)) { hub.workspace.prefs.themeMode = ThemeMode.entries[(theme.ordinal + 1) % ThemeMode.entries.size] }
+            MenuItem(stringResource(R.string.menu_pro), CadIcon.PRO, trailing = when { Pro.isPro -> stringResource(R.string.menu_pro_active); Pro.FREE_DURING_TEST -> stringResource(R.string.menu_pro_trial); else -> Pro.price }) { open = false; Pro.dialogOpen = true }
+            MenuItem(stringResource(R.string.menu_help), CadIcon.HELP) { open = false; showHelp = true }
+            MenuItem(stringResource(R.string.menu_feedback), CadIcon.MAIL) { open = false; sendFeedback(context) }
+            MenuItem(stringResource(R.string.menu_imprint), CadIcon.INFO) { open = false; showImprint = true }
+            MenuItem(stringResource(R.string.menu_licenses), CadIcon.INFO) { open = false; showLicenses = true }
+            // Sprache je App: die Systemseite dafür gibt es ab Android 13
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                MenuItem(stringResource(R.string.menu_language), CadIcon.INFO) { open = false; openLanguageSettings(context) }
+            }
         }
     }
 
@@ -138,19 +145,19 @@ internal fun ProjectMenu(hub: ProjectHub, modifier: Modifier = Modifier) {
         var text by remember { mutableStateOf(hub.currentName) }
         AlertDialog(
             onDismissRequest = { renaming = false },
-            title = { Text("${hub.active.label} umbenennen") },
-            text = { OutlinedTextField(value = text, onValueChange = { text = it.take(80) }, singleLine = true, label = { Text("Name") }) },
-            confirmButton = { TextButton(onClick = { renaming = false; hub.renameCurrent(text) }, enabled = text.isNotBlank()) { Text("OK") } },
-            dismissButton = { TextButton(onClick = { renaming = false }) { Text("Abbrechen") } },
+            title = { Text(stringResource(if (hub.active == ProjectKind.MODEL) R.string.menu_rename_model_title else R.string.menu_rename_script_title)) },
+            text = { OutlinedTextField(value = text, onValueChange = { text = it.take(80) }, singleLine = true, label = { Text(stringResource(R.string.common_name)) }) },
+            confirmButton = { TextButton(onClick = { renaming = false; hub.renameCurrent(text) }, enabled = text.isNotBlank()) { Text(stringResource(R.string.common_ok)) } },
+            dismissButton = { TextButton(onClick = { renaming = false }) { Text(stringResource(R.string.common_cancel)) } },
         )
     }
     deleting?.let { e ->
         AlertDialog(
             onDismissRequest = { deleting = null },
-            title = { Text("„${e.info.name}“ löschen?") },
-            text = { Text(if (e.kind == ProjectKind.MODEL) "Skizzen und Körper werden dauerhaft entfernt." else "Das Skript wird dauerhaft entfernt.") },
-            confirmButton = { TextButton(onClick = { deleting = null; hub.delete(e) }) { Text("Löschen", color = colors.error) } },
-            dismissButton = { TextButton(onClick = { deleting = null }) { Text("Abbrechen") } },
+            title = { Text(stringResource(R.string.menu_delete_title, e.info.name)) },
+            text = { Text(stringResource(if (e.kind == ProjectKind.MODEL) R.string.menu_delete_msg_model else R.string.menu_delete_msg_script)) },
+            confirmButton = { TextButton(onClick = { deleting = null; hub.delete(e) }) { Text(stringResource(R.string.common_delete), color = colors.error) } },
+            dismissButton = { TextButton(onClick = { deleting = null }) { Text(stringResource(R.string.common_cancel)) } },
         )
     }
     if (showAll) AllProjectsDialog(hub, onDelete = { deleting = it }, onDismiss = { showAll = false })
@@ -191,7 +198,7 @@ private fun AllProjectsDialog(hub: ProjectHub, onDelete: (ProjectEntry) -> Unit,
     val colors = MaterialTheme.colorScheme
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Alle Projekte") },
+        title = { Text(stringResource(R.string.menu_all_title)) },
         text = {
             LazyColumn(Modifier.heightIn(max = 420.dp)) {
                 items(hub.entries, key = { "${it.kind}/${it.info.id}" }) { e ->
@@ -201,16 +208,16 @@ private fun AllProjectsDialog(hub: ProjectHub, onDelete: (ProjectEntry) -> Unit,
                     ) {
                         CadIconView(e.kind.icon(), colors.primary, 22.dp)
                         Column(Modifier.weight(1f)) {
-                            Text(e.info.name + if (hub.isCurrent(e)) "  (geöffnet)" else "", maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            Text("${e.kind.label} · ${format.format(Date(e.info.updatedAt))}", style = MaterialTheme.typography.labelSmall, color = colors.onSurfaceVariant)
+                            Text(if (hub.isCurrent(e)) stringResource(R.string.menu_all_current, e.info.name) else e.info.name, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text("${stringResource(e.kind.label)} · ${format.format(Date(e.info.updatedAt))}", style = MaterialTheme.typography.labelSmall, color = colors.onSurfaceVariant)
                         }
-                        TextButton(onClick = { onDismiss(); hub.duplicate(e) }) { Text("Kopie") }
-                        TextButton(onClick = { onDelete(e) }) { Text("Löschen", color = colors.error) }
+                        TextButton(onClick = { onDismiss(); hub.duplicate(e) }) { Text(stringResource(R.string.menu_copy)) }
+                        TextButton(onClick = { onDelete(e) }) { Text(stringResource(R.string.common_delete), color = colors.error) }
                     }
                 }
             }
         },
-        confirmButton = { TextButton(onClick = onDismiss) { Text("Schließen") } },
+        confirmButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.common_close)) } },
     )
 }
 
@@ -229,16 +236,16 @@ internal fun ExamplesDialog(hub: ProjectHub, onDismiss: () -> Unit) {
             CadIconView(kind.icon(), colors.primary, 22.dp)
             Column(Modifier.weight(1f)) {
                 Text(name)
-                Text(kind.label, style = MaterialTheme.typography.labelSmall, color = colors.onSurfaceVariant)
+                Text(stringResource(kind.label), style = MaterialTheme.typography.labelSmall, color = colors.onSurfaceVariant)
             }
         }
     }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Beispiele") },
+        title = { Text(stringResource(R.string.menu_examples_title)) },
         text = {
             LazyColumn(Modifier.heightIn(max = 420.dp)) {
-                item { Row(ProjectKind.MODEL, "Platte mit vier Bohrungen") { hub.loadModelExample() } }
+                item { Row(ProjectKind.MODEL, stringResource(R.string.menu_example_plate)) { hub.loadModelExample() } }
                 items(scripts) { file ->
                     Row(ProjectKind.SCRIPT, file.removeSuffix(".scad")) {
                         val text = context.assets.open("examples/$file").use { it.readBytes().toString(Charsets.UTF_8) }
@@ -247,7 +254,7 @@ internal fun ExamplesDialog(hub: ProjectHub, onDismiss: () -> Unit) {
                 }
             }
         },
-        confirmButton = { TextButton(onClick = onDismiss) { Text("Schließen") } },
+        confirmButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.common_close)) } },
     )
 }
 
@@ -256,10 +263,11 @@ internal fun ExamplesDialog(hub: ProjectHub, onDismiss: () -> Unit) {
 internal fun rememberImporter(hub: ProjectHub): () -> Unit {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    val defaultName = stringResource(R.string.menu_import_default_name)
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) scope.launch {
             val text = withContext(Dispatchers.IO) { context.contentResolver.openInputStream(uri)?.use { it.readBytes().toString(Charsets.UTF_8) } }
-            if (text != null) hub.import(displayName(context, uri)?.removeSuffix(".paramworker")?.removeSuffix(".partwright") ?: "Import", text)
+            if (text != null) hub.import(displayName(context, uri)?.removeSuffix(".paramworker")?.removeSuffix(".partwright") ?: defaultName, text)
         }
     }
     return { launcher.launch(arrayOf("*/*")) }
@@ -285,6 +293,17 @@ private fun sendFeedback(context: Context) {
     try {
         context.startActivity(intent)
     } catch (_: ActivityNotFoundException) {
-        Toast.makeText(context, "Keine E-Mail-App gefunden – Feedback bitte an $FEEDBACK_ADDRESS", Toast.LENGTH_LONG).show()
+        Toast.makeText(context, context.getString(R.string.menu_feedback_no_app, FEEDBACK_ADDRESS), Toast.LENGTH_LONG).show()
+    }
+}
+
+/** Öffnet die Sprachseite dieser App in den Systemeinstellungen (Android 13+). */
+private fun openLanguageSettings(context: Context) {
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return
+    val intent = Intent(Settings.ACTION_APP_LOCALE_SETTINGS, Uri.fromParts("package", context.packageName, null))
+    try {
+        context.startActivity(intent)
+    } catch (_: ActivityNotFoundException) {
+        // ohne Systemseite gibt es nichts anzubieten
     }
 }

@@ -1,5 +1,6 @@
 package dev.androidcad.model
 
+import dev.androidcad.text.Msg
 import dev.androidcad.brep.BrepException
 import dev.androidcad.brep.BrepShape
 import dev.androidcad.sketch.Region
@@ -10,7 +11,7 @@ import dev.androidcad.sketch.regions
 /** Ergebnis von [Document.build]. [body] gehört dem Aufrufer und muss geschlossen werden. */
 class BuildResult(
     val body: BrepShape?,
-    val errors: Map<FeatureId, String>,
+    val errors: Map<FeatureId, Msg>,
     /** Die beim Aufbau tatsächlich verwendete Ebene jeder Skizze (bei Skizzen auf Flächen aus der Fläche berechnet). */
     val sketchPlanes: Map<FeatureId, Workplane> = emptyMap(),
     /** Für jede Skizze auf einer Fläche: die Kanten der Fläche, die sich projizieren lassen (siehe [Document.addProjections]). */
@@ -61,8 +62,8 @@ class Document {
      * Stelle, neuer Name, der alte kommt nicht mehr vor) wird in allen Ausdrücken mit umbenannt – in der Tabelle und in den Bindungen.
      */
     fun setParameters(list: List<Parameter>) {
-        list.forEach { p -> Parameter.nameProblem(p.name)?.let { throw IllegalArgumentException(it) } }
-        require(list.map { it.name }.toSet().size == list.size) { "Parameternamen müssen eindeutig sein" }
+        list.forEach { p -> Parameter.nameProblem(p.name)?.let { throw ModelException(it) } }
+        if (list.map { it.name }.toSet().size != list.size) throw ModelException(Msg(ModelText.PARAMETER_NAMES_NOT_UNIQUE))
         val names = list.map { it.name }.toSet()
         val renames = if (list.size != parameters.size) emptyList()
         else parameters.zip(list).filter { (old, new) -> old.name != new.name && old.name !in names }.map { it.first.name to it.second.name }
@@ -102,9 +103,9 @@ class Document {
             if (!exists) continue
             live[ref] = expr
             try {
-                applyValue(ref, dev.androidcad.lang.CadLang.evalNumber(expr, result.values))?.let { errors += "„$expr“: $it" }
+                applyValue(ref, dev.androidcad.lang.CadLang.evalNumber(expr, result.values))?.let { errors += Msg(ModelText.EXPRESSION_VALUE_ERROR, expr, it) }
             } catch (e: dev.androidcad.lang.CadLangException) {
-                errors += "Ausdruck ${e.message}"
+                errors += Msg(ModelText.EXPRESSION_ERROR, e.msg)
             }
         }
         bindings = live
@@ -189,7 +190,7 @@ class Document {
 
     /** Arbeitsebene aus [def]; [plane] ist ihre aktuelle Lage (z. B. aus [DatumPlane.offset]). */
     fun addPlane(name: String, def: PlaneDef, plane: Workplane): PlaneFeature {
-        DatumPlane.validate(def)?.let { throw IllegalArgumentException(it) }
+        DatumPlane.validate(def)?.let { throw ModelException(it) }
         val known = items.map { it.id }.toSet()
         val f = PlaneFeature(FeatureId(nextId), name, def, plane)
         require(known.containsAll(f.references)) { "Ebene verweist auf ein unbekanntes Feature" }
@@ -259,8 +260,8 @@ class Document {
      */
     fun addPattern(name: String, source: FeatureId, kind: PatternKind, withFillets: Boolean = false): PatternFeature {
         val src = items.firstOrNull { it.id == source } ?: throw IllegalArgumentException("Unbekanntes Feature $source")
-        patternSourceProblem(src, items, kind)?.let { throw IllegalArgumentException(it) }
-        PatternGeometry.validate(kind)?.let { throw IllegalArgumentException(it) }
+        patternSourceProblem(src, items, kind)?.let { throw ModelException(it) }
+        PatternGeometry.validate(kind)?.let { throw ModelException(it) }
         return PatternFeature(FeatureId(nextId++), name, source, kind, withFillets).also { items += it }
     }
 
@@ -333,7 +334,7 @@ class Document {
     /** Ändert die Definition einer Arbeitsebene; [plane] ist die neue Lage (falls schon bekannt, sonst die bisherige). */
     fun updatePlane(id: FeatureId, def: PlaneDef, plane: Workplane? = null) {
         val f = feature(id) as? PlaneFeature ?: throw IllegalArgumentException("Keine Arbeitsebene: $id")
-        DatumPlane.validate(def)?.let { throw IllegalArgumentException(it) }
+        DatumPlane.validate(def)?.let { throw ModelException(it) }
         update(f.copy(def = def, plane = plane ?: f.plane))
     }
 
@@ -433,7 +434,7 @@ class Document {
      */
     fun build(): BuildResult {
         var body: BrepShape? = null
-        val errors = LinkedHashMap<FeatureId, String>()
+        val errors = LinkedHashMap<FeatureId, Msg>()
         val planes = LinkedHashMap<FeatureId, Workplane>()
         val projectable = LinkedHashMap<FeatureId, List<EdgeProjection.Geometry>>()
         val projected = LinkedHashMap<FeatureId, List<Pair<ProjectedEdge, EdgeProjection.Geometry>>>()
@@ -445,12 +446,12 @@ class Document {
                     if (f.onPlane != null) {
                         val resolved = datum[f.onPlane]
                         if (resolved != null) plane = resolved
-                        else errors[f.id] = "Skizze „${f.name}“: die Arbeitsebene, auf der sie liegt, fehlt"
+                        else errors[f.id] = Msg(ModelText.SKETCH_PLANE_MISSING, f.name)
                     }
                     if (f.onFace != null) {
                         val resolved = body?.let { facePlane(it, f.onFace) }
                         if (resolved != null) plane = resolved
-                        else errors[f.id] = "Skizze „${f.name}“: die Fläche, auf der sie liegt, existiert nicht mehr oder ist nicht eben"
+                        else errors[f.id] = Msg(ModelText.SKETCH_FACE_MISSING, f.name)
                     }
                     planes[f.id] = plane
                     if (f.onFace != null && body != null) {
@@ -458,7 +459,7 @@ class Document {
                         syncProjections(body, f, plane, projected)?.let { errors[f.id] = it }
                     }
                     val r = f.sketch.solve()
-                    if (!r.isSolved) errors[f.id] = "Skizze „${f.name}“: Constraints widersprechen sich"
+                    if (!r.isSolved) errors[f.id] = Msg(ModelText.SKETCH_CONFLICTING, f.name)
                 }
                 is ExtrudeFeature -> attempt(f, errors) {
                     body = combine(body, extrudeTool(f, planes, body), f.op)
@@ -477,7 +478,7 @@ class Document {
                 }
                 is PlaneFeature -> {
                     val resolved = body?.let { DatumPlane.resolve(it, f.def) }
-                    if (resolved == null) errors[f.id] = "Ebene „${f.name}“: die Fläche oder Kante, aus der sie entsteht, existiert nicht mehr"
+                    if (resolved == null) errors[f.id] = Msg(ModelText.PLANE_SOURCE_MISSING, f.name)
                     // Rückfall auf die zuletzt bekannte Lage, damit Skizzen darauf weiter gebaut werden
                     datum[f.id] = resolved ?: f.plane
                 }
@@ -490,8 +491,9 @@ class Document {
                     if (f.withFillets) {
                         val withRounds = try {
                             applyPatternFillets(body!!, f)
-                        } catch (e: BrepException) {
-                            errors[f.id] = "„${f.name}“: Verrundungen der Kopien fehlgeschlagen – ${e.message}"
+                        } catch (e: RuntimeException) {
+                            if (e !is BrepException && e !is ModelException) throw e
+                            errors[f.id] = Msg(ModelText.PATTERN_FILLETS_FAILED, f.name, reason(e))
                             body
                         }
                         if (withRounds !== body) { body?.close(); body = withRounds }
@@ -506,15 +508,18 @@ class Document {
     }
 
     /** Führt den Aufbauschritt von [f] aus; scheitert er, landet der Grund in [errors] und der Aufbau geht mit dem nächsten Feature weiter. */
-    private inline fun attempt(f: Feature, errors: MutableMap<FeatureId, String>, step: () -> Unit) {
+    private inline fun attempt(f: Feature, errors: MutableMap<FeatureId, Msg>, step: () -> Unit) {
         try {
             step()
         } catch (e: BrepException) {
-            errors[f.id] = "„${f.name}“: ${e.message}"
+            errors[f.id] = Msg(ModelText.FEATURE_FAILED, f.name, reason(e))
         } catch (e: IllegalArgumentException) {
-            errors[f.id] = "„${f.name}“: ${e.message}"
+            errors[f.id] = Msg(ModelText.FEATURE_FAILED, f.name, reason(e))
         }
     }
+
+    /** Grund eines gescheiterten Schritts: eigene Meldung ([ModelException]) oder der technische Text des Geometriekerns. */
+    private fun reason(e: RuntimeException): Any = (e as? ModelException)?.msg ?: e.message.orEmpty()
 
     /**
      * Überträgt die beim Aufbau gefundene Lage der projizierten Kanten ([BuildResult.projected]) in die Skizzen dieses Dokuments
@@ -552,7 +557,7 @@ class Document {
     private fun syncProjections(
         body: BrepShape, f: SketchFeature, plane: Workplane,
         found: MutableMap<FeatureId, List<Pair<ProjectedEdge, EdgeProjection.Geometry>>>,
-    ): String? {
+    ): Msg? {
         var missing = 0
         val ok = ArrayList<Pair<ProjectedEdge, EdgeProjection.Geometry>>()
         for (p in f.projections) {
@@ -561,7 +566,7 @@ class Document {
             if (g == null || !EdgeProjection.update(f.sketch, p, g)) missing++ else ok += p to g
         }
         found[f.id] = ok
-        return if (missing == 0) null else "Skizze „${f.name}“: $missing projizierte Kante(n) existieren nicht mehr oder liegen nicht mehr in der Ebene"
+        return if (missing == 0) null else Msg(ModelText.PROJECTIONS_MISSING, missing, f.name)
     }
 
     /** Ebene der benannten Fläche im aktuellen Körper (die erste ebene, falls sie zerteilt wurde); `null`, wenn es sie nicht gibt. */
@@ -578,10 +583,10 @@ class Document {
      * im Körper).
      */
     private fun patternTool(body: BrepShape?, f: PatternFeature, planes: Map<FeatureId, Workplane>): BrepShape {
-        if (body == null) throw BrepException("es gibt noch keinen Körper")
-        PatternGeometry.validate(f.kind)?.let { throw IllegalArgumentException(it) }
+        if (body == null) throw ModelException(Msg(ModelText.NO_BODY))
+        PatternGeometry.validate(f.kind)?.let { throw ModelException(it) }
         val src = items.firstOrNull { it.id == f.source }
-        if (src != null) patternSourceProblem(src, items, f.kind)?.let { throw BrepException(it) }
+        if (src != null) patternSourceProblem(src, items, f.kind)?.let { throw ModelException(it) }
         val ids = PatternGeometry.instances(f.kind)
         // Muster eines Musters: kopiert wird dessen gesamtes Ergebnis (Original + Kopien), die Namen bekommen beide Kopienummern
         val nested = src is PatternFeature
@@ -590,7 +595,7 @@ class Document {
             is RevolveFeature -> revolveTool(src, planes)
             is HoleFeature -> holeTool(body, src)
             is PatternFeature -> patternResultTool(body, src, planes)
-            else -> throw BrepException("das vervielfältigte Feature existiert nicht mehr")
+            else -> throw ModelException(Msg(ModelText.PATTERN_SOURCE_GONE))
         }
         var all: BrepShape? = null
         try {
@@ -608,7 +613,7 @@ class Document {
                 }
                 all = all?.let { prev -> prev.use { p -> copy.use { c -> p.union(c) } } } ?: copy
             }
-            return all ?: throw BrepException("das Muster hat keine Kopien")
+            return all ?: throw ModelException(Msg(ModelText.PATTERN_NO_COPIES))
         } catch (e: Throwable) {
             all?.close()
             throw e
@@ -619,10 +624,10 @@ class Document {
 
     /** Spiegelbild des bisherigen Körpers an der Ebene von [f], mit den Flächennamen der Spiegelung ([MirrorNaming]). */
     private fun mirrorTool(body: BrepShape?, f: MirrorBodyFeature, datum: Map<FeatureId, Workplane>): BrepShape {
-        if (body == null) throw BrepException("es gibt noch keinen Körper, der gespiegelt werden könnte")
-        MirrorNaming.validate(f)?.let { throw IllegalArgumentException(it) }
+        if (body == null) throw ModelException(Msg(ModelText.NO_BODY_TO_MIRROR))
+        MirrorNaming.validate(f)?.let { throw ModelException(it) }
         val (o, n) = if (f.datum != null) {
-            val p = datum[f.datum] ?: throw BrepException("die Arbeitsebene, an der gespiegelt wird, fehlt")
+            val p = datum[f.datum] ?: throw ModelException(Msg(ModelText.MIRROR_PLANE_GONE))
             p.origin to p.normal
         } else f.origin to f.normal
         return body.mirror(o.x, o.y, o.z, n.x, n.y, n.z).use { it.retag { tag -> MirrorNaming.mirrorTag(tag, f.id) } }
@@ -632,7 +637,7 @@ class Document {
     fun addMirrorBody(name: String, origin: Vec3, normal: Vec3, datum: FeatureId? = null): MirrorBodyFeature {
         val f = MirrorBodyFeature(FeatureId(nextId), name, origin, normal, datum)
         if (datum != null) require(items.firstOrNull { it.id == datum } is PlaneFeature) { "Keine Arbeitsebene: $datum" }
-        MirrorNaming.validate(f)?.let { throw IllegalArgumentException(it) }
+        MirrorNaming.validate(f)?.let { throw ModelException(it) }
         nextId++
         return f.also { items += it }
     }
@@ -643,8 +648,8 @@ class Document {
             is ExtrudeFeature -> extrudeTool(src, planes, body)
             is RevolveFeature -> revolveTool(src, planes)
             is HoleFeature -> holeTool(body, src)
-            is PatternFeature -> throw BrepException("Muster lassen sich nur eine Ebene tief verschachteln")
-            else -> throw BrepException("das vervielfältigte Feature existiert nicht mehr")
+            is PatternFeature -> throw ModelException(Msg(ModelText.PATTERN_NESTING))
+            else -> throw ModelException(Msg(ModelText.PATTERN_SOURCE_GONE))
         }
         val copies = try { patternTool(body, p, planes) } catch (e: Throwable) { base.close(); throw e }
         return base.use { b -> copies.use { c -> b.union(c) } }
@@ -674,7 +679,7 @@ class Document {
      * plus 1 mm, damit keine hauchdünne Haut stehen bleibt. Vorzeichen wie [ExtrudeFeature.distance], außer der Körper liegt ganz auf der anderen Seite.
      */
     private fun throughAllDistance(f: ExtrudeFeature, plane: Workplane, body: BrepShape?): Double {
-        if (body == null) throw BrepException("„Durch alles“ braucht einen vorhandenen Körper")
+        if (body == null) throw ModelException(Msg(ModelText.THROUGH_ALL_NEEDS_BODY))
         val b = body.bounds()
         val along = (0 until 8).map { i ->
             val c = Vec3(b[if (i and 1 == 0) 0 else 3], b[if (i and 2 == 0) 1 else 4], b[if (i and 4 == 0) 2 else 5])
@@ -690,9 +695,9 @@ class Document {
     /** Ausgewählte Flächen der Skizze, um die Achse gedreht und in den Raum gestellt, vereinigt zu einem Werkzeugkörper. */
     private fun revolveTool(f: RevolveFeature, planes: Map<FeatureId, Workplane>): BrepShape {
         val sk = sketch(f.sketch)
-        val axis = RevolveGeometry.resolve(sk.sketch, f.axis) ?: throw IllegalArgumentException("die Drehachse (Linie in „${sk.name}“) existiert nicht mehr")
+        val axis = RevolveGeometry.resolve(sk.sketch, f.axis) ?: throw ModelException(Msg(ModelText.REVOLVE_AXIS_GONE, sk.name))
         return sketchTool(f.sketch, f.regionPoints, planes, check = { regions ->
-            RevolveGeometry.problem(regions, axis)?.let { throw IllegalArgumentException(it) }
+            RevolveGeometry.problem(regions, axis)?.let { throw ModelException(it) }
         }) { region ->
             BrepShape.revolve(
                 region.toProfile(f.id), axis.point.x, axis.point.y, axis.direction.x, axis.direction.y, f.angle, f.symmetric,
@@ -715,7 +720,7 @@ class Document {
         val regions: List<Region> =
             if (regionPoints.isEmpty()) sk.sketch.regions().regions
             else regionPoints.mapNotNull { sk.sketch.regionAt(it.x, it.y) }.distinct()
-        require(regions.isNotEmpty()) { "keine geschlossene Fläche in „${sk.name}“ gefunden" }
+        if (regions.isEmpty()) throw ModelException(Msg(ModelText.NO_CLOSED_REGION, sk.name))
         check(regions)
         var tool: BrepShape? = null
         try {
@@ -742,7 +747,7 @@ class Document {
         if (body == null) {
             if (op == BodyOp.CUT) {
                 tool.close()
-                throw BrepException("es gibt noch keinen Körper, von dem abgetragen werden könnte")
+                throw ModelException(Msg(ModelText.NO_BODY_TO_CUT))
             }
             return tool
         }
@@ -766,14 +771,14 @@ class Document {
      * entgegen der Außennormalen in den Körper.
      */
     private fun holeTool(body: BrepShape?, f: HoleFeature): BrepShape {
-        if (body == null) throw BrepException("es gibt noch keinen Körper")
-        require(f.diameter > 0.0 && f.diameter.isFinite()) { "Durchmesser muss größer als 0 sein" }
-        require(f.depth == null || (f.depth > 0.0 && f.depth.isFinite())) { "Tiefe muss größer als 0 sein" }
+        if (body == null) throw ModelException(Msg(ModelText.NO_BODY))
+        if (!(f.diameter > 0.0 && f.diameter.isFinite())) throw ModelException(Msg(ModelText.DIAMETER_NOT_POSITIVE))
+        if (!(f.depth == null || (f.depth > 0.0 && f.depth.isFinite()))) throw ModelException(Msg(ModelText.DEPTH_NOT_POSITIVE))
         val ids = body.facesWithTag(f.face.tag)
-        if (ids.isEmpty()) throw BrepException("die gewählte Fläche existiert nicht mehr (verändert oder entfernt)")
+        if (ids.isEmpty()) throw ModelException(Msg(ModelText.FACE_GONE))
         val planes = body.planarFaces()
         val plane = ids.mapNotNull { planes.getOrNull(it - 1) }.minByOrNull { kotlin.math.abs(it.distanceTo(f.x, f.y, f.z)) }
-            ?: throw BrepException("die gewählte Fläche ist nicht eben")
+            ?: throw ModelException(Msg(ModelText.FACE_NOT_PLANAR))
         val n = Vec3(plane.normal.first, plane.normal.second, plane.normal.third)
         val onFace = f.anchors?.let { anchoredPoint(body, plane, n, it) } ?: run {
             val d = plane.distanceTo(f.x, f.y, f.z)
@@ -795,25 +800,25 @@ class Document {
         fun v(t: Triple<Double, Double, Double>) = Vec3(t.first, t.second, t.third)
         fun line(a: EdgeDistance): HolePlacement.Line {
             val ids = body.edgesBetween(a.edge.a.tag, a.edge.b.tag)
-            if (ids.isEmpty()) throw BrepException("eine Referenzkante der Bohrung existiert nicht mehr (Fläche verändert oder entfernt)")
+            if (ids.isEmpty()) throw ModelException(Msg(ModelText.HOLE_REF_EDGE_GONE))
             val inPlane = ids.mapNotNull { id -> infos.getOrNull(id - 1) }.filter { // edges() in ID-Reihenfolge
                 it.start.let { s -> kotlin.math.abs(plane.distanceTo(s.first, s.second, s.third)) } < 1e-4 &&
                     it.end.let { e -> kotlin.math.abs(plane.distanceTo(e.first, e.second, e.third)) } < 1e-4
             }
-            val e = inPlane.firstOrNull() ?: throw BrepException("eine Referenzkante liegt nicht in der gewählten Fläche")
-            if (!e.isLine) throw BrepException("Referenzkanten müssen gerade sein")
+            val e = inPlane.firstOrNull() ?: throw ModelException(Msg(ModelText.HOLE_REF_EDGE_NOT_IN_FACE))
+            if (!e.isLine) throw ModelException(Msg(ModelText.HOLE_REF_EDGE_NOT_STRAIGHT))
             return HolePlacement.Line(v(e.start), v(e.end))
         }
         return HolePlacement.solve(v(plane.origin), n, line(anchors.first), anchors.first.distance, line(anchors.second), anchors.second.distance)
-            ?: throw BrepException("die beiden Referenzkanten der Bohrung sind parallel")
+            ?: throw ModelException(Msg(ModelText.HOLE_REF_EDGES_PARALLEL))
     }
 
     /** Findet die Öffnungen über ihre Namen und höhlt den Körper aus. Bei Fehler bleibt [body] unverändert. */
     private fun applyShell(body: BrepShape?, f: ShellFeature): BrepShape {
-        if (body == null) throw BrepException("es gibt noch keinen Körper")
-        require(f.thickness > 0.0 && f.thickness.isFinite()) { "Wandstärke muss größer als 0 sein" }
+        if (body == null) throw ModelException(Msg(ModelText.NO_BODY))
+        if (!(f.thickness > 0.0 && f.thickness.isFinite())) throw ModelException(Msg(ModelText.THICKNESS_NOT_POSITIVE))
         val ids = f.openFaces.flatMap { ref ->
-            body.facesWithTag(ref.tag).ifEmpty { throw BrepException("eine gewählte Fläche existiert nicht mehr (verändert oder entfernt)") }
+            body.facesWithTag(ref.tag).ifEmpty { throw ModelException(Msg(ModelText.A_FACE_GONE)) }
         }.distinct()
         val result = body.shell(ids, f.thickness) { tag -> faceTag(f.id, FaceRole.SIDE, ShellFeature.innerElement(tag)) }
         body.close()
@@ -822,12 +827,12 @@ class Document {
 
     /** Findet die Kanten über ihre Nachbarflächen und rundet/fast sie. Bei Fehler bleibt [body] unverändert. */
     private fun applyEdges(body: BrepShape?, f: FilletFeature): BrepShape {
-        if (body == null) throw BrepException("es gibt noch keinen Körper")
-        require(f.size > 0.0 && f.size.isFinite()) { "Größe muss größer als 0 sein" }
+        if (body == null) throw ModelException(Msg(ModelText.NO_BODY))
+        if (!(f.size > 0.0 && f.size.isFinite())) throw ModelException(Msg(ModelText.SIZE_NOT_POSITIVE))
         val ids = LinkedHashMap<Int, Int>() // Kanten-ID → Index der Referenz
         f.edges.forEachIndexed { i, ref ->
             val found = body.edgesBetween(ref.a.tag, ref.b.tag)
-            if (found.isEmpty()) throw BrepException("eine gewählte Kante existiert nicht mehr (Fläche verändert oder entfernt)")
+            if (found.isEmpty()) throw ModelException(Msg(ModelText.AN_EDGE_GONE))
             for (id in found) ids.putIfAbsent(id, i)
         }
         val tags = ids.values.map { faceTag(f.id, FaceRole.ROUND, it) }
@@ -844,15 +849,15 @@ class Document {
          * Warum [src] nicht als Quelle eines Musters taugt (`null` = taugt): erlaubt sind Extrusionen, Bohrungen und einfache Muster
          * (deren Quelle selbst kein Muster ist – eine Verschachtelungsebene, siehe [PatternGeometry.nestedCopyTag]).
          */
-        fun patternSourceProblem(src: Feature, all: List<Feature>, kind: PatternKind? = null): String? = when (src) {
+        fun patternSourceProblem(src: Feature, all: List<Feature>, kind: PatternKind? = null): Msg? = when (src) {
             is ExtrudeFeature, is RevolveFeature, is HoleFeature -> null
             is PatternFeature -> when {
-                all.firstOrNull { it.id == src.source } is PatternFeature -> "Muster lassen sich nur eine Ebene tief verschachteln"
-                PatternGeometry.isTwoWay(src.kind) -> "Ein Raster (Muster mit zwei Richtungen) lässt sich nicht weiter vervielfältigen"
-                kind != null && PatternGeometry.isTwoWay(kind) -> "Ein Muster von Mustern hat nur eine Richtung"
+                all.firstOrNull { it.id == src.source } is PatternFeature -> Msg(ModelText.PATTERN_NESTING)
+                PatternGeometry.isTwoWay(src.kind) -> Msg(ModelText.GRID_NOT_PATTERNABLE)
+                kind != null && PatternGeometry.isTwoWay(kind) -> Msg(ModelText.PATTERN_OF_PATTERN_ONE_WAY)
                 else -> null
             }
-            else -> "Nur Extrusionen, Drehungen, Bohrungen und Muster lassen sich vervielfältigen"
+            else -> Msg(ModelText.NOT_PATTERNABLE)
         }
 
         /** Länge des Bohrwerkzeugs für „durchgehend“ (mm) – länger als jedes Bauteil. */

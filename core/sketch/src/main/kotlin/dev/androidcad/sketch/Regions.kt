@@ -1,5 +1,6 @@
 package dev.androidcad.sketch
 
+import dev.androidcad.text.Msg
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.atan2
@@ -37,7 +38,7 @@ public data class Region(val outer: Loop, val holes: List<Loop>) {
 public data class RegionResult(
     val regions: List<Region>,
     /** Hinweise auf Elemente, die keine geschlossene Kontur bilden (offene Enden, Verzweigungen). */
-    val problems: List<String>,
+    val problems: List<Msg>,
 )
 
 private class UnionFind(n: Int) {
@@ -102,7 +103,7 @@ public fun Sketch.regions(tolerance: Double = 1e-6): RegionResult {
         if (a != b) edges += Edge.A(a, b, node(arc.center), id.value)
     }
 
-    val problems = ArrayList<String>()
+    val problems = ArrayList<Msg>()
     val loops = ArrayList<Loop>()
     val samples = ArrayList<List<Vec2>>()
     // Außengrenze einer verzweigten Komponente (Index in loops) → ihre Teilflächen mit Stützpunkten
@@ -203,8 +204,8 @@ public fun Sketch.regions(tolerance: Double = 1e-6): RegionResult {
             decompose(comp)
             val open = bad.firstOrNull { incident.getValue(it).size == 1 }
             val p = pos(open ?: bad[0])
-            if (open != null) problems += "Offenes Ende bei (%.2f, %.2f)".format(java.util.Locale.ROOT, p.x, p.y)
-            else if (loops.size == before) problems += "Verzweigung bei (%.2f, %.2f)".format(java.util.Locale.ROOT, p.x, p.y)
+            if (open != null) problems += Msg(SketchText.OPEN_END, p.x, p.y)
+            else if (loops.size == before) problems += Msg(SketchText.BRANCH, p.x, p.y)
             continue
         }
         // Kontur ablaufen
@@ -220,7 +221,7 @@ public fun Sketch.regions(tolerance: Double = 1e-6): RegionResult {
             cur = if (forward) e.b else e.a
             ei = incident.getValue(cur).firstOrNull { !used[it] && it in comp } ?: break
         }
-        if (segs.size != comp.size) { problems += "Kontur konnte nicht vollständig durchlaufen werden"; continue }
+        if (segs.size != comp.size) { problems += Msg(SketchText.CONTOUR_INCOMPLETE); continue }
         loops += Loop(segs, abs(signedArea(segs)))
         samples += sample(segs)
     }

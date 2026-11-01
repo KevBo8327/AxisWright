@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Startseite, Projektmenü, Projektarten, Darstellung. -->
+<resources>
+    <!-- Startseite -->
+    <string name="start_tagline">Parametrisch konstruieren – Skizze, Maße, Körper.</string>
+    <string name="start_tile_new_model">Neues Modell</string>
+    <string name="start_tile_new_model_sub">Skizze → Körper</string>
+    <string name="start_tile_new_script">Neues Skript</string>
+    <string name="start_tile_examples">Beispiele</string>
+    <string name="start_tile_examples_sub">zum Ausprobieren</string>
+    <string name="start_tile_import">Importieren</string>
+    <string name="start_tile_import_sub">Modell oder .scad</string>
+    <string name="start_tile_help">Hilfe &amp; Gesten</string>
+    <string name="start_tile_help_sub">Einführung</string>
+    <string name="start_recent">Zuletzt bearbeitet</string>
+    <string name="start_empty">Noch keine Projekte – starte mit „Neues Modell“ oder einem Beispiel.</string>
+    <string name="start_thumb_cd">Vorschau von %1$s</string>
+
+    <!-- Projektarten und Darstellung -->
+    <string name="start_kind_model">Modell</string>
+    <string name="start_kind_script">Skript</string>
+    <string name="start_theme_dark">Dunkel</string>
+    <string name="start_theme_light">Hell</string>
+    <string name="start_theme_system">Wie das System</string>
+
+    <!-- Projektmenü -->
+    <string name="menu_section_start">Start</string>
+    <string name="menu_home">Startseite</string>
+    <string name="menu_new_script">Neues Skript (OpenSCAD)</string>
+    <string name="menu_examples">Beispiele …</string>
+    <string name="menu_import">Importieren (Modell, .scad) …</string>
+    <string name="menu_open_badge">geöffnet</string>
+    <string name="menu_all_projects">Alle Projekte …</string>
+    <string name="menu_section_project">Dieses Projekt</string>
+    <string name="menu_rename">Umbenennen …</string>
+    <string name="menu_duplicate">Duplizieren</string>
+    <string name="menu_delete">Löschen …</string>
+    <string name="menu_section_app">App</string>
+    <string name="menu_appearance">Darstellung</string>
+    <string name="menu_pro">ParamWorker Pro …</string>
+    <string name="menu_pro_active">aktiv</string>
+    <string name="menu_pro_trial">Testphase frei</string>
+    <string name="menu_help">Hilfe &amp; Gesten …</string>
+    <string name="menu_feedback">Feedback senden …</string>
+    <string name="menu_imprint">Impressum &amp; Datenschutz …</string>
+    <string name="menu_licenses">Lizenzen …</string>
+    <string name="menu_language">Sprache …</string>
+    <string name="menu_feedback_no_app">Keine E-Mail-App gefunden – Feedback bitte an %1$s</string>
+
+    <!-- Dialoge des Projektmenüs -->
+    <string name="menu_rename_model_title">Modell umbenennen</string>
+    <string name="menu_rename_script_title">Skript umbenennen</string>
+    <string name="menu_delete_title">„%1$s“ löschen?</string>
+    <string name="menu_delete_msg_model">Skizzen und Körper werden dauerhaft entfernt.</string>
+    <string name="menu_delete_msg_script">Das Skript wird dauerhaft entfernt.</string>
+    <string name="menu_all_title">Alle Projekte</string>
+    <string name="menu_all_current">%1$s  (geöffnet)</string>
+    <string name="menu_copy">Kopie</string>
+    <string name="menu_examples_title">Beispiele</string>
+    <string name="menu_example_plate">Platte mit vier Bohrungen</string>
+
+    <!-- Namen neuer Projekte (werden beim Anlegen festgeschrieben) -->
+    <string name="menu_script_default_name">Neues Skript</string>
+    <string name="menu_import_default_name">Import</string>
+</resources>

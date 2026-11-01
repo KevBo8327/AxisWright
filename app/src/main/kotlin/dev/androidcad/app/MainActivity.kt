@@ -17,12 +17,12 @@ class MainActivity : ComponentActivity() {
     // Der Zustand lebt in der Activity (nicht in der Komposition) und wird beim Start aus dem
     // zuletzt geöffneten Projekt wiederhergestellt – auch nach Prozess-Tod.
     private val state by lazy {
-        CadState(ProjectRepository(File(filesDir, "projects")), lifecycleScope, "Box", DEFAULT_SOURCE)
+        CadState(ProjectRepository(File(filesDir, "projects")), lifecycleScope, getString(R.string.script_default_name), DEFAULT_SOURCE, getString(R.string.script_new_project_name))
     }
 
     // Skizzen und Modell werden im Projektspeicher (filesDir/models) gesichert und beim Start wiederhergestellt.
     private val workspace by lazy {
-        WorkspaceState(lifecycleScope, ModelSession(ModelRepository(File(filesDir, "models"))), UiPrefs(File(filesDir, "ui.properties")))
+        WorkspaceState(lifecycleScope, ModelSession(ModelRepository(File(filesDir, "models")), getString(R.string.model_default_name)), ::getString, UiPrefs(File(filesDir, "ui.properties")))
     }
 
     // Eine Projektverwaltung für Modelle und Skripte; merkt sich, welche Art zuletzt bearbeitet wurde.

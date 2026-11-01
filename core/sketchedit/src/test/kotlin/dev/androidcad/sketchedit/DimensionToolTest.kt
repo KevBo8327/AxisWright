@@ -119,7 +119,7 @@ class DimensionToolTest {
         sketch.add(LengthDim(r.edges[1], 20.0)) // rechte Kante; die linke ist damit auch bestimmt (Rechteck)
         tap(0.0, 10.0) // linke Kante
         assertNull(e.pendingAction, "kein Dialog, dessen Wert nichts bewirken könnte")
-        assertTrue(e.message!!.contains("festgelegt"), e.message)
+        assertEquals(EditText.DIM_ALREADY_DETERMINED, e.message?.key, e.message.toString())
     }
 
     @Test

@@ -18,13 +18,13 @@ internal fun CoroutineScope.writeExport(context: Context, uri: Uri, cleanup: () 
     launch(Dispatchers.IO) {
         try {
             val data = bytes()
-            val out = context.contentResolver.openOutputStream(uri) ?: throw IOException("Ziel lässt sich nicht öffnen")
+            val out = context.contentResolver.openOutputStream(uri) ?: throw IOException(context.getString(R.string.export_target_unavailable))
             out.use { it.write(data) }
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
             withContext(Dispatchers.Main) {
-                Toast.makeText(context, "Export fehlgeschlagen: ${e.message ?: e.javaClass.simpleName}", Toast.LENGTH_LONG).show()
+                Toast.makeText(context, context.getString(R.string.export_failed, e.message ?: e.javaClass.simpleName), Toast.LENGTH_LONG).show()
             }
         } finally {
             cleanup()

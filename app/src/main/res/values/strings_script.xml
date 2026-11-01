@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Skript-Editor: Standardnamen -->
+    <string name="script_default_name">Box</string>
+    <string name="script_new_project_name">New project</string>
+    <string name="script_file_default_model">model</string>
+    <string name="script_file_default_project">project</string>
+
+    <!-- Tabs, Ansicht -->
+    <string name="script_tab_code">Code</string>
+    <string name="script_tab_3d">3D</string>
+    <plurals name="script_triangles">
+        <item quantity="one">%1$,d triangle</item>
+        <item quantity="other">%1$,d triangles</item>
+    </plurals>
+    <string name="script_volume">%1$.2f cm³</string>
+    <string name="script_geometry_error">Geometry: %1$s</string>
+
+    <!-- Editor und Konsole -->
+    <string name="script_editor_label">OpenSCAD code</string>
+    <string name="script_console_ready">Ready.</string>
+    <string name="script_console_error">Error: %1$s</string>
+    <string name="script_console_warning">Warning: %1$s</string>
+
+    <!-- App-Leiste -->
+    <string name="script_save_saved">Saved</string>
+    <string name="script_save_pending">Saving …</string>
+    <string name="script_save_error">Save failed</string>
+    <string name="script_undo">Undo (Ctrl+Z)</string>
+    <string name="script_redo">Redo (Ctrl+Shift+Z)</string>
+    <string name="script_export_stl">Export STL</string>
+    <string name="script_export_3mf">Export 3MF (3D printing)</string>
+    <string name="script_export_source">Export source (.scad) …</string>
+    <string name="script_to_model_editor">Switch to model editor</string>
+
+    <!-- Parameter-Panel -->
+    <string name="script_params_empty">No parameters. Declare variables with a comment, e.g.\nwidth = 40; // [10:5:100]</string>
+</resources>

@@ -1,5 +1,6 @@
 package dev.androidcad.sketch
 
+import dev.androidcad.text.Msg
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.acos
@@ -13,10 +14,12 @@ import kotlin.math.sqrt
 import kotlin.math.tan
 
 /** Ergebnis einer Skizzenoperation: [ok] oder ein Grund ([message]), warum sie nicht möglich war. Bei Fehlern bleibt die Skizze unverändert. */
-public class OpResult private constructor(public val ok: Boolean, public val message: String?) {
+public class OpResult private constructor(public val ok: Boolean, public val message: Msg?) {
     public companion object {
-        public fun ok(message: String? = null): OpResult = OpResult(true, message)
-        public fun fail(message: String): OpResult = OpResult(false, message)
+        public fun ok(message: Msg? = null): OpResult = OpResult(true, message)
+        public fun ok(key: SketchText, vararg args: Any): OpResult = ok(Msg(key, *args))
+        public fun fail(message: Msg): OpResult = OpResult(false, message)
+        public fun fail(key: SketchText, vararg args: Any): OpResult = fail(Msg(key, *args))
     }
 }
 
@@ -199,7 +202,7 @@ public object SketchOps {
         val l = s.line(line)
         val a = s.point(l.p1); val b = s.point(l.p2)
         val len2 = (b.x - a.x) * (b.x - a.x) + (b.y - a.y) * (b.y - a.y)
-        if (len2 < 1e-18) return OpResult.fail("Die Linie hat keine Länge")
+        if (len2 < 1e-18) return OpResult.fail(SketchText.LINE_NO_LENGTH)
         fun tOf(p: Vec2) = ((p.x - a.x) * (b.x - a.x) + (p.y - a.y) * (b.y - a.y)) / len2
         val all = cuts(s, curveOf(s, line), line, null).map { tOf(it.p) to it }.filter { it.first > 1e-7 && it.first < 1 - 1e-7 }.sortedBy { it.first }
         val ts = ArrayList<Pair<Double, Cut>>()
@@ -208,12 +211,12 @@ public object SketchOps {
         val low = ts.lastOrNull { it.first <= tc }?.second
         val up = ts.firstOrNull { it.first > tc }?.second
         when {
-            low == null && up == null -> { s.remove(line); s.removeOrphanPoints(); return OpResult.ok("Linie gelöscht") }
+            low == null && up == null -> { s.remove(line); s.removeOrphanPoints(); return OpResult.ok(SketchText.LINE_DELETED) }
             low == null -> { s.setLineEndpoints(line, pointAt(s, up!!), l.p2); dropLengthConstraints(s, line) }
             up == null -> { s.setLineEndpoints(line, l.p1, pointAt(s, low)); dropLengthConstraints(s, line) }
             else -> {
                 val n1 = pointAt(s, low); val n2 = pointAt(s, up)
-                if (n1 == n2) return OpResult.fail("Die Schnittpunkte fallen zusammen")
+                if (n1 == n2) return OpResult.fail(SketchText.INTERSECTIONS_COINCIDE)
                 val second = s.addLine(n2, l.p2, l.construction)
                 s.setLineEndpoints(line, l.p1, n1)
                 dropLengthConstraints(s, line)
@@ -237,14 +240,14 @@ public object SketchOps {
         val ts = ArrayList<Pair<Double, Cut>>()
         for (x in angled) if (ts.isEmpty() || x.first - ts.last().first > 1e-7) ts += x
         if (ts.size > 1 && TWO_PI - ts.last().first + ts.first().first < 1e-7) ts.removeAt(ts.size - 1) // Schnittpunkt bei 0 doppelt
-        if (ts.isEmpty()) { s.remove(id); s.removeOrphanPoints(); return OpResult.ok("Kreis gelöscht") }
-        if (ts.size == 1) return OpResult.fail("Zum Trimmen braucht der Kreis mindestens zwei Schnittpunkte")
+        if (ts.isEmpty()) { s.remove(id); s.removeOrphanPoints(); return OpResult.ok(SketchText.CIRCLE_DELETED) }
+        if (ts.size == 1) return OpResult.fail(SketchText.TRIM_CIRCLE_NEEDS_TWO)
         val ac = angleOf(c, at).let { if (it < 0) it + TWO_PI else it }
         val prev = ts.lastOrNull { it.first <= ac } ?: ts.last()
         val next = ts.firstOrNull { it.first > ac } ?: ts.first()
         // Es bleibt der Bogen von „next“ gegen den Uhrzeigersinn bis „prev“.
         val start = pointAt(s, next.second); val end = pointAt(s, prev.second)
-        if (start == end) return OpResult.fail("Die Schnittpunkte fallen zusammen")
+        if (start == end) return OpResult.fail(SketchText.INTERSECTIONS_COINCIDE)
         val arc = s.addArc(data.center, start, end, data.construction)
         s.remapRound(id, arc)
         s.remove(id)
@@ -264,12 +267,12 @@ public object SketchOps {
         val low = ts.lastOrNull { it.first <= sc }?.second
         val up = ts.firstOrNull { it.first > sc }?.second
         when {
-            low == null && up == null -> { s.remove(id); s.removeOrphanPoints(); return OpResult.ok("Bogen gelöscht") }
+            low == null && up == null -> { s.remove(id); s.removeOrphanPoints(); return OpResult.ok(SketchText.ARC_DELETED) }
             low == null -> s.setArcEnds(id, pointAt(s, up!!), data.end)
             up == null -> s.setArcEnds(id, data.start, pointAt(s, low))
             else -> {
                 val n1 = pointAt(s, low); val n2 = pointAt(s, up)
-                if (n1 == n2) return OpResult.fail("Die Schnittpunkte fallen zusammen")
+                if (n1 == n2) return OpResult.fail(SketchText.INTERSECTIONS_COINCIDE)
                 val second = s.addArc(data.center, n2, data.end, data.construction)
                 s.setArcEnds(id, data.start, n1)
                 s.add(EqualRadius(id, second))
@@ -289,13 +292,13 @@ public object SketchOps {
         val e = if (endIsP2) l.p2 else l.p1
         val from = if (endIsP2) a else b
         val ep = s.point(e)
-        if (s.elementsUsing(e).any { it != line }) return OpResult.fail("Der Endpunkt ist mit anderen Elementen verbunden")
+        if (s.elementsUsing(e).any { it != line }) return OpResult.fail(SketchText.END_CONNECTED)
         val len = dist(from, ep)
-        if (len < EPS) return OpResult.fail("Die Linie hat keine Länge")
+        if (len < EPS) return OpResult.fail(SketchText.LINE_NO_LENGTH)
         val dx = (ep.x - from.x) / len; val dy = (ep.y - from.y) / len
         val ray = Curve.Seg(ep, Vec2(ep.x + dx * RAY, ep.y + dy * RAY))
         val hit = cuts(s, ray, line, null).map { (it.p.x - ep.x) * dx + (it.p.y - ep.y) * dy to it }.filter { it.first > 1e-7 }.minByOrNull { it.first }
-            ?: return OpResult.fail("Kein Element in Verlängerungsrichtung")
+            ?: return OpResult.fail(SketchText.NOTHING_TO_EXTEND_TO)
         s.movePoint(e, hit.second.p.x, hit.second.p.y)
         when (val o = hit.second.other) {
             is Other.OnLine -> s.add(PointOnLine(e, o.id))
@@ -312,14 +315,14 @@ public object SketchOps {
         val st = s.point(data.start); val en = s.point(data.end)
         val endIsEnd = dist(at, en) <= dist(at, st)
         val moving = if (endIsEnd) data.end else data.start
-        if (s.elementsUsing(moving).any { it != arc }) return OpResult.fail("Der Endpunkt ist mit anderen Elementen verbunden")
+        if (s.elementsUsing(moving).any { it != arc }) return OpResult.fail(SketchText.END_CONNECTED)
         val base = if (endIsEnd) curve.a0 + curve.sweep else curve.a0
         // freier Bereich außerhalb des Bogens: vom Ende weiter gegen den Uhrzeigersinn bzw. vom Start im Uhrzeigersinn
         val free = TWO_PI - curve.sweep
         val full = Curve.Circ(curve.c, curve.r)
         val found = cuts(s, full, null, arc).map { (if (endIsEnd) ccw(base, angleOf(curve.c, it.p)) else ccw(angleOf(curve.c, it.p), base)) to it }
             .filter { it.first > 1e-7 && it.first < free - 1e-7 }.minByOrNull { it.first }
-            ?: return OpResult.fail("Kein Element in Verlängerungsrichtung")
+            ?: return OpResult.fail(SketchText.NOTHING_TO_EXTEND_TO)
         s.movePoint(moving, found.second.p.x, found.second.p.y)
         when (val o = found.second.other) {
             is Other.OnLine -> s.add(PointOnLine(moving, o.id))
@@ -337,7 +340,7 @@ public object SketchOps {
      * mit dem alten und bekommt den neuen Radius als Maß.
      */
     public fun offset(s: Sketch, round: RoundId, side: Vec2, distance: Double): OpResult {
-        if (!(distance > 0) || !distance.isFinite()) return OpResult.fail("Der Abstand muss größer als 0 sein")
+        if (!(distance > 0) || !distance.isFinite()) return OpResult.fail(SketchText.DISTANCE_NOT_POSITIVE)
         val curve = curveOf(s, round)
         val (c, r, construction) = when (round) {
             is CircleId -> Triple(s.point(s.circle(round).center), s.circle(round).radius, s.circle(round).construction)
@@ -345,7 +348,7 @@ public object SketchOps {
         }
         val outside = dist(side, c) > r
         val r2 = if (outside) r + distance else r - distance
-        if (r2 < 1e-6) return OpResult.fail("Der Versatz nach innen ist größer als der Radius")
+        if (r2 < 1e-6) return OpResult.fail(SketchText.OFFSET_EXCEEDS_RADIUS)
         when (round) {
             is CircleId -> {
                 val n = s.addCircle(s.circle(round).center, r2, construction)
@@ -404,7 +407,7 @@ public object SketchOps {
      * Eine einzelne Linie bekommt zusätzlich gleiche Länge; die Enden einer offenen Kette können noch entlang ihrer Linie gleiten.
      */
     public fun offset(s: Sketch, line: LineId, side: Vec2, distance: Double): OpResult {
-        if (!(distance > 0) || !distance.isFinite()) return OpResult.fail("Der Abstand muss größer als 0 sein")
+        if (!(distance > 0) || !distance.isFinite()) return OpResult.fail(SketchText.DISTANCE_NOT_POSITIVE)
         val (chain, closed) = chainOf(s, line)
         val clicked = chain.first { it.line == line }
         val cu = s.point(clicked.from); val cv = s.point(clicked.to)
@@ -414,7 +417,7 @@ public object SketchOps {
         val offs = chain.map {
             val u = s.point(it.from); val v = s.point(it.to)
             val len = dist(u, v)
-            if (len < EPS) return OpResult.fail("Eine Linie der Kette hat keine Länge")
+            if (len < EPS) return OpResult.fail(SketchText.CHAIN_LINE_NO_LENGTH)
             val dx = (v.x - u.x) / len; val dy = (v.y - u.y) / len
             Off(u.x + sign * -dy * distance, u.y + sign * dx * distance, dx, dy)
         }
@@ -452,22 +455,22 @@ public object SketchOps {
      * gekürzt, der Bogen ist tangential zu beiden und hat den Radius als Maß. Der Eckpunkt entfällt (samt seiner Maße).
      */
     public fun fillet(s: Sketch, corner: PointId, radius: Double): OpResult {
-        if (!(radius > 0) || !radius.isFinite()) return OpResult.fail("Der Radius muss größer als 0 sein")
+        if (!(radius > 0) || !radius.isFinite()) return OpResult.fail(SketchText.RADIUS_NOT_POSITIVE)
         val users = s.elementsUsing(corner)
-        if (users.size != 2 || users.any { it !is LineId }) return OpResult.fail("Die Ecke braucht genau zwei Linien")
+        if (users.size != 2 || users.any { it !is LineId }) return OpResult.fail(SketchText.CORNER_NEEDS_TWO_LINES)
         val l1 = users[0] as LineId; val l2 = users[1] as LineId
         val d1 = s.line(l1); val d2 = s.line(l2)
         val a1 = if (d1.p1 == corner) d1.p2 else d1.p1
         val a2 = if (d2.p1 == corner) d2.p2 else d2.p1
         val c = s.point(corner); val p1 = s.point(a1); val p2 = s.point(a2)
         val len1 = dist(c, p1); val len2 = dist(c, p2)
-        if (len1 < EPS || len2 < EPS) return OpResult.fail("Eine Linie hat keine Länge")
+        if (len1 < EPS || len2 < EPS) return OpResult.fail(SketchText.A_LINE_NO_LENGTH)
         val u1x = (p1.x - c.x) / len1; val u1y = (p1.y - c.y) / len1
         val u2x = (p2.x - c.x) / len2; val u2y = (p2.y - c.y) / len2
         val theta = acos((u1x * u2x + u1y * u2y).coerceIn(-1.0, 1.0)) // Winkel zwischen den Linien
-        if (theta < 1e-3 || theta > PI - 1e-3) return OpResult.fail("Die Linien liegen auf einer Geraden")
+        if (theta < 1e-3 || theta > PI - 1e-3) return OpResult.fail(SketchText.LINES_COLLINEAR)
         val t = radius / tan(theta / 2)
-        if (t >= len1 - 1e-9 || t >= len2 - 1e-9) return OpResult.fail("Der Radius ist für diese Ecke zu groß")
+        if (t >= len1 - 1e-9 || t >= len2 - 1e-9) return OpResult.fail(SketchText.RADIUS_TOO_LARGE)
         val t1 = Vec2(c.x + u1x * t, c.y + u1y * t); val t2 = Vec2(c.x + u2x * t, c.y + u2y * t)
         val bx = u1x + u2x; val by = u1y + u2y
         val bl = hypot(bx, by)
@@ -552,8 +555,8 @@ public object SketchOps {
      */
     public fun cornerToOrigin(s: Sketch, lines: Collection<LineId>, rounds: Collection<RoundId>): OpResult {
         val pts = shapePoints(s, lines, rounds)
-        if (pts.isEmpty()) return OpResult.fail("Wähle die Form, die an den Ursprung soll.")
-        if (attachedToOrigin(s, pointsOf(s, shapeLines(s, lines), shapeRounds(s, rounds)))) return OpResult.fail("Die Form hängt schon am Ursprung.")
+        if (pts.isEmpty()) return OpResult.fail(SketchText.SELECT_SHAPE_FOR_ORIGIN)
+        if (attachedToOrigin(s, pointsOf(s, shapeLines(s, lines), shapeRounds(s, rounds)))) return OpResult.fail(SketchText.SHAPE_ALREADY_AT_ORIGIN)
         val nearest = pts.minBy { s.point(it).let { p -> hypot(p.x, p.y) } }
         s.add(Coincident(s.origin, nearest))
         return OpResult.ok()
@@ -571,15 +574,15 @@ public object SketchOps {
      * Mittelpunkt der Form als Punkt: bei einem einzelnen Kreis sein Mittelpunkt, sonst ein neuer Punkt in der Mitte einer neuen
      * Hilfsdiagonale (links unten → rechts oben, siehe [centerOnOrigin]). `null` mit Grund, wenn die Form keine Ausdehnung hat.
      */
-    private fun shapeCenter(s: Sketch, lines: Collection<LineId>, rounds: Collection<RoundId>): Pair<PointId?, String?> {
+    private fun shapeCenter(s: Sketch, lines: Collection<LineId>, rounds: Collection<RoundId>): Pair<PointId?, SketchText?> {
         val myLines = shapeLines(s, lines)
         val myRounds = shapeRounds(s, rounds)
         if (myLines.isEmpty() && myRounds.size == 1 && myRounds.first() is CircleId) return s.circle(myRounds.first() as CircleId).center to null
         val pts = shapePoints(s, myLines, myRounds)
-        if (pts.size < 2) return null to "Wähle die Form, die mittig sitzen soll."
+        if (pts.size < 2) return null to SketchText.SELECT_SHAPE_TO_CENTER
         val lo = pts.minBy { s.point(it).let { p -> p.x + p.y } }
         val hi = pts.maxBy { s.point(it).let { p -> p.x + p.y } }
-        if (lo == hi || dist(s.point(lo), s.point(hi)) < SAME_POINT) return null to "Die Form hat keine Ausdehnung."
+        if (lo == hi || dist(s.point(lo), s.point(hi)) < SAME_POINT) return null to SketchText.SHAPE_NO_EXTENT
         val diagonal = s.addLine(lo, hi, construction = true)
         val a = s.point(lo); val b = s.point(hi)
         val m = s.addPoint((a.x + b.x) / 2, (a.y + b.y) / 2)
@@ -595,9 +598,9 @@ public object SketchOps {
     public fun centerOnEdge(s: Sketch, lines: Collection<LineId>, rounds: Collection<RoundId>, edge: LineId): OpResult {
         val l = s.line(edge)
         val a = s.point(l.p1); val b = s.point(l.p2)
-        if (dist(a, b) < SAME_POINT) return OpResult.fail("Die Kante hat keine Länge.")
+        if (dist(a, b) < SAME_POINT) return OpResult.fail(SketchText.EDGE_NO_LENGTH)
         val (m, why) = shapeCenter(s, lines.filter { it != edge }, rounds)
-        if (m == null) return OpResult.fail(why ?: "Nicht möglich")
+        if (m == null) return OpResult.fail(why ?: SketchText.NOT_POSSIBLE)
         val mid = Vec2((a.x + b.x) / 2, (a.y + b.y) / 2)
         val q = s.point(m)
         val ux = (b.x - a.x) / dist(a, b); val uy = (b.y - a.y) / dist(a, b)
@@ -607,7 +610,7 @@ public object SketchOps {
         s.add(Midpoint(e, edge))
         val normal = s.addLine(e, m, construction = true)
         s.add(Perpendicular(normal, edge))
-        return OpResult.ok("Mittig zur Kante – der Abstand zur Kante ist noch frei (z. B. mit „Abstand“ bemaßen).")
+        return OpResult.ok(SketchText.CENTERED_ON_EDGE)
     }
 
     /** Wohin [centerOn] die Mitte einer Form legt: auf einen Punkt oder in die Mitte der Strecke zwischen zwei Punkten. */
@@ -625,7 +628,7 @@ public object SketchOps {
      */
     public fun centerOnOrigin(s: Sketch, lines: Collection<LineId>, rounds: Collection<RoundId>): OpResult {
         if (attachedToOrigin(s, pointsOf(s, shapeLines(s, lines), shapeRounds(s, rounds))))
-            return OpResult.fail(if (shapeLines(s, lines).isEmpty()) "Der Kreis sitzt schon auf dem Ursprung." else "Die Form hängt schon am Ursprung.")
+            return OpResult.fail(if (shapeLines(s, lines).isEmpty()) SketchText.CIRCLE_ALREADY_AT_ORIGIN else SketchText.SHAPE_ALREADY_AT_ORIGIN)
         return centerOn(s, lines, rounds, CenterTarget.Point(s.origin))
     }
 
@@ -642,16 +645,16 @@ public object SketchOps {
         val shapeDiagonal: LineId?
         if (single == null) {
             val pts = shapePoints(s, myLines, myRounds)
-            if (pts.size < 2) return OpResult.fail("Wähle die Form, die mittig sitzen soll.")
+            if (pts.size < 2) return OpResult.fail(SketchText.SELECT_SHAPE_TO_CENTER)
             val lo = pts.minBy { s.point(it).let { p -> p.x + p.y } }
             val hi = pts.maxBy { s.point(it).let { p -> p.x + p.y } }
-            if (lo == hi || dist(s.point(lo), s.point(hi)) < SAME_POINT) return OpResult.fail("Die Form hat keine Ausdehnung.")
+            if (lo == hi || dist(s.point(lo), s.point(hi)) < SAME_POINT) return OpResult.fail(SketchText.SHAPE_NO_EXTENT)
             shapeDiagonal = s.addLine(lo, hi, construction = true)
         } else shapeDiagonal = null
         when (target) {
             is CenterTarget.Point -> if (single != null) s.add(Coincident(target.point, single)) else s.add(Midpoint(target.point, shapeDiagonal!!))
             is CenterTarget.Diagonal -> {
-                if (target.a == target.b || dist(s.point(target.a), s.point(target.b)) < SAME_POINT) return OpResult.fail("Die Fläche hat keine Ausdehnung.")
+                if (target.a == target.b || dist(s.point(target.a), s.point(target.b)) < SAME_POINT) return OpResult.fail(SketchText.FACE_NO_EXTENT)
                 val targetDiagonal = s.addLine(target.a, target.b, construction = true)
                 if (single != null) s.add(Midpoint(single, targetDiagonal))
                 else {
@@ -695,11 +698,11 @@ public object SketchOps {
      */
     public fun mirror(s: Sketch, lines: Collection<LineId>, rounds: Collection<RoundId>, axis: LineId): OpResult {
         val srcLines = lines.filter { it != axis }
-        if (srcLines.isEmpty() && rounds.isEmpty()) return OpResult.fail("Nichts zu spiegeln")
+        if (srcLines.isEmpty() && rounds.isEmpty()) return OpResult.fail(SketchText.NOTHING_TO_MIRROR)
         val ad = s.line(axis)
         val a = s.point(ad.p1); val b = s.point(ad.p2)
         val alen = dist(a, b)
-        if (alen < EPS) return OpResult.fail("Die Spiegelachse hat keine Länge")
+        if (alen < EPS) return OpResult.fail(SketchText.MIRROR_AXIS_NO_LENGTH)
         val ux = (b.x - a.x) / alen; val uy = (b.y - a.y) / alen
         fun reflect(p: Vec2): Vec2 {
             val dx = p.x - a.x; val dy = p.y - a.y
@@ -784,11 +787,11 @@ public object SketchOps {
     public fun linearPattern(
         s: Sketch, lines: Collection<LineId>, rounds: Collection<RoundId>, direction: Vec2, count: Int, spacing: Double, along: LineId? = null,
     ): OpResult {
-        if (lines.isEmpty() && rounds.isEmpty()) return OpResult.fail("Nichts zu vervielfältigen")
-        if (count < 2) return OpResult.fail("Anzahl muss mindestens 2 sein")
-        if (!spacing.isFinite() || spacing <= 0.0) return OpResult.fail("Abstand muss größer als 0 sein")
+        if (lines.isEmpty() && rounds.isEmpty()) return OpResult.fail(SketchText.NOTHING_TO_PATTERN)
+        if (count < 2) return OpResult.fail(SketchText.COUNT_AT_LEAST_2)
+        if (!spacing.isFinite() || spacing <= 0.0) return OpResult.fail(SketchText.SPACING_NOT_POSITIVE)
         val len = hypot(direction.x, direction.y)
-        if (!len.isFinite() || len < EPS) return OpResult.fail("Richtung fehlt")
+        if (!len.isFinite() || len < EPS) return OpResult.fail(SketchText.DIRECTION_MISSING)
         val dx = direction.x / len * spacing; val dy = direction.y / len * spacing
         val src = pointsOf(s, lines, rounds)
         val anchor = src.first()
@@ -811,7 +814,7 @@ public object SketchOps {
             prevCircles = copyElements(s, lines, rounds, map, prevCircles)
             prev = map
         }
-        return OpResult.ok("${count - 1} ${if (count == 2) "Kopie" else "Kopien"} – Abstand über die Bemaßung der Hilfslinie änderbar.")
+        return OpResult.ok(SketchText.LINEAR_COPIES, count - 1)
     }
 
     /**
@@ -820,12 +823,12 @@ public object SketchOps {
      * der Mittelpunkt selbst bleibt ein gemeinsamer Punkt.
      */
     public fun circularPattern(s: Sketch, lines: Collection<LineId>, rounds: Collection<RoundId>, center: PointId, count: Int, angle: Double = 360.0): OpResult {
-        if (lines.isEmpty() && rounds.isEmpty()) return OpResult.fail("Nichts zu vervielfältigen")
-        if (count < 2) return OpResult.fail("Anzahl muss mindestens 2 sein")
-        if (!angle.isFinite() || angle == 0.0 || abs(angle) > 360.0) return OpResult.fail("Winkel muss zwischen −360° und 360° liegen und darf nicht 0 sein")
+        if (lines.isEmpty() && rounds.isEmpty()) return OpResult.fail(SketchText.NOTHING_TO_PATTERN)
+        if (count < 2) return OpResult.fail(SketchText.COUNT_AT_LEAST_2)
+        if (!angle.isFinite() || angle == 0.0 || abs(angle) > 360.0) return OpResult.fail(SketchText.ANGLE_RANGE_360)
         val step = if (abs(angle) >= 360.0 - 1e-9) angle / count else angle / (count - 1)
         val src = pointsOf(s, lines, rounds)
-        if (src.all { it == center }) return OpResult.fail("Der Mittelpunkt kann nicht das einzige Element sein")
+        if (src.all { it == center }) return OpResult.fail(SketchText.CENTER_ONLY_ELEMENT)
         val c = s.point(center)
         var prev = src.associateWith { it }
         var prevCircles = emptyMap<CircleId, CircleId>()
@@ -843,7 +846,7 @@ public object SketchOps {
             prevCircles = copyElements(s, lines, rounds, map, prevCircles)
             prev = map
         }
-        return OpResult.ok("${count - 1} ${if (count == 2) "Kopie" else "Kopien"} um den Mittelpunkt.")
+        return OpResult.ok(SketchText.CIRCULAR_COPIES, count - 1)
     }
 
     // ---- Muster nachträglich ändern ---------------------------------------------------------------
@@ -913,10 +916,10 @@ public object SketchOps {
      * bei einem Teilkreis bleibt der Gesamtwinkel gleich.
      */
     public fun setPatternCount(s: Sketch, pattern: SketchPattern, count: Int): OpResult {
-        if (count < 2) return OpResult.fail("Anzahl muss mindestens 2 sein")
-        if (count > MAX_PATTERN_COUNT) return OpResult.fail("Höchstens $MAX_PATTERN_COUNT Exemplare")
+        if (count < 2) return OpResult.fail(SketchText.COUNT_AT_LEAST_2)
+        if (count > MAX_PATTERN_COUNT) return OpResult.fail(SketchText.MAX_INSTANCES, MAX_PATTERN_COUNT)
         val old = pattern.count
-        if (count == old) return OpResult.fail("Das Muster hat schon $count Exemplare")
+        if (count == old) return OpResult.fail(SketchText.PATTERN_ALREADY_HAS, count)
         val chains = pattern.chains
         fun layer(k: Int) = chains.map { it[k] }.toSet()
         // Vorlage: Elemente der ersten Kopie, zurückgeführt auf das Original (so zählen nur Elemente, die wirklich kopiert wurden)
@@ -937,7 +940,7 @@ public object SketchOps {
                 }
             }
         }
-        if (srcLines.isEmpty() && srcRounds.isEmpty()) return OpResult.fail("Die Vorlage des Musters ist nicht mehr vollständig")
+        if (srcLines.isEmpty() && srcRounds.isEmpty()) return OpResult.fail(SketchText.PATTERN_SOURCE_INCOMPLETE)
 
         if (count < old) for (k in count until old) layer(k).forEach { s.remove(it) }
 
@@ -994,7 +997,7 @@ public object SketchOps {
             }
         }
         val added = count - old
-        return OpResult.ok(if (added > 0) "$added ${if (added == 1) "Exemplar" else "Exemplare"} ergänzt – jetzt $count." else "${-added} ${if (added == -1) "Exemplar" else "Exemplare"} entfernt – jetzt $count.")
+        return if (added > 0) OpResult.ok(SketchText.INSTANCES_ADDED, added, count) else OpResult.ok(SketchText.INSTANCES_REMOVED, -added, count)
     }
 
     /** Obergrenze für die Anzahl der Exemplare eines Skizzenmusters (die Skizze bleibt damit lösbar und bedienbar). */

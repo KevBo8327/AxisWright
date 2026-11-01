@@ -15,6 +15,7 @@ kotlin {
 }
 
 dependencies {
+    api(project(":core:text"))
     testImplementation(libs.kotlin.test)
 }
 

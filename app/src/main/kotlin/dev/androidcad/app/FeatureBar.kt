@@ -54,6 +54,9 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.platform.LocalResources
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import dev.androidcad.model.BasePlane
 import dev.androidcad.model.BodyOp
 import dev.androidcad.model.EdgeKind
@@ -94,33 +97,11 @@ internal fun Feature.icon(): CadIcon = when (this) {
 }
 
 /** Kurzbeschreibung der Ebene einer Skizze: „auf Fläche“, „XY +8 mm“ oder „frei“. */
+@Composable
 internal fun planeLabel(s: SketchFeature): String = when {
-    s.onFace != null -> "auf Fläche"
-    s.onPlane != null -> "auf Ebene"
-    else -> PlaneSpec.from(s.plane)?.label ?: "frei"
-}
-
-internal fun Feature.label(): String = when (this) {
-    is SketchFeature -> "$name · ${planeLabel(this)}"
-    is ExtrudeFeature -> if (throughAll) "$name · durch alles" else "$name · ${formatValue(kotlin.math.abs(distance))} mm"
-    is RevolveFeature -> "$name · ${formatValue(kotlin.math.abs(angle))}°"
-    is ShellFeature -> "$name · ${formatValue(thickness)} mm"
-    is FilletFeature -> "$name · ${formatValue(size)} mm"
-    is HoleFeature -> "$name · Ø${formatValue(diameter)}"
-    is PlaneFeature -> when (val d = def) {
-        is PlaneDef.Offset -> "$name · ${formatValue(d.distance)} mm"
-        is PlaneDef.AtEdge -> "$name · ${formatValue(d.angle)}° an Kante"
-    }
-    is PatternFeature -> when (val k = kind) {
-        is PatternKind.Linear ->
-            if (k.direction2 != null) "$name · ${k.count} × ${k.count2} · ${formatValue(k.spacing)}/${formatValue(k.spacing2)} mm"
-            else "$name · ${k.count}× ${formatValue(k.spacing)} mm"
-        is PatternKind.Circular -> "$name · ${k.count}× ${formatValue(k.angle)}°"
-        is PatternKind.Mirror -> "$name · gespiegelt"
-    }
-    is MirrorBodyFeature ->
-        if (datum != null) "$name · an Arbeitsebene"
-        else normal.dominantAxis().let { a -> "$name · ${AXIS_NAMES[a]} = ${formatValue(origin.component(a))} mm" }
+    s.onFace != null -> stringResource(R.string.feat_plane_on_face)
+    s.onPlane != null -> stringResource(R.string.feat_plane_on_plane)
+    else -> PlaneSpec.from(s.plane)?.label() ?: stringResource(R.string.feat_plane_free)
 }
 
 /**
@@ -149,7 +130,7 @@ fun Timeline(state: WorkspaceState, modifier: Modifier) {
                     .height(40.dp)
                     .background(if (selected) colors.primaryContainer else androidx.compose.ui.graphics.Color.Transparent, shapeItem)
                     .combinedClickable(
-                        onClickLabel = if (selected) "Bearbeiten" else "Auswählen", onLongClickLabel = "Menü",
+                        onClickLabel = if (selected) stringResource(R.string.common_edit) else stringResource(R.string.feat_tl_click_select), onLongClickLabel = stringResource(R.string.feat_tl_long_click_menu),
                         onClick = {
                             when {
                                 !selected -> state.select(f.id, openCard = false)
@@ -180,25 +161,26 @@ private fun FeatureMenu(state: WorkspaceState, f: Feature, expanded: Boolean, on
     var renaming by remember { mutableStateOf(false) }
     var deleting by remember { mutableStateOf(false) }
     var changingPlane by remember { mutableStateOf(false) }
+    val menuCd = stringResource(R.string.feat_tl_cd_menu, f.name)
     Box {
-        TextButton(onClick = onExpand, modifier = Modifier.semantics { contentDescription = "Menü zu ${f.name}" }) { Text("⋯") }
+        TextButton(onClick = onExpand, modifier = Modifier.semantics { contentDescription = menuCd }) { Text("⋯") }
         DropdownMenu(expanded = expanded, onDismissRequest = onDismiss) {
             if (f is SketchFeature) {
-                DropdownMenuItem(text = { Text("Skizze bearbeiten") }, onClick = { onDismiss(); state.editSketch() })
-                if (!f.planeIsDerived) DropdownMenuItem(text = { Text("Ebene ändern …") }, onClick = { onDismiss(); changingPlane = true })
-            } else DropdownMenuItem(text = { Text("Bearbeiten") }, onClick = { onDismiss(); state.openCard() })
-            DropdownMenuItem(text = { Text("Umbenennen …") }, onClick = { onDismiss(); renaming = true })
-            DropdownMenuItem(text = { Text("Löschen …") }, onClick = { onDismiss(); deleting = true })
+                DropdownMenuItem(text = { Text(stringResource(R.string.feat_edit_sketch)) }, onClick = { onDismiss(); state.editSketch() })
+                if (!f.planeIsDerived) DropdownMenuItem(text = { Text(stringResource(R.string.feat_menu_change_plane)) }, onClick = { onDismiss(); changingPlane = true })
+            } else DropdownMenuItem(text = { Text(stringResource(R.string.common_edit)) }, onClick = { onDismiss(); state.openCard() })
+            DropdownMenuItem(text = { Text(stringResource(R.string.feat_menu_rename)) }, onClick = { onDismiss(); renaming = true })
+            DropdownMenuItem(text = { Text(stringResource(R.string.feat_menu_delete)) }, onClick = { onDismiss(); deleting = true })
         }
     }
     if (renaming) {
         var text by remember { mutableStateOf(f.name) }
         AlertDialog(
             onDismissRequest = { renaming = false },
-            title = { Text("Umbenennen") },
-            text = { OutlinedTextField(value = text, onValueChange = { text = it }, singleLine = true, label = { Text("Name") }) },
-            confirmButton = { TextButton(onClick = { renaming = false; state.select(f.id); state.renameSelected(text) }, enabled = text.isNotBlank()) { Text("OK") } },
-            dismissButton = { TextButton(onClick = { renaming = false }) { Text("Abbrechen") } },
+            title = { Text(stringResource(R.string.common_rename)) },
+            text = { OutlinedTextField(value = text, onValueChange = { text = it }, singleLine = true, label = { Text(stringResource(R.string.common_name)) }) },
+            confirmButton = { TextButton(onClick = { renaming = false; state.select(f.id); state.renameSelected(text) }, enabled = text.isNotBlank()) { Text(stringResource(R.string.common_ok)) } },
+            dismissButton = { TextButton(onClick = { renaming = false }) { Text(stringResource(R.string.common_cancel)) } },
         )
     }
     if (deleting) {
@@ -206,21 +188,24 @@ private fun FeatureMenu(state: WorkspaceState, f: Feature, expanded: Boolean, on
         val dependents = remember(f.id) { state.dependentNames(f.id) }
         AlertDialog(
             onDismissRequest = { deleting = false },
-            title = { Text("„${f.name}“ löschen?") },
+            title = { Text(stringResource(R.string.feat_delete_title, f.name)) },
             text = {
+                val res = LocalResources.current
                 Text(
-                    if (dependents.isEmpty()) "Nichts sonst baut auf diesem Schritt auf. Rückgängig macht das Löschen wieder rückgängig."
-                    else "Mit gelöscht ${if (dependents.size == 1) "wird" else "werden"}, weil ${if (dependents.size == 1) "es" else "sie"} darauf aufbau${if (dependents.size == 1) "t" else "en"}: " +
-                        dependents.joinToString(", ") { "„$it“" } + ". Rückgängig holt alles wieder zurück.",
+                    if (dependents.isEmpty()) stringResource(R.string.feat_delete_alone)
+                    else pluralStringResource(
+                        R.plurals.feat_delete_with_dependents, dependents.size,
+                        dependents.joinToString(", ") { res.getString(R.string.feat_quoted_name, it) },
+                    ),
                 )
             },
-            confirmButton = { TextButton(onClick = { deleting = false; state.select(f.id); state.deleteSelected() }) { Text("Löschen") } },
-            dismissButton = { TextButton(onClick = { deleting = false }) { Text("Abbrechen") } },
+            confirmButton = { TextButton(onClick = { deleting = false; state.select(f.id); state.deleteSelected() }) { Text(stringResource(R.string.common_delete)) } },
+            dismissButton = { TextButton(onClick = { deleting = false }) { Text(stringResource(R.string.common_cancel)) } },
         )
     }
     if (changingPlane && f is SketchFeature) {
         PlaneDialog(
-            title = "Ebene der Skizze ändern",
+            title = stringResource(R.string.feat_plane_change_title),
             initial = PlaneSpec.from(f.plane) ?: PlaneSpec(BasePlane.XY),
             onConfirm = { changingPlane = false; state.select(f.id); state.changePlane(it) },
             onDismiss = { changingPlane = false },
@@ -246,22 +231,22 @@ internal fun PlaneDialog(title: String, initial: PlaneSpec, onConfirm: (PlaneSpe
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     BasePlane.entries.forEach { b ->
-                        val (name, view) = b.title.split(" · ").let { it[0] to it.getOrElse(1) { "" } }
+                        val (name, view) = coreLabel(b).split(" · ").let { it[0] to it.getOrElse(1) { "" } }
                         PlaneTile(name, view, base == b, onClick = { base = b }) { PlanePicture(b) }
                     }
-                    if (onFace != null) PlaneTile("Fläche", "auf dem Körper", false, onClick = onFace) {
+                    if (onFace != null) PlaneTile(stringResource(R.string.feat_plane_tile_face), stringResource(R.string.feat_plane_tile_face_sub), false, onClick = onFace) {
                         CadIconView(CadIcon.SKETCH_ON_FACE, MaterialTheme.colorScheme.primary, 40.dp)
                     }
                 }
                 OutlinedTextField(
                     value = offsetText, onValueChange = { offsetText = it }, singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                    isError = offset == null, label = { Text("Versatz entlang der Normalen (mm)") },
+                    isError = offset == null, label = { Text(stringResource(R.string.feat_plane_offset)) },
                 )
             }
         },
-        confirmButton = { TextButton(onClick = { offset?.let { onConfirm(PlaneSpec(base, it)) } }, enabled = offset != null) { Text("OK") } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Abbrechen") } },
+        confirmButton = { TextButton(onClick = { offset?.let { onConfirm(PlaneSpec(base, it)) } }, enabled = offset != null) { Text(stringResource(R.string.common_ok)) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.common_cancel)) } },
     )
 }
 
@@ -341,33 +326,33 @@ fun FeatureControls(state: WorkspaceState) {
     ) {
         if (measure != null) {
             Text(
-                if (measure.picks.isEmpty()) "Tippe eine Kante oder Fläche an – oder zwei für Abstand und Winkel." else "Erneut tippen hebt die Wahl auf; ein drittes Teil ersetzt das älteste.",
+                if (measure.picks.isEmpty()) stringResource(R.string.feat_measure_hint_empty) else stringResource(R.string.feat_measure_hint_picks),
                 style = MaterialTheme.typography.labelLarge,
             )
-            measure.lines.forEach { Text(it, style = MaterialTheme.typography.bodyLarge) }
-            OutlinedButton(onClick = state::cancelMeasure, modifier = Modifier.fillMaxWidth()) { Text("Fertig") }
+            measure.lines.forEach { Text(it.text(), style = MaterialTheme.typography.bodyLarge) }
+            OutlinedButton(onClick = state::cancelMeasure, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.common_done)) }
         } else if (pattern != null && holeMode == null && mode == null && !state.faceSketchPick) {
             PatternControls(state, pattern)
         } else if (mirrorBody != null && holeMode == null && mode == null && !state.faceSketchPick && !state.planePick) {
             MirrorBodyControls(state, mirrorBody)
         } else if (state.planePick) {
-            Text("Tippe im 3D-Bild auf die ebene Fläche, aus der die Arbeitsebene entstehen soll.", style = MaterialTheme.typography.labelLarge)
-            OutlinedButton(onClick = state::cancelPlanePick) { Text("Abbrechen") }
+            Text(stringResource(R.string.feat_plane_pick_hint), style = MaterialTheme.typography.labelLarge)
+            OutlinedButton(onClick = state::cancelPlanePick) { Text(stringResource(R.string.common_cancel)) }
         } else if (datum != null && holeMode == null && mode == null && !state.faceSketchPick) {
             DatumControls(state, datum)
         } else if (state.faceSketchPick) {
-            Text("Tippe im 3D-Bild auf die ebene Fläche, auf der die neue Skizze liegen soll.", style = MaterialTheme.typography.labelLarge)
-            OutlinedButton(onClick = state::cancelFaceSketchPick) { Text("Abbrechen") }
+            Text(stringResource(R.string.feat_face_sketch_hint), style = MaterialTheme.typography.labelLarge)
+            OutlinedButton(onClick = state::cancelFaceSketchPick) { Text(stringResource(R.string.common_cancel)) }
         } else if (holeMode != null) {
             Text(
-                if (holeMode.face == null) "Tippe im 3D-Bild auf eine ebene Fläche – dort entsteht die Bohrung. Erneut tippen verschiebt sie." else "Bohrung gesetzt – Maße einstellen, dann „Anwenden“.",
+                if (holeMode.face == null) stringResource(R.string.feat_hole_hint_pick) else stringResource(R.string.feat_hole_hint_placed),
                 style = MaterialTheme.typography.labelLarge,
             )
             AnchorFields(holeMode.anchors, state::setAnchorDistance)
             HoleSizeControls(state, state.holeDiameter, state.holeDepth, state.holeThrough, state::changeHoleDiameter, { state.holeDepth = it }, { state.holeThrough = it })
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedButton(onClick = state::cancelHoleMode) { Text("Abbrechen") }
-                Button(onClick = state::applyHoleMode, enabled = holeMode.face != null, modifier = Modifier.weight(1f)) { Text("Anwenden") }
+                OutlinedButton(onClick = state::cancelHoleMode) { Text(stringResource(R.string.common_cancel)) }
+                Button(onClick = state::applyHoleMode, enabled = holeMode.face != null, modifier = Modifier.weight(1f)) { Text(stringResource(R.string.common_apply)) }
             }
         } else if (hole != null && mode == null) {
             AnchorFields(hole.anchors, state::updateHoleAnchor)
@@ -376,81 +361,80 @@ fun FeatureControls(state: WorkspaceState) {
                 { state.updateHole(it, hole.depth) }, { state.updateHole(hole.diameter, it) }, { state.updateHole(hole.diameter, if (it) null else (hole.depth ?: 10.0)) },
             )
             Text(
-                if (hole.anchors != null) "Die Bohrung hängt an den beiden hervorgehobenen Kanten und wandert mit ihnen." else "Position und Fläche bleiben fest; zum Verschieben löschen und neu setzen.",
+                if (hole.anchors != null) stringResource(R.string.feat_hole_anchored) else stringResource(R.string.feat_hole_fixed),
                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         } else if (shellMode != null) {
             val n = shellMode.selected.size
             Text(
-                if (n == 0) "Tippe im 3D-Bild die Flächen an, die offen bleiben sollen (z. B. die Oberseite)." else "$n ${if (n == 1) "Öffnung" else "Öffnungen"} gewählt – erneut tippen hebt die Wahl auf.",
+                if (n == 0) stringResource(R.string.feat_shell_hint_none) else pluralStringResource(R.plurals.feat_shell_selected, n, n),
                 style = MaterialTheme.typography.labelLarge,
             )
-            NumberField("Wandstärke (mm)", state.shellThickness) { if (it > 0) state.shellThickness = it }
+            NumberField(stringResource(R.string.feat_shell_thickness), state.shellThickness) { if (it > 0) state.shellThickness = it }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedButton(onClick = state::cancelShellMode) { Text("Abbrechen") }
-                Button(onClick = state::applyShellMode, enabled = n > 0, modifier = Modifier.weight(1f)) { Text("Anwenden") }
+                OutlinedButton(onClick = state::cancelShellMode) { Text(stringResource(R.string.common_cancel)) }
+                Button(onClick = state::applyShellMode, enabled = n > 0, modifier = Modifier.weight(1f)) { Text(stringResource(R.string.common_apply)) }
             }
         } else if (shell != null) {
-            val bound = ExprField(state, "Wandstärke (mm)", shell.thickness, ValueRef.FeatureValue(shell.id)) { if (it > 0) state.updateShell(it) }
+            val bound = ExprField(state, stringResource(R.string.feat_shell_thickness), shell.thickness, ValueRef.FeatureValue(shell.id)) { if (it > 0) state.updateShell(it) }
             if (!bound) Slider(value = shell.thickness.toFloat().coerceIn(0.5f, 10f), onValueChange = { state.updateShell(Math.round(it * 2) / 2.0) }, valueRange = 0.5f..10f)
             Text(
-                "${shell.openFaces.size} ${if (shell.openFaces.size == 1) "Öffnung" else "Öffnungen"} (hervorgehoben); zum Ändern löschen und neu wählen.",
+                pluralStringResource(R.plurals.feat_shell_open_info, shell.openFaces.size, shell.openFaces.size),
                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         } else if (mode != null) {
             val n = mode.selected.size
             Text(
-                if (n == 0) "Tippe im 3D-Bild die Kanten an, die du bearbeiten willst." else "$n ${if (n == 1) "Kante" else "Kanten"} gewählt – erneut tippen hebt die Wahl auf.",
+                if (n == 0) stringResource(R.string.feat_edges_hint_none) else pluralStringResource(R.plurals.feat_edges_selected, n, n),
                 style = MaterialTheme.typography.labelLarge,
             )
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                FilterChip(selected = mode.kind == EdgeKind.ROUND, onClick = { state.setEdgeKind(EdgeKind.ROUND) }, label = { Text("◜ Verrundung") })
-                FilterChip(selected = mode.kind == EdgeKind.CHAMFER, onClick = { state.setEdgeKind(EdgeKind.CHAMFER) }, label = { Text("◸ Fase") })
+                FilterChip(selected = mode.kind == EdgeKind.ROUND, onClick = { state.setEdgeKind(EdgeKind.ROUND) }, label = { Text("◜ ${stringResource(R.string.feat_fillet)}") })
+                FilterChip(selected = mode.kind == EdgeKind.CHAMFER, onClick = { state.setEdgeKind(EdgeKind.CHAMFER) }, label = { Text("◸ ${stringResource(R.string.feat_chamfer)}") })
             }
-            NumberField(if (mode.kind == EdgeKind.ROUND) "Radius (mm)" else "Abstand (mm)", state.edgeSize) { if (it > 0) state.edgeSize = it }
+            NumberField(if (mode.kind == EdgeKind.ROUND) stringResource(R.string.feat_fillet_radius) else stringResource(R.string.feat_chamfer_distance), state.edgeSize) { if (it > 0) state.edgeSize = it }
             Slider(value = state.edgeSize.toFloat().coerceIn(0.5f, 20f), onValueChange = { state.edgeSize = Math.round(it * 2) / 2.0 }, valueRange = 0.5f..20f)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedButton(onClick = state::cancelEdgeMode) { Text("Abbrechen") }
-                Button(onClick = state::applyEdgeMode, enabled = n > 0, modifier = Modifier.weight(1f)) { Text("Anwenden") }
+                OutlinedButton(onClick = state::cancelEdgeMode) { Text(stringResource(R.string.common_cancel)) }
+                Button(onClick = state::applyEdgeMode, enabled = n > 0, modifier = Modifier.weight(1f)) { Text(stringResource(R.string.common_apply)) }
             }
         } else if (fillet != null) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                FilterChip(selected = fillet.kind == EdgeKind.ROUND, onClick = { state.updateFillet(fillet.size, EdgeKind.ROUND) }, label = { Text("◜ Verrundung") })
-                FilterChip(selected = fillet.kind == EdgeKind.CHAMFER, onClick = { state.updateFillet(fillet.size, EdgeKind.CHAMFER) }, label = { Text("◸ Fase") })
+                FilterChip(selected = fillet.kind == EdgeKind.ROUND, onClick = { state.updateFillet(fillet.size, EdgeKind.ROUND) }, label = { Text("◜ ${stringResource(R.string.feat_fillet)}") })
+                FilterChip(selected = fillet.kind == EdgeKind.CHAMFER, onClick = { state.updateFillet(fillet.size, EdgeKind.CHAMFER) }, label = { Text("◸ ${stringResource(R.string.feat_chamfer)}") })
             }
-            val bound = ExprField(state, if (fillet.kind == EdgeKind.ROUND) "Radius (mm)" else "Abstand (mm)", fillet.size, ValueRef.FeatureValue(fillet.id)) { if (it > 0) state.updateFillet(it, fillet.kind) }
+            val bound = ExprField(state, if (fillet.kind == EdgeKind.ROUND) stringResource(R.string.feat_fillet_radius) else stringResource(R.string.feat_chamfer_distance), fillet.size, ValueRef.FeatureValue(fillet.id)) { if (it > 0) state.updateFillet(it, fillet.kind) }
             if (!bound) Slider(value = fillet.size.toFloat().coerceIn(0.5f, 20f), onValueChange = { state.updateFillet(Math.round(it * 2) / 2.0, fillet.kind) }, valueRange = 0.5f..20f)
-            Text("${fillet.edges.size} ${if (fillet.edges.size == 1) "Kante" else "Kanten"}; zum Ändern der Kanten löschen und neu wählen.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(pluralStringResource(R.plurals.feat_fillet_edges_info, fillet.edges.size, fillet.edges.size), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         } else if (revolve != null) {
             RevolveControls(state, revolve)
         } else if (ex == null) {
             val n = state.regionCount
-            Text("Ebene: ${planeLabel(state.sketch)}", style = MaterialTheme.typography.labelLarge)
+            Text(stringResource(R.string.feat_sketch_plane, planeLabel(state.sketch)), style = MaterialTheme.typography.labelLarge)
             Text(
                 when {
-                    n == 0 -> "Noch keine geschlossene Fläche – öffne die Skizze und zeichne eine Kontur."
-                    n == 1 -> "1 geschlossene Fläche – bereit für Körper › „Extrudieren“, „Abtragen“ oder „Drehen“."
-                    else -> "$n geschlossene Flächen – bereit für Körper › „Extrudieren“, „Abtragen“ oder „Drehen“."
+                    n == 0 -> stringResource(R.string.feat_sketch_no_profile)
+                    else -> pluralStringResource(R.plurals.feat_sketch_profiles, n, n)
                 },
                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            OutlinedButton(onClick = state::editSketch, modifier = Modifier.fillMaxWidth()) { Text("Skizze bearbeiten") }
+            OutlinedButton(onClick = state::editSketch, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.feat_edit_sketch)) }
         } else {
             val reversed = ex.distance < 0
             val length = kotlin.math.abs(ex.distance)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                FilterChip(selected = ex.op == BodyOp.ADD, onClick = { state.updateExtrusion(ex.distance, ex.symmetric, BodyOp.ADD) }, label = { Text("▲ Hinzufügen") })
-                FilterChip(selected = ex.op == BodyOp.CUT, onClick = { state.updateExtrusion(ex.distance, ex.symmetric, BodyOp.CUT) }, label = { Text("▼ Abtragen") })
+                FilterChip(selected = ex.op == BodyOp.ADD, onClick = { state.updateExtrusion(ex.distance, ex.symmetric, BodyOp.ADD) }, label = { Text("▲ ${stringResource(R.string.feat_op_add)}") })
+                FilterChip(selected = ex.op == BodyOp.CUT, onClick = { state.updateExtrusion(ex.distance, ex.symmetric, BodyOp.CUT) }, label = { Text("▼ ${stringResource(R.string.feat_op_cut)}") })
             }
-            if (ex.op == BodyOp.CUT) SwitchRow("Durch alles", ex.throughAll) { state.updateExtrusion(ex.distance, ex.symmetric, throughAll = it) }
-            val bound = !ex.throughAll && ExprField(state, "Länge (mm)", length, ValueRef.FeatureValue(ex.id)) { v -> if (v > 0) state.updateExtrusion(if (reversed) -v else v, ex.symmetric) }
+            if (ex.op == BodyOp.CUT) SwitchRow(stringResource(R.string.feat_extrude_through_all), ex.throughAll) { state.updateExtrusion(ex.distance, ex.symmetric, throughAll = it) }
+            val bound = !ex.throughAll && ExprField(state, stringResource(R.string.feat_extrude_length), length, ValueRef.FeatureValue(ex.id)) { v -> if (v > 0) state.updateExtrusion(if (reversed) -v else v, ex.symmetric) }
             if (!bound && !ex.throughAll) Slider(value = length.toFloat().coerceIn(1f, 100f), onValueChange = { v ->
                 val d = Math.round(v).toDouble().coerceAtLeast(1.0)
                 state.updateExtrusion(if (reversed) -d else d, ex.symmetric)
             }, valueRange = 1f..100f)
-            SwitchRow("Symmetrisch zur Skizzenebene", ex.symmetric) { state.updateExtrusion(ex.distance, it) }
-            SwitchRow("Umgekehrte Richtung", reversed) { state.updateExtrusion(if (it) -length else length, ex.symmetric) }
-            OutlinedButton(onClick = state::editSketch, modifier = Modifier.fillMaxWidth()) { Text("Skizze bearbeiten") }
+            SwitchRow(stringResource(R.string.feat_symmetric), ex.symmetric) { state.updateExtrusion(ex.distance, it) }
+            SwitchRow(stringResource(R.string.feat_reversed), reversed) { state.updateExtrusion(if (it) -length else length, ex.symmetric) }
+            OutlinedButton(onClick = state::editSketch, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.feat_edit_sketch)) }
         }
     }
 }
@@ -462,31 +446,31 @@ private fun RevolveControls(state: WorkspaceState, f: RevolveFeature) {
     val angle = kotlin.math.abs(f.angle)
     fun withAngle(a: Double) = f.copy(angle = if (reversed) -a else a)
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-        FilterChip(selected = f.op == BodyOp.ADD, onClick = { state.updateRevolve(f.copy(op = BodyOp.ADD)) }, label = { Text("▲ Hinzufügen") })
-        FilterChip(selected = f.op == BodyOp.CUT, onClick = { state.updateRevolve(f.copy(op = BodyOp.CUT)) }, label = { Text("▼ Abtragen") }, enabled = f.op == BodyOp.CUT || state.canCut)
+        FilterChip(selected = f.op == BodyOp.ADD, onClick = { state.updateRevolve(f.copy(op = BodyOp.ADD)) }, label = { Text("▲ ${stringResource(R.string.feat_op_add)}") })
+        FilterChip(selected = f.op == BodyOp.CUT, onClick = { state.updateRevolve(f.copy(op = BodyOp.CUT)) }, label = { Text("▼ ${stringResource(R.string.feat_op_cut)}") }, enabled = f.op == BodyOp.CUT || state.canCut)
     }
-    Text("Drehachse", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    Text(stringResource(R.string.feat_revolve_axis_label), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     val lines = state.revolveAxisOptions(f.sketch)
     Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        FilterChip(selected = f.axis == RevolveAxis.SketchY, onClick = { state.updateRevolve(f.copy(axis = RevolveAxis.SketchY)) }, label = { Text("Senkrecht (y)") })
-        FilterChip(selected = f.axis == RevolveAxis.SketchX, onClick = { state.updateRevolve(f.copy(axis = RevolveAxis.SketchX)) }, label = { Text("Waagrecht (x)") })
+        FilterChip(selected = f.axis == RevolveAxis.SketchY, onClick = { state.updateRevolve(f.copy(axis = RevolveAxis.SketchY)) }, label = { Text(stringResource(R.string.feat_revolve_axis_vertical)) })
+        FilterChip(selected = f.axis == RevolveAxis.SketchX, onClick = { state.updateRevolve(f.copy(axis = RevolveAxis.SketchX)) }, label = { Text(stringResource(R.string.feat_revolve_axis_horizontal)) })
         lines.forEachIndexed { i, a ->
-            FilterChip(selected = f.axis == a, onClick = { state.updateRevolve(f.copy(axis = a)) }, label = { Text("Hilfslinie ${i + 1}") })
+            FilterChip(selected = f.axis == a, onClick = { state.updateRevolve(f.copy(axis = a)) }, label = { Text(stringResource(R.string.feat_revolve_axis_construction, i + 1)) })
         }
         // Achse ist eine Linie, die keine Hilfslinie (mehr) ist – trotzdem als gewählt anzeigen
-        if (f.axis is RevolveAxis.Line && f.axis !in lines) FilterChip(selected = true, onClick = {}, label = { Text("Linie") })
+        if (f.axis is RevolveAxis.Line && f.axis !in lines) FilterChip(selected = true, onClick = {}, label = { Text(stringResource(R.string.feat_revolve_axis_line)) })
     }
-    val bound = ExprField(state, "Winkel (°) – 360 = volle Drehung", angle, ValueRef.FeatureValue(f.id)) { v -> if (v > 0 && v <= 360) state.updateRevolve(withAngle(v)) }
+    val bound = ExprField(state, stringResource(R.string.feat_revolve_angle), angle, ValueRef.FeatureValue(f.id)) { v -> if (v > 0 && v <= 360) state.updateRevolve(withAngle(v)) }
     if (!bound) Slider(value = angle.toFloat().coerceIn(5f, 360f), onValueChange = { v -> state.updateRevolve(withAngle((Math.round(v / 5) * 5.0).coerceAtLeast(5.0))) }, valueRange = 5f..360f)
     if (angle < 360) {
-        SwitchRow("Symmetrisch zur Skizzenebene", f.symmetric) { state.updateRevolve(f.copy(symmetric = it)) }
-        SwitchRow("Umgekehrte Richtung", reversed) { state.updateRevolve(f.copy(angle = if (it) -angle else angle)) }
+        SwitchRow(stringResource(R.string.feat_symmetric), f.symmetric) { state.updateRevolve(f.copy(symmetric = it)) }
+        SwitchRow(stringResource(R.string.feat_reversed), reversed) { state.updateRevolve(f.copy(angle = if (it) -angle else angle)) }
     }
     Text(
-        "Die Fläche darf die Achse berühren, aber nicht schneiden. Eine andere Achse: in der Skizze eine Hilfslinie zeichnen.",
+        stringResource(R.string.feat_revolve_hint),
         style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
-    OutlinedButton(onClick = state::editSketch, modifier = Modifier.fillMaxWidth()) { Text("Skizze bearbeiten") }
+    OutlinedButton(onClick = state::editSketch, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.feat_edit_sketch)) }
 }
 
 /** Einstellungen der gewählten Arbeitsebene: Art (Abstand / gedreht an Kante), Wert, Drehachse, „Skizze auf dieser Ebene“. */
@@ -497,35 +481,35 @@ private fun DatumControls(state: WorkspaceState, p: PlaneFeature) {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         FilterChip(selected = def is PlaneDef.Offset, onClick = {
             state.updateDatum(PlaneDef.Offset(def.face, (def as? PlaneDef.Offset)?.distance ?: 10.0))
-        }, label = { Text("Abstand") })
+        }, label = { Text(stringResource(R.string.feat_datum_offset)) })
         FilterChip(selected = def is PlaneDef.AtEdge, onClick = {
             if (def !is PlaneDef.AtEdge) {
-                if (edges.isEmpty()) state.notice = "Diese Fläche hat keine gerade Kante als Drehachse."
+                if (edges.isEmpty()) state.notice = UiText.Res(R.string.feat_datum_no_edge)
                 else state.updateDatum(PlaneDef.AtEdge(def.face, edges.first(), 30.0))
             }
-        }, label = { Text("Gedreht an Kante") })
+        }, label = { Text(stringResource(R.string.feat_datum_at_edge)) })
     }
     when (def) {
-        is PlaneDef.Offset -> NumberField("Abstand zur Fläche (mm, negativ = in den Körper)", def.distance) { state.updateDatum(def.copy(distance = it)) }
+        is PlaneDef.Offset -> NumberField(stringResource(R.string.feat_datum_distance), def.distance) { state.updateDatum(def.copy(distance = it)) }
         is PlaneDef.AtEdge -> {
-            NumberField("Winkel zur Fläche (°)", def.angle) { state.updateDatum(def.copy(angle = it)) }
+            NumberField(stringResource(R.string.feat_datum_angle), def.angle) { state.updateDatum(def.copy(angle = it)) }
             val i = edges.indexOf(def.edge)
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    if (i >= 0) "Drehachse: Kante ${i + 1} von ${edges.size} (hervorgehoben)" else "Drehachse nicht gefunden",
+                    if (i >= 0) stringResource(R.string.feat_datum_axis_edge, i + 1, edges.size) else stringResource(R.string.feat_datum_axis_missing),
                     Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium,
                 )
-                OutlinedButton(onClick = { state.updateDatum(def.copy(edge = edges[(i + 1).mod(edges.size)])) }, enabled = edges.size > 1) { Text("Nächste") }
+                OutlinedButton(onClick = { state.updateDatum(def.copy(edge = edges[(i + 1).mod(edges.size)])) }, enabled = edges.size > 1) { Text(stringResource(R.string.feat_datum_next)) }
             }
         }
     }
     Button(onClick = state::createSketchOnDatum, modifier = Modifier.fillMaxWidth()) {
         CadIconView(CadIcon.SKETCH, MaterialTheme.colorScheme.onPrimary, 18.dp)
         Spacer(Modifier.width(8.dp))
-        Text("Skizze auf dieser Ebene")
+        Text(stringResource(R.string.feat_datum_sketch))
     }
     Text(
-        "Die Ebene folgt der Fläche bei Maßänderungen – Skizzen darauf wandern mit.",
+        stringResource(R.string.feat_datum_follows),
         style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
 }
@@ -547,56 +531,56 @@ private fun Vec3.with(i: Int, v: Double) = Vec3(if (i == 0) v else x, if (i == 1
 /** Einstellungen des gewählten Musters bzw. der Spiegelung: Achse/Ebene, Anzahl, Abstand/Winkel. */
 @Composable
 private fun PatternControls(state: WorkspaceState, p: PatternFeature) {
-    Text("Vervielfältigt „${state.patternSourceName(p)}“", style = MaterialTheme.typography.labelLarge)
+    Text(stringResource(R.string.feat_pattern_source, state.patternSourceName(p)), style = MaterialTheme.typography.labelLarge)
     when (val k = p.kind) {
         is PatternKind.Linear -> {
             val axis1 = k.direction.dominantAxis()
             val axis2 = k.direction2?.dominantAxis()
-            AxisChips("Richtung", axis1, disabled = axis2) { state.updatePattern(k.copy(direction = axisVector(it))) }
+            AxisChips(stringResource(R.string.feat_pattern_direction), axis1, disabled = axis2) { state.updatePattern(k.copy(direction = axisVector(it))) }
             CountSlider(k.count, 2..20) { state.updatePattern(k.copy(count = it)) }
-            NumberField("Abstand (mm, negativ = Gegenrichtung)", k.spacing) { state.updatePattern(k.copy(spacing = it)) }
+            NumberField(stringResource(R.string.feat_pattern_spacing), k.spacing) { state.updatePattern(k.copy(spacing = it)) }
             if (state.canTwoWay(p)) {
-                SwitchRow("Zweite Richtung (Raster)", k.direction2 != null) { on ->
+                SwitchRow(stringResource(R.string.feat_pattern_second_direction), k.direction2 != null) { on ->
                     state.updatePattern(if (on) k.copy(direction2 = axisVector(if (axis1 == 0) 1 else 0), spacing2 = k.spacing) else k.copy(direction2 = null))
                 }
             }
             if (axis2 != null) {
-                AxisChips("Richtung 2", axis2, disabled = axis1) { state.updatePattern(k.copy(direction2 = axisVector(it))) }
+                AxisChips(stringResource(R.string.feat_pattern_direction2), axis2, disabled = axis1) { state.updatePattern(k.copy(direction2 = axisVector(it))) }
                 CountSlider(k.count2, 2..20) { state.updatePattern(k.copy(count2 = it)) }
-                NumberField("Abstand 2 (mm, negativ = Gegenrichtung)", k.spacing2) { state.updatePattern(k.copy(spacing2 = it)) }
+                NumberField(stringResource(R.string.feat_pattern_spacing2), k.spacing2) { state.updatePattern(k.copy(spacing2 = it)) }
                 if (k.count * k.count2 > PatternGeometry.MAX_COUNT) {
-                    Text("Höchstens ${PatternGeometry.MAX_COUNT} Exemplare – Anzahl verringern.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+                    Text(stringResource(R.string.feat_pattern_max, PatternGeometry.MAX_COUNT), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
                 }
             }
         }
         is PatternKind.Circular -> {
-            AxisChips("Drehachse", k.axis.dominantAxis()) { state.updatePattern(k.copy(axis = axisVector(it))) }
+            AxisChips(stringResource(R.string.feat_pattern_rotation_axis), k.axis.dominantAxis()) { state.updatePattern(k.copy(axis = axisVector(it))) }
             CountSlider(k.count, 2..24) { state.updatePattern(k.copy(count = it)) }
-            Text("Punkt auf der Drehachse", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(stringResource(R.string.feat_pattern_axis_point), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                for (i in 0..2) NumberField("${AXIS_NAMES[i]} (mm)", k.origin.component(i), Modifier.weight(1f)) { state.updatePattern(k.copy(origin = k.origin.with(i, it))) }
+                for (i in 0..2) NumberField(stringResource(R.string.feat_coord_mm, AXIS_NAMES[i]), k.origin.component(i), Modifier.weight(1f)) { state.updatePattern(k.copy(origin = k.origin.with(i, it))) }
             }
-            NumberField("Winkel (°) – 360 = voller Kreis", k.angle) { state.updatePattern(k.copy(angle = it)) }
+            NumberField(stringResource(R.string.feat_pattern_circular_angle), k.angle) { state.updatePattern(k.copy(angle = it)) }
         }
         is PatternKind.Mirror -> {
             val axis = k.normal.dominantAxis()
-            AxisChips("Spiegelebene senkrecht zu", axis) { state.updatePattern(k.copy(normal = axisVector(it))) }
-            NumberField("Lage der Ebene auf der ${AXIS_NAMES[axis]}-Achse (mm)", k.origin.component(axis)) { state.updatePattern(k.copy(origin = k.origin.with(axis, it))) }
-            OutlinedButton(onClick = state::mirrorWholeBodyInstead, modifier = Modifier.fillMaxWidth()) { Text("Stattdessen den ganzen Körper spiegeln") }
+            AxisChips(stringResource(R.string.feat_mirror_plane_normal), axis) { state.updatePattern(k.copy(normal = axisVector(it))) }
+            NumberField(stringResource(R.string.feat_mirror_plane_position, AXIS_NAMES[axis]), k.origin.component(axis)) { state.updatePattern(k.copy(origin = k.origin.with(axis, it))) }
+            OutlinedButton(onClick = state::mirrorWholeBodyInstead, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.feat_pattern_mirror_body_instead)) }
         }
     }
     val rounds = state.patternFilletCount(p)
     if (rounds > 0 || p.withFillets) {
         SwitchRow(
-            if (rounds == 1) "1 Verrundung/Fase der Quelle mitnehmen" else "$rounds Verrundungen/Fasen der Quelle mitnehmen",
+            pluralStringResource(R.plurals.feat_pattern_with_fillets, rounds, rounds),
             p.withFillets,
         ) { state.setPatternWithFillets(it) }
     }
     Text(
         when {
-            state.canPattern -> "Die Kopien wirken wie das Original (hinzufügen bzw. abtragen). Mit Muster › Reihe, Kreis oder Spiegeln lässt sich dieses Muster selbst vervielfältigen – z. B. eine Reihe im Kreis."
-            PatternGeometry.isTwoWay(p.kind) -> "Die Kopien wirken wie das Original (hinzufügen bzw. abtragen). Ein Raster lässt sich nicht weiter vervielfältigen."
-            else -> "Die Kopien wirken wie das Original (hinzufügen bzw. abtragen). Dieses Muster vervielfältigt schon ein Muster und lässt sich nicht weiter verschachteln."
+            state.canPattern -> stringResource(R.string.feat_pattern_note_nestable)
+            PatternGeometry.isTwoWay(p.kind) -> stringResource(R.string.feat_pattern_note_grid)
+            else -> stringResource(R.string.feat_pattern_note_nested)
         },
         style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
@@ -605,24 +589,24 @@ private fun PatternControls(state: WorkspaceState, p: PatternFeature) {
 /** Einstellungen einer Körperspiegelung: Arbeitsebene oder Koordinatenebene mit Lage. */
 @Composable
 private fun MirrorBodyControls(state: WorkspaceState, f: MirrorBodyFeature) {
-    Text("Spiegelt den ganzen Körper bis hierher und vereinigt ihn mit seinem Spiegelbild.", style = MaterialTheme.typography.labelLarge)
+    Text(stringResource(R.string.feat_mirror_body_hint), style = MaterialTheme.typography.labelLarge)
     val datums = state.mirrorDatumOptions(f)
     if (datums.isNotEmpty()) {
-        Text("Spiegelebene", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(stringResource(R.string.feat_mirror_plane), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            FilterChip(selected = f.datum == null, onClick = { state.updateMirrorBody(f.copy(datum = null)) }, label = { Text("Koordinatenebene") })
+            FilterChip(selected = f.datum == null, onClick = { state.updateMirrorBody(f.copy(datum = null)) }, label = { Text(stringResource(R.string.feat_mirror_coordinate_plane)) })
             datums.forEach { d -> FilterChip(selected = f.datum == d.id, onClick = { state.updateMirrorBody(f.copy(datum = d.id)) }, label = { Text(d.name) }) }
         }
     }
     if (f.datum == null) {
         val axis = f.normal.dominantAxis()
-        AxisChips("Spiegelebene senkrecht zu", axis) { state.updateMirrorBody(f.copy(normal = axisVector(it))) }
-        NumberField("Lage der Ebene auf der ${AXIS_NAMES[axis]}-Achse (mm)", f.origin.component(axis)) { state.updateMirrorBody(f.copy(origin = f.origin.with(axis, it))) }
+        AxisChips(stringResource(R.string.feat_mirror_plane_normal), axis) { state.updateMirrorBody(f.copy(normal = axisVector(it))) }
+        NumberField(stringResource(R.string.feat_mirror_plane_position, AXIS_NAMES[axis]), f.origin.component(axis)) { state.updateMirrorBody(f.copy(origin = f.origin.with(axis, it))) }
     } else {
-        Text("Die Spiegelung folgt der Arbeitsebene, wenn sich der Körper ändert.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(stringResource(R.string.feat_mirror_follows), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
     Text(
-        "Berührt der Körper die Ebene, entsteht ein zusammenhängendes, symmetrisches Teil; liegt er davor, kommt ein getrenntes Spiegelbild hinzu.",
+        stringResource(R.string.feat_mirror_note),
         style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
 }
@@ -638,7 +622,7 @@ private fun AxisChips(title: String, selected: Int, disabled: Int? = null, onSel
 @Composable
 private fun CountSlider(count: Int, range: IntRange, onChange: (Int) -> Unit) {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
-        Text("Anzahl (mit Original)", Modifier.weight(1f))
+        Text(stringResource(R.string.feat_count), Modifier.weight(1f))
         Text("$count", color = MaterialTheme.colorScheme.primary)
     }
     Slider(
@@ -685,7 +669,7 @@ private fun ExprField(state: WorkspaceState, label: String, value: Double, ref: 
         },
         singleLine = true, modifier = Modifier.fillMaxWidth(),
         isError = evaluated == null, label = { Text(label) },
-        supportingText = if (number == null && evaluated != null) ({ Text("= ${formatValue(evaluated)} (folgt den Parametern)") }) else null,
+        supportingText = if (number == null && evaluated != null) ({ Text(stringResource(R.string.feat_expr_follows, formatValue(evaluated))) }) else null,
     )
     return expr != null
 }
@@ -705,20 +689,19 @@ fun ParameterDialog(state: WorkspaceState, onDismiss: () -> Unit) {
         ) {
             Column(Modifier.padding(horizontal = 20.dp, vertical = 16.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("Parameter", Modifier.weight(1f), style = MaterialTheme.typography.titleLarge)
+                    Text(stringResource(R.string.common_parameters), Modifier.weight(1f), style = MaterialTheme.typography.titleLarge)
                     TextButton(onClick = onDismiss) { Text("✕") }
                 }
                 // Kopfzeile statt Beschriftung in jedem Feld: spart Höhe, die Spalten bleiben ausgerichtet
                 Row(Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Name", Modifier.weight(1.2f), style = MaterialTheme.typography.labelMedium, color = colors.onSurfaceVariant)
-                    Text("Wert oder Formel", Modifier.weight(1.6f), style = MaterialTheme.typography.labelMedium, color = colors.onSurfaceVariant)
+                    Text(stringResource(R.string.common_name), Modifier.weight(1.2f), style = MaterialTheme.typography.labelMedium, color = colors.onSurfaceVariant)
+                    Text(stringResource(R.string.feat_param_col_value), Modifier.weight(1.6f), style = MaterialTheme.typography.labelMedium, color = colors.onSurfaceVariant)
                     Spacer(Modifier.width(PARAM_DELETE_WIDTH))
                 }
                 HorizontalDivider()
                 Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     if (list.isEmpty()) Text(
-                        "Noch keine Parameter. Lege z. B. „wand = 2“ an und schreibe dann in ein Maß oder eine Länge „wand * 3“ – " +
-                            "ändert sich der Parameter, folgt das Modell.",
+                        stringResource(R.string.feat_param_empty),
                         style = MaterialTheme.typography.bodyMedium, color = colors.onSurfaceVariant,
                     )
                     list.forEachIndexed { i, p ->
@@ -735,13 +718,13 @@ fun ParameterDialog(state: WorkspaceState, onDismiss: () -> Unit) {
                         var n = list.size + 1
                         while (list.any { it.name == "p$n" }) n++
                         state.updateParameters(list + dev.androidcad.model.Parameter("p$n", "10"))
-                    }) { Text("+ Parameter") }
+                    }) { Text(stringResource(R.string.feat_param_add)) }
                     val used = state.bindings.size
                     Text(
-                        if (used > 0) "$used ${if (used == 1) "Wert folgt" else "Werte folgen"} den Parametern" else "", Modifier.weight(1f),
+                        if (used > 0) pluralStringResource(R.plurals.feat_params_following, used, used) else "", Modifier.weight(1f),
                         style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant,
                     )
-                    Button(onClick = onDismiss) { Text("Fertig") }
+                    Button(onClick = onDismiss) { Text(stringResource(R.string.common_done)) }
                 }
             }
         }
@@ -758,7 +741,7 @@ private fun ParameterRow(state: WorkspaceState, p: dev.androidcad.model.Paramete
     var expr by remember { mutableStateOf(p.expression) }
     LaunchedEffect(p.name) { if (p.name != name && dev.androidcad.model.Parameter.nameProblem(name) == null) name = p.name }
     LaunchedEffect(p.expression) { if (p.expression != expr) expr = p.expression }
-    val nameProblem = dev.androidcad.model.Parameter.nameProblem(name) ?: if (state.parameters.any { o -> o !== p && o.name == name }) "„$name“ gibt es schon" else null
+    val nameProblem = dev.androidcad.model.Parameter.nameProblem(name)?.text() ?: if (state.parameters.any { o -> o !== p && o.name == name }) stringResource(R.string.feat_param_name_taken, name) else null
     Column {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.Top) {
             OutlinedTextField(
@@ -778,7 +761,7 @@ private fun ParameterRow(state: WorkspaceState, p: dev.androidcad.model.Paramete
             }
             TextButton(onClick = onDelete, modifier = Modifier.width(PARAM_DELETE_WIDTH).padding(top = 4.dp), contentPadding = PaddingValues(0.dp)) { Text("✕") }
         }
-        val problem = nameProblem ?: if (value == null) "Ausdruck ungültig – Namen und Rechenzeichen prüfen" else null
+        val problem = nameProblem ?: if (value == null) stringResource(R.string.feat_param_expr_invalid) else null
         if (problem != null) Text(problem, Modifier.padding(start = 4.dp, top = 2.dp), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
     }
 }
@@ -798,7 +781,7 @@ private fun AnchorFields(anchors: Pair<dev.androidcad.model.EdgeDistance, dev.an
                 value = text, onValueChange = { text = it; it.replace(',', '.').toDoubleOrNull()?.takeIf { v -> v >= 0 }?.let { v -> onChange(i, v) } },
                 singleLine = true, modifier = Modifier.weight(1f),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                isError = parsed == null || parsed < 0, label = { Text("Kante ${i + 1} (mm)") },
+                isError = parsed == null || parsed < 0, label = { Text(stringResource(R.string.feat_anchor_edge, i + 1)) },
             )
         }
     }
@@ -811,14 +794,14 @@ private fun HoleSizeControls(
     onDiameter: (Double) -> Unit, onDepth: (Double) -> Unit, onThrough: (Boolean) -> Unit,
 ) {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
-        Text("Ø Durchmesser", Modifier.weight(1f))
-        Text("${formatValue(diameter)} mm", color = MaterialTheme.colorScheme.primary)
+        Text("Ø ${stringResource(R.string.feat_hole_diameter)}", Modifier.weight(1f))
+        Text(stringResource(R.string.feat_value_mm, formatValue(diameter)), color = MaterialTheme.colorScheme.primary)
     }
     Slider(value = diameter.toFloat().coerceIn(1f, 40f), onValueChange = { onDiameter(Math.round(it * 2) / 2.0) }, valueRange = 1f..40f)
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
-        Text("Durchgehend"); Switch(through, onThrough)
+        Text(stringResource(R.string.feat_hole_through)); Switch(through, onThrough)
         Box(Modifier.weight(1f))
-        if (!through) Text("Tiefe ${formatValue(depth)} mm", color = MaterialTheme.colorScheme.primary)
+        if (!through) Text(stringResource(R.string.feat_hole_depth_value, formatValue(depth)), color = MaterialTheme.colorScheme.primary)
     }
     if (!through) Slider(value = depth.toFloat().coerceIn(1f, 100f), onValueChange = { onDepth(Math.round(it * 2) / 2.0) }, valueRange = 1f..100f)
 }

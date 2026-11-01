@@ -59,7 +59,7 @@ class CustomizerAndReferenceTest {
         val modes = listOf("assembly", "print_layout", "chest_plate", "arm", "phone_base", "phone_slider", "phone_bracket", "joint_bolt", "joint_nut", "clamp_screw")
         for (m in modes) {
             val r = CadLang.render(src, mapOf("mode" to "\"$m\""))
-            val unsupported = r.warnings.filter { it.contains("nicht unterstützt") || it.contains("Unbekannte") }
+            val unsupported = r.warnings.filter { it.key == LangText.UNKNOWN_MODULE || it.key == LangText.UNKNOWN_FUNCTION }
             assertTrue(unsupported.isEmpty(), "Modus $m: $unsupported")
             assertTrue(countLeaves(r.root) > 0, "Modus $m liefert keine Geometrie")
         }

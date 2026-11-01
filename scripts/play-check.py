@@ -187,7 +187,7 @@ def check_licenses():
     required = {"MIT (manifold svd.h)": "wi-re", "BSD-3 (NVIDIA PhysX in manifold)": "NVIDIA",
                 "MIT (Delabella in OCCT)": "Sokalski", "BSD (flex in OCCT)": "Regents of the University of California",
                 "MIT (musl in manifold)": "Rich Felker", "strtod (Lucent) in OCCT": "Lucent Technologies",
-                "Unicode, Inc. in OCCT": "Unicode, Inc.", "LLVM-Ausnahme (libc++_shared.so)": "LLVM Exceptions"}
+                "Unicode, Inc. in OCCT": "Unicode, Inc.", "Google Play Billing (Protocol Buffers)": "Protocol Buffers", "LLVM-Ausnahme (libc++_shared.so)": "LLVM Exceptions"}
     texts = "".join(open(f, encoding="utf-8").read() for f in glob.glob(os.path.join(ROOT, "app", "src", "main", "assets", "licenses", "*.txt")))
     for what, marker in required.items():
         (ok if marker in texts else fail)(f"Hinweis vorhanden: {what}")

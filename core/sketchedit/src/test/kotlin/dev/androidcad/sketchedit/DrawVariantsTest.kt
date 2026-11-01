@@ -95,7 +95,7 @@ class DrawVariantsTest {
         e.setTool(Tool.CIRCLE)
         e.click(0.0, 20.0); e.click(5.0, 20.0); e.click(10.0, 20.0)
         assertEquals(1, s.circleIds.size)
-        assertTrue(e.message!!.contains("Geraden"))
+        assertEquals(EditText.POINTS_COLLINEAR, e.message?.key)
     }
 
     @Test
@@ -150,7 +150,7 @@ class DrawVariantsTest {
         e.setTool(Tool.ARC); e.arcMode = ArcMode.TANGENT
         e.click(5.0, 5.0)
         assertTrue(!e.drawingInProgress)
-        assertTrue(e.message!!.startsWith("Tangential"))
+        assertEquals(EditText.TANGENT_START_AT_END, e.message?.key)
     }
 
     @Test

@@ -90,12 +90,12 @@ class ModelSessionTest {
         File(dir, "$id/model.json").writeText("{ kaputt")
         val r = ModelSession(repo()).open(id)
         assertNotNull(r.document)
-        assertTrue(r.notice!!.contains("Sicherung"))
+        assertEquals(ModelText.MODEL_RESTORED_FROM_BACKUP, r.notice?.key)
 
         File(dir, "$id/model.json.bak").delete()
         val failed = ModelSession(repo()).open(id)
         assertNull(failed.document)
-        assertTrue(failed.notice!!.contains("beschädigt"))
+        assertEquals(ModelText.MODEL_DAMAGED, failed.notice?.key)
         assertEquals("{ kaputt", File(dir, "$id/model.json").readText()) // unberührt
     }
 
@@ -152,7 +152,7 @@ class ModelSessionTest {
 
     @Test
     fun freshNamesDoNotCollide() {
-        val s = ModelSession(repo())
+        val s = ModelSession(repo(), baseName = "Modell")
         s.startNew(); s.save(doc())
         s.startNew(); s.save(doc())
         s.startNew()

@@ -1,0 +1,149 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Zeitleiste und Menü eines Schritts -->
+    <string name="feat_tl_click_select">Select</string>
+    <string name="feat_tl_long_click_menu">Menu</string>
+    <string name="feat_tl_cd_menu">Menu for %1$s</string>
+    <string name="feat_edit_sketch">Edit sketch</string>
+    <string name="feat_menu_change_plane">Change plane…</string>
+    <string name="feat_menu_rename">Rename…</string>
+    <string name="feat_menu_delete">Delete…</string>
+    <string name="feat_delete_title">Delete “%1$s”?</string>
+    <string name="feat_delete_alone">Nothing else depends on this step. Undo reverses the deletion.</string>
+    <string name="feat_quoted_name">“%1$s”</string>
+    <plurals name="feat_delete_with_dependents">
+        <item quantity="one">Also deleted, because it depends on this step: %1$s. Undo restores everything.</item>
+        <item quantity="other">Also deleted, because they depend on this step: %1$s. Undo restores everything.</item>
+    </plurals>
+
+    <!-- Ebene einer Skizze -->
+    <string name="feat_plane_change_title">Change sketch plane</string>
+    <string name="feat_plane_tile_face">Face</string>
+    <string name="feat_plane_tile_face_sub">on the body</string>
+    <string name="feat_plane_offset">Offset along the normal (mm)</string>
+    <string name="feat_plane_on_face">on face</string>
+    <string name="feat_plane_on_plane">on work plane</string>
+    <string name="feat_plane_free">free</string>
+    <string name="feat_sketch_plane">Plane: %1$s</string>
+
+    <!-- Messen, Auswahlmodi -->
+    <string name="feat_measure_hint_empty">Tap an edge or face – or two for distance and angle.</string>
+    <string name="feat_measure_hint_picks">Tap again to deselect; a third item replaces the oldest.</string>
+    <string name="feat_plane_pick_hint">Tap the planar face in the 3D view that the work plane should be created from.</string>
+    <string name="feat_face_sketch_hint">Tap the planar face in the 3D view that the new sketch should lie on.</string>
+
+    <!-- Bohrung -->
+    <string name="feat_hole_hint_pick">Tap a planar face in the 3D view – the hole is placed there. Tap again to move it.</string>
+    <string name="feat_hole_hint_placed">Hole placed – set the dimensions, then tap “Apply”.</string>
+    <string name="feat_hole_anchored">The hole is attached to the two highlighted edges and moves with them.</string>
+    <string name="feat_hole_fixed">Position and face stay fixed; to move it, delete it and place a new one.</string>
+    <string name="feat_hole_diameter">Diameter</string>
+    <string name="feat_hole_through">Through all</string>
+    <string name="feat_hole_depth_value">Depth %1$s mm</string>
+    <string name="feat_value_mm">%1$s mm</string>
+    <string name="feat_anchor_edge">Edge %1$d (mm)</string>
+
+    <!-- Schale -->
+    <string name="feat_shell_hint_none">Tap the faces in the 3D view that should stay open (e.g. the top face).</string>
+    <plurals name="feat_shell_selected">
+        <item quantity="one">%1$d open face selected – tap again to deselect.</item>
+        <item quantity="other">%1$d open faces selected – tap again to deselect.</item>
+    </plurals>
+    <string name="feat_shell_thickness">Thickness (mm)</string>
+    <plurals name="feat_shell_open_info">
+        <item quantity="one">%1$d open face (highlighted); to change, delete and select again.</item>
+        <item quantity="other">%1$d open faces (highlighted); to change, delete and select again.</item>
+    </plurals>
+
+    <!-- Verrundung / Fase -->
+    <string name="feat_edges_hint_none">Tap the edges in the 3D view that you want to modify.</string>
+    <plurals name="feat_edges_selected">
+        <item quantity="one">%1$d edge selected – tap again to deselect.</item>
+        <item quantity="other">%1$d edges selected – tap again to deselect.</item>
+    </plurals>
+    <string name="feat_fillet">Fillet</string>
+    <string name="feat_chamfer">Chamfer</string>
+    <string name="feat_fillet_radius">Radius (mm)</string>
+    <string name="feat_chamfer_distance">Distance (mm)</string>
+    <plurals name="feat_fillet_edges_info">
+        <item quantity="one">%1$d edge; to change the edges, delete and select again.</item>
+        <item quantity="other">%1$d edges; to change the edges, delete and select again.</item>
+    </plurals>
+
+    <!-- Skizze -->
+    <string name="feat_sketch_no_profile">No closed profile yet – open the sketch and draw a contour.</string>
+    <plurals name="feat_sketch_profiles">
+        <item quantity="one">%1$d closed profile – ready for Body › “Extrude”, “Cut” or “Revolve”.</item>
+        <item quantity="other">%1$d closed profiles – ready for Body › “Extrude”, “Cut” or “Revolve”.</item>
+    </plurals>
+
+    <!-- Extrusion / Drehung -->
+    <string name="feat_op_add">Add</string>
+    <string name="feat_op_cut">Cut</string>
+    <string name="feat_extrude_through_all">Through all</string>
+    <string name="feat_extrude_length">Length (mm)</string>
+    <string name="feat_symmetric">Symmetric about the sketch plane</string>
+    <string name="feat_reversed">Reverse direction</string>
+    <string name="feat_revolve_axis_label">Axis of revolution</string>
+    <string name="feat_revolve_axis_vertical">Vertical (y)</string>
+    <string name="feat_revolve_axis_horizontal">Horizontal (x)</string>
+    <string name="feat_revolve_axis_construction">Construction line %1$d</string>
+    <string name="feat_revolve_axis_line">Line</string>
+    <string name="feat_revolve_angle">Angle (°) – 360 = full revolution</string>
+    <string name="feat_revolve_hint">The profile may touch the axis but not cross it. For a different axis, draw a construction line in the sketch.</string>
+
+    <!-- Arbeitsebene -->
+    <string name="feat_datum_offset">Offset</string>
+    <string name="feat_datum_at_edge">Rotated about edge</string>
+    <string name="feat_datum_no_edge">This face has no straight edge to use as the axis of rotation.</string>
+    <string name="feat_datum_distance">Distance from face (mm, negative = into the body)</string>
+    <string name="feat_datum_angle">Angle to face (°)</string>
+    <string name="feat_datum_axis_edge">Axis of rotation: edge %1$d of %2$d (highlighted)</string>
+    <string name="feat_datum_axis_missing">Axis of rotation not found</string>
+    <string name="feat_datum_next">Next</string>
+    <string name="feat_datum_sketch">Sketch on this plane</string>
+    <string name="feat_datum_follows">The plane follows the face when dimensions change – sketches on it move along.</string>
+
+    <!-- Muster -->
+    <string name="feat_pattern_source">Source: “%1$s”</string>
+    <string name="feat_pattern_direction">Direction</string>
+    <string name="feat_pattern_direction2">Direction 2</string>
+    <string name="feat_pattern_spacing">Spacing (mm, negative = opposite direction)</string>
+    <string name="feat_pattern_spacing2">Spacing 2 (mm, negative = opposite direction)</string>
+    <string name="feat_pattern_second_direction">Second direction (grid)</string>
+    <string name="feat_pattern_max">At most %1$d instances – reduce the count.</string>
+    <string name="feat_pattern_rotation_axis">Axis of rotation</string>
+    <string name="feat_pattern_axis_point">Point on the axis of rotation</string>
+    <string name="feat_coord_mm">%1$s (mm)</string>
+    <string name="feat_pattern_circular_angle">Angle (°) – 360 = full circle</string>
+    <string name="feat_count">Count (including original)</string>
+    <string name="feat_mirror_plane_normal">Mirror plane perpendicular to</string>
+    <string name="feat_mirror_plane_position">Plane position on the %1$s axis (mm)</string>
+    <string name="feat_pattern_mirror_body_instead">Mirror the whole body instead</string>
+    <plurals name="feat_pattern_with_fillets">
+        <item quantity="one">Include %1$d fillet/chamfer of the source</item>
+        <item quantity="other">Include %1$d fillets/chamfers of the source</item>
+    </plurals>
+    <string name="feat_pattern_note_nestable">Copies act like the original (add or cut). With Pattern › Linear, Circular or Mirror you can pattern this pattern itself – e.g. a row on a circle.</string>
+    <string name="feat_pattern_note_grid">Copies act like the original (add or cut). A grid cannot be patterned further.</string>
+    <string name="feat_pattern_note_nested">Copies act like the original (add or cut). This pattern already patterns a pattern and cannot be nested further.</string>
+
+    <!-- Körper spiegeln -->
+    <string name="feat_mirror_body_hint">Mirrors the whole body up to this point and unites it with its mirror image.</string>
+    <string name="feat_mirror_plane">Mirror plane</string>
+    <string name="feat_mirror_coordinate_plane">Coordinate plane</string>
+    <string name="feat_mirror_follows">The mirror plane follows the work plane when the body changes.</string>
+    <string name="feat_mirror_note">If the body touches the plane, the result is one connected, symmetric part; if it lies in front of it, a separate mirror image is added.</string>
+
+    <!-- Parameter-Fenster -->
+    <string name="feat_param_col_value">Value or formula</string>
+    <string name="feat_param_empty">No parameters yet. Create e.g. “wall = 2”, then enter “wall * 3” in a dimension or length – when the parameter changes, the model follows.</string>
+    <string name="feat_param_add">+ Parameter</string>
+    <plurals name="feat_params_following">
+        <item quantity="one">%1$d value follows the parameters</item>
+        <item quantity="other">%1$d values follow the parameters</item>
+    </plurals>
+    <string name="feat_param_name_taken">“%1$s” already exists</string>
+    <string name="feat_param_expr_invalid">Invalid expression – check names and operators</string>
+    <string name="feat_expr_follows">= %1$s (follows the parameters)</string>
+</resources>

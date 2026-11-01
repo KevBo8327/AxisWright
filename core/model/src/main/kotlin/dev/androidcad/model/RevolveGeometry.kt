@@ -1,5 +1,6 @@
 package dev.androidcad.model
 
+import dev.androidcad.text.Msg
 import dev.androidcad.sketch.Loop
 import dev.androidcad.sketch.LoopSegment
 import dev.androidcad.sketch.Region
@@ -34,11 +35,11 @@ object RevolveGeometry {
      * berühren (eine Kante oder ein Punkt auf der Achse) ist erlaubt, schneiden nicht. Verschiedene Flächen dürfen auf verschiedenen
      * Seiten liegen.
      */
-    fun problem(regions: List<Region>, axis: Axis): String? {
+    fun problem(regions: List<Region>, axis: Axis): Msg? {
         for (r in regions) {
             val (lo, hi) = range(r.outer, axis)
-            if (lo < -EPS && hi > EPS) return "Die Fläche schneidet die Drehachse – sie muss ganz auf einer Seite liegen (berühren ist erlaubt)"
-            if (hi - lo <= EPS) return "Die Fläche liegt auf der Drehachse"
+            if (lo < -EPS && hi > EPS) return Msg(ModelText.REGION_CROSSES_AXIS)
+            if (hi - lo <= EPS) return Msg(ModelText.REGION_ON_AXIS)
         }
         return null
     }

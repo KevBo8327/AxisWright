@@ -1,0 +1,149 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Zeitleiste und Menü eines Schritts -->
+    <string name="feat_tl_click_select">Auswählen</string>
+    <string name="feat_tl_long_click_menu">Menü</string>
+    <string name="feat_tl_cd_menu">Menü zu %1$s</string>
+    <string name="feat_edit_sketch">Skizze bearbeiten</string>
+    <string name="feat_menu_change_plane">Ebene ändern …</string>
+    <string name="feat_menu_rename">Umbenennen …</string>
+    <string name="feat_menu_delete">Löschen …</string>
+    <string name="feat_delete_title">„%1$s“ löschen?</string>
+    <string name="feat_delete_alone">Nichts sonst baut auf diesem Schritt auf. Rückgängig macht das Löschen wieder rückgängig.</string>
+    <string name="feat_quoted_name">„%1$s“</string>
+    <plurals name="feat_delete_with_dependents">
+        <item quantity="one">Mit gelöscht wird, weil es darauf aufbaut: %1$s. Rückgängig holt alles wieder zurück.</item>
+        <item quantity="other">Mit gelöscht werden, weil sie darauf aufbauen: %1$s. Rückgängig holt alles wieder zurück.</item>
+    </plurals>
+
+    <!-- Ebene einer Skizze -->
+    <string name="feat_plane_change_title">Ebene der Skizze ändern</string>
+    <string name="feat_plane_tile_face">Fläche</string>
+    <string name="feat_plane_tile_face_sub">auf dem Körper</string>
+    <string name="feat_plane_offset">Versatz entlang der Normalen (mm)</string>
+    <string name="feat_plane_on_face">auf Fläche</string>
+    <string name="feat_plane_on_plane">auf Ebene</string>
+    <string name="feat_plane_free">frei</string>
+    <string name="feat_sketch_plane">Ebene: %1$s</string>
+
+    <!-- Messen, Auswahlmodi -->
+    <string name="feat_measure_hint_empty">Tippe eine Kante oder Fläche an – oder zwei für Abstand und Winkel.</string>
+    <string name="feat_measure_hint_picks">Erneut tippen hebt die Wahl auf; ein drittes Teil ersetzt das älteste.</string>
+    <string name="feat_plane_pick_hint">Tippe im 3D-Bild auf die ebene Fläche, aus der die Arbeitsebene entstehen soll.</string>
+    <string name="feat_face_sketch_hint">Tippe im 3D-Bild auf die ebene Fläche, auf der die neue Skizze liegen soll.</string>
+
+    <!-- Bohrung -->
+    <string name="feat_hole_hint_pick">Tippe im 3D-Bild auf eine ebene Fläche – dort entsteht die Bohrung. Erneut tippen verschiebt sie.</string>
+    <string name="feat_hole_hint_placed">Bohrung gesetzt – Maße einstellen, dann „Anwenden“.</string>
+    <string name="feat_hole_anchored">Die Bohrung hängt an den beiden hervorgehobenen Kanten und wandert mit ihnen.</string>
+    <string name="feat_hole_fixed">Position und Fläche bleiben fest; zum Verschieben löschen und neu setzen.</string>
+    <string name="feat_hole_diameter">Durchmesser</string>
+    <string name="feat_hole_through">Durchgehend</string>
+    <string name="feat_hole_depth_value">Tiefe %1$s mm</string>
+    <string name="feat_value_mm">%1$s mm</string>
+    <string name="feat_anchor_edge">Kante %1$d (mm)</string>
+
+    <!-- Schale -->
+    <string name="feat_shell_hint_none">Tippe im 3D-Bild die Flächen an, die offen bleiben sollen (z. B. die Oberseite).</string>
+    <plurals name="feat_shell_selected">
+        <item quantity="one">%1$d Öffnung gewählt – erneut tippen hebt die Wahl auf.</item>
+        <item quantity="other">%1$d Öffnungen gewählt – erneut tippen hebt die Wahl auf.</item>
+    </plurals>
+    <string name="feat_shell_thickness">Wandstärke (mm)</string>
+    <plurals name="feat_shell_open_info">
+        <item quantity="one">%1$d Öffnung (hervorgehoben); zum Ändern löschen und neu wählen.</item>
+        <item quantity="other">%1$d Öffnungen (hervorgehoben); zum Ändern löschen und neu wählen.</item>
+    </plurals>
+
+    <!-- Verrundung / Fase -->
+    <string name="feat_edges_hint_none">Tippe im 3D-Bild die Kanten an, die du bearbeiten willst.</string>
+    <plurals name="feat_edges_selected">
+        <item quantity="one">%1$d Kante gewählt – erneut tippen hebt die Wahl auf.</item>
+        <item quantity="other">%1$d Kanten gewählt – erneut tippen hebt die Wahl auf.</item>
+    </plurals>
+    <string name="feat_fillet">Verrundung</string>
+    <string name="feat_chamfer">Fase</string>
+    <string name="feat_fillet_radius">Radius (mm)</string>
+    <string name="feat_chamfer_distance">Abstand (mm)</string>
+    <plurals name="feat_fillet_edges_info">
+        <item quantity="one">%1$d Kante; zum Ändern der Kanten löschen und neu wählen.</item>
+        <item quantity="other">%1$d Kanten; zum Ändern der Kanten löschen und neu wählen.</item>
+    </plurals>
+
+    <!-- Skizze -->
+    <string name="feat_sketch_no_profile">Noch keine geschlossene Fläche – öffne die Skizze und zeichne eine Kontur.</string>
+    <plurals name="feat_sketch_profiles">
+        <item quantity="one">%1$d geschlossene Fläche – bereit für Körper › „Extrudieren“, „Abtragen“ oder „Drehen“.</item>
+        <item quantity="other">%1$d geschlossene Flächen – bereit für Körper › „Extrudieren“, „Abtragen“ oder „Drehen“.</item>
+    </plurals>
+
+    <!-- Extrusion / Drehung -->
+    <string name="feat_op_add">Hinzufügen</string>
+    <string name="feat_op_cut">Abtragen</string>
+    <string name="feat_extrude_through_all">Durch alles</string>
+    <string name="feat_extrude_length">Länge (mm)</string>
+    <string name="feat_symmetric">Symmetrisch zur Skizzenebene</string>
+    <string name="feat_reversed">Umgekehrte Richtung</string>
+    <string name="feat_revolve_axis_label">Drehachse</string>
+    <string name="feat_revolve_axis_vertical">Senkrecht (y)</string>
+    <string name="feat_revolve_axis_horizontal">Waagrecht (x)</string>
+    <string name="feat_revolve_axis_construction">Hilfslinie %1$d</string>
+    <string name="feat_revolve_axis_line">Linie</string>
+    <string name="feat_revolve_angle">Winkel (°) – 360 = volle Drehung</string>
+    <string name="feat_revolve_hint">Die Fläche darf die Achse berühren, aber nicht schneiden. Eine andere Achse: in der Skizze eine Hilfslinie zeichnen.</string>
+
+    <!-- Arbeitsebene -->
+    <string name="feat_datum_offset">Abstand</string>
+    <string name="feat_datum_at_edge">Gedreht an Kante</string>
+    <string name="feat_datum_no_edge">Diese Fläche hat keine gerade Kante als Drehachse.</string>
+    <string name="feat_datum_distance">Abstand zur Fläche (mm, negativ = in den Körper)</string>
+    <string name="feat_datum_angle">Winkel zur Fläche (°)</string>
+    <string name="feat_datum_axis_edge">Drehachse: Kante %1$d von %2$d (hervorgehoben)</string>
+    <string name="feat_datum_axis_missing">Drehachse nicht gefunden</string>
+    <string name="feat_datum_next">Nächste</string>
+    <string name="feat_datum_sketch">Skizze auf dieser Ebene</string>
+    <string name="feat_datum_follows">Die Ebene folgt der Fläche bei Maßänderungen – Skizzen darauf wandern mit.</string>
+
+    <!-- Muster -->
+    <string name="feat_pattern_source">Vervielfältigt „%1$s“</string>
+    <string name="feat_pattern_direction">Richtung</string>
+    <string name="feat_pattern_direction2">Richtung 2</string>
+    <string name="feat_pattern_spacing">Abstand (mm, negativ = Gegenrichtung)</string>
+    <string name="feat_pattern_spacing2">Abstand 2 (mm, negativ = Gegenrichtung)</string>
+    <string name="feat_pattern_second_direction">Zweite Richtung (Raster)</string>
+    <string name="feat_pattern_max">Höchstens %1$d Exemplare – Anzahl verringern.</string>
+    <string name="feat_pattern_rotation_axis">Drehachse</string>
+    <string name="feat_pattern_axis_point">Punkt auf der Drehachse</string>
+    <string name="feat_coord_mm">%1$s (mm)</string>
+    <string name="feat_pattern_circular_angle">Winkel (°) – 360 = voller Kreis</string>
+    <string name="feat_count">Anzahl (mit Original)</string>
+    <string name="feat_mirror_plane_normal">Spiegelebene senkrecht zu</string>
+    <string name="feat_mirror_plane_position">Lage der Ebene auf der %1$s-Achse (mm)</string>
+    <string name="feat_pattern_mirror_body_instead">Stattdessen den ganzen Körper spiegeln</string>
+    <plurals name="feat_pattern_with_fillets">
+        <item quantity="one">%1$d Verrundung/Fase der Quelle mitnehmen</item>
+        <item quantity="other">%1$d Verrundungen/Fasen der Quelle mitnehmen</item>
+    </plurals>
+    <string name="feat_pattern_note_nestable">Die Kopien wirken wie das Original (hinzufügen bzw. abtragen). Mit Muster › Reihe, Kreis oder Spiegeln lässt sich dieses Muster selbst vervielfältigen – z. B. eine Reihe im Kreis.</string>
+    <string name="feat_pattern_note_grid">Die Kopien wirken wie das Original (hinzufügen bzw. abtragen). Ein Raster lässt sich nicht weiter vervielfältigen.</string>
+    <string name="feat_pattern_note_nested">Die Kopien wirken wie das Original (hinzufügen bzw. abtragen). Dieses Muster vervielfältigt schon ein Muster und lässt sich nicht weiter verschachteln.</string>
+
+    <!-- Körper spiegeln -->
+    <string name="feat_mirror_body_hint">Spiegelt den ganzen Körper bis hierher und vereinigt ihn mit seinem Spiegelbild.</string>
+    <string name="feat_mirror_plane">Spiegelebene</string>
+    <string name="feat_mirror_coordinate_plane">Koordinatenebene</string>
+    <string name="feat_mirror_follows">Die Spiegelung folgt der Arbeitsebene, wenn sich der Körper ändert.</string>
+    <string name="feat_mirror_note">Berührt der Körper die Ebene, entsteht ein zusammenhängendes, symmetrisches Teil; liegt er davor, kommt ein getrenntes Spiegelbild hinzu.</string>
+
+    <!-- Parameter-Fenster -->
+    <string name="feat_param_col_value">Wert oder Formel</string>
+    <string name="feat_param_empty">Noch keine Parameter. Lege z. B. „wand = 2“ an und schreibe dann in ein Maß oder eine Länge „wand * 3“ – ändert sich der Parameter, folgt das Modell.</string>
+    <string name="feat_param_add">+ Parameter</string>
+    <plurals name="feat_params_following">
+        <item quantity="one">%1$d Wert folgt den Parametern</item>
+        <item quantity="other">%1$d Werte folgen den Parametern</item>
+    </plurals>
+    <string name="feat_param_name_taken">„%1$s“ gibt es schon</string>
+    <string name="feat_param_expr_invalid">Ausdruck ungültig – Namen und Rechenzeichen prüfen</string>
+    <string name="feat_expr_follows">= %1$s (folgt den Parametern)</string>
+</resources>

@@ -31,7 +31,7 @@ class SketchOpsTest {
     fun trimmingOneSideOfACrossKeepsTheOtherSideAndBindsTheNewEndToTheCrossingLine() {
         val (s, h, v) = cross()
         val r = SketchOps.trim(s, h, Vec2(-5.0, 0.0))
-        assertTrue(r.ok, r.message ?: "")
+        assertTrue(r.ok, r.message.toString())
         val (a, b) = s.ends(h)
         near(Vec2(0.0, 0.0), a); near(Vec2(10.0, 0.0), b)
         val start = s.line(h).p1
@@ -49,7 +49,7 @@ class SketchOpsTest {
         val v1 = s.addLine(-2.0, -5.0, -2.0, 5.0)
         val v2 = s.addLine(2.0, -5.0, 2.0, 5.0)
         val r = SketchOps.trim(s, h, Vec2(0.0, 0.0))
-        assertTrue(r.ok, r.message ?: "")
+        assertTrue(r.ok, r.message.toString())
         // zwei Hälften: die erste behält die Kennung
         near(Vec2(-10.0, 0.0), s.ends(h).first); near(Vec2(-2.0, 0.0), s.ends(h).second)
         val second = s.lineIds.single { it != h && it != v1 && it != v2 }
@@ -92,7 +92,7 @@ class SketchOpsTest {
         s.addLine(5.0, -20.0, 5.0, 20.0)
         s.addLine(-5.0, -20.0, -5.0, 20.0)
         val r = SketchOps.trim(s, c, Vec2(10.0, 0.0)) // rechter Teil
-        assertTrue(r.ok, r.message ?: "")
+        assertTrue(r.ok, r.message.toString())
         assertTrue(s.circleIds.isEmpty())
         val arc = s.arcIds.single()
         val d = s.arc(arc)
@@ -156,7 +156,7 @@ class SketchOpsTest {
         val l = s.addLine(0.0, 0.0, 5.0, 0.0)
         val wall = s.addLine(10.0, -5.0, 10.0, 5.0)
         val r = SketchOps.extend(s, l, Vec2(5.0, 0.0))
-        assertTrue(r.ok, r.message ?: "")
+        assertTrue(r.ok, r.message.toString())
         near(Vec2(10.0, 0.0), s.ends(l).second)
         assertTrue(s.constraintEntries.any { (it.constraint as? PointOnLine)?.let { c -> c.point == s.line(l).p2 && c.line == wall } == true })
         s.solved()
@@ -186,7 +186,7 @@ class SketchOpsTest {
         val arc = s.addArc(0.0, 0.0, 10.0, 0.0, 0.0, 10.0) // 0° bis 90°
         s.addLine(-5.0, 0.0, -5.0, 20.0)
         val r = SketchOps.extend(s, arc, Vec2(0.0, 10.0))
-        assertTrue(r.ok, r.message ?: "")
+        assertTrue(r.ok, r.message.toString())
         near(Vec2(-5.0, sqrt(75.0)), s.point(s.arc(arc).end), 1e-6)
         s.solved()
         near(10.0, s.radiusOf(arc), 1e-5)
@@ -219,7 +219,7 @@ class SketchOpsTest {
         val rect = s.addRectangle(0.0, 0.0, 20.0, 10.0)
         val old = s.pointIds.toSet()
         val r = SketchOps.offset(s, rect.edges[0], Vec2(10.0, -5.0), 2.0) // unter der unteren Kante = außen
-        assertTrue(r.ok, r.message ?: "")
+        assertTrue(r.ok, r.message.toString())
         assertEquals(8, s.lineIds.size)
         s.solved()
         val fresh = s.pointIds.filter { it !in old }.map { s.point(it) }
@@ -285,7 +285,7 @@ class SketchOpsTest {
         val rect = s.addRectangle(0.0, 0.0, 20.0, 10.0)
         val corner = rect.corners[1] // rechts unten
         val r = SketchOps.fillet(s, corner, 3.0)
-        assertTrue(r.ok, r.message ?: "")
+        assertTrue(r.ok, r.message.toString())
         assertFalse(s.exists(corner))
         val arc = s.arcIds.single()
         s.solved()

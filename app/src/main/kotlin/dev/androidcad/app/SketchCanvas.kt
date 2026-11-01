@@ -101,6 +101,7 @@ fun SketchCanvas(handle: EditorHandle, modifier: Modifier = Modifier, multiSelec
         )
     }
     val measurer = rememberTextMeasurer()
+    val res = androidx.compose.ui.platform.LocalResources.current
     val focus = remember { FocusRequester() }
     var size by remember { mutableStateOf(androidx.compose.ui.unit.IntSize.Zero) }
 
@@ -190,7 +191,7 @@ fun SketchCanvas(handle: EditorHandle, modifier: Modifier = Modifier, multiSelec
     ) {
         Canvas(Modifier.fillMaxSize()) {
             handle.version // Beobachtung: bei jeder Editor-Änderung neu zeichnen
-            drawSketch(editor, measurer, colors, reference)
+            drawSketch(editor, measurer, colors, reference, res)
         }
     }
 }
@@ -231,7 +232,7 @@ private fun handleKey(editor: SketchEditor, e: KeyEvent): Boolean {
 
 // ---- Zeichnen ---------------------------------------------------------------------------------------
 
-private fun DrawScope.drawSketch(editor: SketchEditor, measurer: TextMeasurer, c: SketchColors, reference: FloatArray?) {
+private fun DrawScope.drawSketch(editor: SketchEditor, measurer: TextMeasurer, c: SketchColors, reference: FloatArray?, res: android.content.res.Resources) {
     val view = editor.view
     drawGrid(editor, c)
     if (reference != null) drawReference(editor, reference, c.construction)
@@ -289,11 +290,11 @@ private fun DrawScope.drawSketch(editor: SketchEditor, measurer: TextMeasurer, c
         val p = view.toScreen(snap.position)
         val o = Offset(p.x.toFloat(), p.y.toFloat())
         val (label, snapColor) = when (snap.kind) {
-            SnapKind.POINT -> "Punkt" to c.selected
-            SnapKind.MIDPOINT -> "Mitte" to c.selected
-            SnapKind.ON_LINE -> "Auf Linie" to c.selected
-            SnapKind.ON_ROUND -> "Auf Kurve" to c.selected
-            SnapKind.AXIS_X, SnapKind.AXIS_Y -> "Achse" to c.selected
+            SnapKind.POINT -> res.getString(R.string.ws_snap_point) to c.selected
+            SnapKind.MIDPOINT -> res.getString(R.string.ws_snap_midpoint) to c.selected
+            SnapKind.ON_LINE -> res.getString(R.string.ws_snap_on_line) to c.selected
+            SnapKind.ON_ROUND -> res.getString(R.string.ws_snap_on_curve) to c.selected
+            SnapKind.AXIS_X, SnapKind.AXIS_Y -> res.getString(R.string.ws_snap_axis) to c.selected
             SnapKind.GRID -> "" to c.preview
             SnapKind.FREE -> "" to c.preview
         }

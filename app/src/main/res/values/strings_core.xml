@@ -1,0 +1,270 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Texte der Kernmodule (Schlüssel → app/…/CoreText.kt). Generiert aus Phase A; neue Schlüssel hier und in values-de ergänzen. -->
+<resources>
+
+    <!-- Skizze: Bearbeiten, Muster, Profile (core/sketch) -->
+    <string name="core_sketch_line_no_length">The line has no length</string>
+    <string name="core_sketch_line_deleted">Line deleted</string>
+    <string name="core_sketch_circle_deleted">Circle deleted</string>
+    <string name="core_sketch_arc_deleted">Arc deleted</string>
+    <string name="core_sketch_intersections_coincide">The intersections coincide</string>
+    <string name="core_sketch_trim_circle_needs_two">To trim, the circle needs at least two intersections</string>
+    <string name="core_sketch_end_connected">The endpoint is connected to other elements</string>
+    <string name="core_sketch_nothing_to_extend_to">Nothing to extend to</string>
+    <string name="core_sketch_distance_not_positive">The distance must be greater than 0</string>
+    <string name="core_sketch_offset_exceeds_radius">The inward offset is larger than the radius</string>
+    <string name="core_sketch_chain_line_no_length">A line in the chain has no length</string>
+    <string name="core_sketch_radius_not_positive">The radius must be greater than 0</string>
+    <string name="core_sketch_corner_needs_two_lines">The corner needs exactly two lines</string>
+    <string name="core_sketch_a_line_no_length">A line has no length</string>
+    <string name="core_sketch_lines_collinear">The lines are collinear</string>
+    <string name="core_sketch_radius_too_large">The radius is too large for this corner</string>
+    <string name="core_sketch_chamfer_too_large">The distance is too large for this corner</string>
+    <string name="core_sketch_select_shape_for_origin">Select the shape to attach to the origin.</string>
+    <string name="core_sketch_shape_already_at_origin">The shape is already attached to the origin.</string>
+    <string name="core_sketch_circle_already_at_origin">The circle is already on the origin.</string>
+    <string name="core_sketch_select_shape_to_center">Select the shape to center.</string>
+    <string name="core_sketch_shape_no_extent">The shape has no extent.</string>
+    <string name="core_sketch_edge_no_length">The edge has no length.</string>
+    <string name="core_sketch_face_no_extent">The face has no extent.</string>
+    <string name="core_sketch_not_possible">Not possible</string>
+    <string name="core_sketch_centered_on_edge">Centered on edge – the distance to the edge is still free (e.g. add a Distance dimension).</string>
+    <string name="core_sketch_nothing_to_mirror">Nothing to mirror</string>
+    <string name="core_sketch_mirror_axis_no_length">The mirror axis has no length</string>
+    <string name="core_sketch_nothing_to_pattern">Nothing to pattern</string>
+    <string name="core_sketch_count_at_least_2">Count must be at least 2</string>
+    <string name="core_sketch_spacing_not_positive">Spacing must be greater than 0</string>
+    <string name="core_sketch_direction_missing">Direction missing</string>
+    <string name="core_sketch_angle_range_360">Angle must be between −360° and 360° and not 0</string>
+    <string name="core_sketch_center_only_element">The center cannot be the only element</string>
+    <plurals name="core_sketch_linear_copies">
+        <item quantity="one">%1$d copy – change the spacing via the construction line’s dimension.</item>
+        <item quantity="other">%1$d copies – change the spacing via the construction line’s dimension.</item>
+    </plurals>
+    <plurals name="core_sketch_circular_copies">
+        <item quantity="one">%1$d copy around the center.</item>
+        <item quantity="other">%1$d copies around the center.</item>
+    </plurals>
+    <string name="core_sketch_max_instances">At most %1$d instances</string>
+    <plurals name="core_sketch_pattern_already_has">
+        <item quantity="one">The pattern already has %1$d instance</item>
+        <item quantity="other">The pattern already has %1$d instances</item>
+    </plurals>
+    <string name="core_sketch_pattern_source_incomplete">The pattern’s source is no longer complete</string>
+    <plurals name="core_sketch_instances_added">
+        <item quantity="one">%1$d instance added – now %2$d.</item>
+        <item quantity="other">%1$d instances added – now %2$d.</item>
+    </plurals>
+    <plurals name="core_sketch_instances_removed">
+        <item quantity="one">%1$d instance removed – now %2$d.</item>
+        <item quantity="other">%1$d instances removed – now %2$d.</item>
+    </plurals>
+    <string name="core_sketch_tap_between_line_ends">Tap between the ends of the line</string>
+    <string name="core_sketch_tap_between_arc_ends">Tap between the ends of the arc</string>
+    <string name="core_sketch_tap_on_circle">Tap on the circle</string>
+    <string name="core_sketch_open_end">Open end at x = %1$.2f, y = %2$.2f</string>
+    <string name="core_sketch_branch">Branch at x = %1$.2f, y = %2$.2f</string>
+    <string name="core_sketch_contour_incomplete">The contour could not be traced completely</string>
+
+    <!-- Skizzen-Editor: Hinweise, Status (core/sketchedit) -->
+    <string name="core_edit_select_to_mirror">First select the elements to mirror.</string>
+    <string name="core_edit_select_to_pattern">First select the elements to pattern.</string>
+    <string name="core_edit_tangent_start_at_end">Tangent: start at the end of a line or arc.</string>
+    <string name="core_edit_conflicts_with_constraints">This conflicts with the existing constraints.</string>
+    <string name="core_edit_tap_line_circle_arc">Tap a line, circle or arc.</string>
+    <string name="core_edit_tap_end_of_line_or_arc">Tap the end of a line or arc.</string>
+    <string name="core_edit_tap_corner">Tap the corner – the point where two lines end.</string>
+    <string name="core_edit_tap_mirror_axis">Tap a line to use as the mirror axis.</string>
+    <string name="core_edit_tap_pattern_direction">Tap a line as the direction – on the side the pattern should grow towards.</string>
+    <string name="core_edit_tap_pattern_center">Tap a point (or circle) as the center.</string>
+    <string name="core_edit_dim_second_after_line">Tap a second element (distance, angle) – or an empty spot for the length.</string>
+    <string name="core_edit_dim_second_after_point">Tap a second element (point or line).</string>
+    <string name="core_edit_dim_already_determined">Already defined by other dimensions or constraints – tap the driving dimension to change it.</string>
+    <string name="core_edit_dim_not_possible">These elements cannot be dimensioned together.</string>
+    <string name="core_edit_point_on_line">The point lies on the line – choose another element.</string>
+    <string name="core_edit_tap_element">Tap a line, circle or arc.</string>
+    <string name="core_edit_tap_farther">Tap farther from the element to choose the side.</string>
+    <string name="core_edit_point_exists">There is already a point here.</string>
+    <string name="core_edit_tangent_needs_round">Tangent: put the start or end on a circle or arc.</string>
+    <string name="core_edit_no_tangent">No tangent possible here.</string>
+    <string name="core_edit_already_selected">This element is already selected.</string>
+    <string name="core_edit_no_tangent_circle">No circle found that touches all selected elements.</string>
+    <string name="core_edit_points_collinear">The three points are collinear.</string>
+    <string name="core_edit_end_straight_ahead">The end is straight ahead – use the Line tool instead.</string>
+    <string name="core_edit_pattern_count_range">Count: whole number from 2 to %1$d</string>
+    <string name="core_edit_invalid_value">Invalid value</string>
+    <string name="core_edit_select_shape_and_reference">Select the shape and exactly one projected hole or edge.</string>
+    <string name="core_edit_not_a_pattern">The selection is not part of a pattern.</string>
+    <string name="core_edit_face_outline_unknown">The face outline is not known yet – try again in a moment.</string>
+    <string name="core_edit_not_possible_for_selection">Not possible for this selection</string>
+    <string name="core_edit_conflicts">Conflicts with existing constraints</string>
+    <string name="core_edit_already_determined">Already defined by other constraints</string>
+    <string name="core_edit_not_solvable_with_value">Not solvable with this value</string>
+    <string name="core_edit_sketch_conflicting">Sketch is over-constrained</string>
+    <string name="core_edit_angle_deg">Angle (°)</string>
+    <string name="core_edit_status_conflict">Conflicting constraints</string>
+    <string name="core_edit_status_fully_constrained">Fully constrained</string>
+    <string name="core_edit_status_position_free">Shape defined – position still free: connect to the origin or axes</string>
+    <string name="core_edit_status_position_rotation_free">Shape defined – position and rotation still free: connect to the origin or axes</string>
+    <plurals name="core_edit_status_dof">
+        <item quantity="one">%1$d degree of freedom</item>
+        <item quantity="other">%1$d degrees of freedom</item>
+    </plurals>
+
+    <!-- Modell: Aufbau, Parameter, Prüfungen, Öffnen (core/model) -->
+    <string name="core_model_feature_failed">“%1$s”: %2$s</string>
+    <string name="core_model_sketch_plane_missing">Sketch “%1$s”: its construction plane is missing</string>
+    <string name="core_model_sketch_face_missing">Sketch “%1$s”: its face no longer exists or is not planar</string>
+    <string name="core_model_sketch_conflicting">Sketch “%1$s”: constraints conflict</string>
+    <string name="core_model_plane_source_missing">Plane “%1$s”: the face or edge it is based on no longer exists</string>
+    <string name="core_model_pattern_fillets_failed">“%1$s”: fillets on the copies failed – %2$s</string>
+    <plurals name="core_model_projections_missing">
+        <item quantity="one">Sketch “%2$s”: %1$d projected edge no longer exists or is no longer in the plane</item>
+        <item quantity="other">Sketch “%2$s”: %1$d projected edges no longer exist or are no longer in the plane</item>
+    </plurals>
+    <string name="core_model_no_body">there is no body yet</string>
+    <string name="core_model_no_body_to_mirror">there is no body to mirror yet</string>
+    <string name="core_model_no_body_to_cut">there is no body to cut from yet</string>
+    <string name="core_model_pattern_source_gone">the patterned feature no longer exists</string>
+    <string name="core_model_pattern_no_copies">the pattern has no copies</string>
+    <string name="core_model_mirror_plane_gone">the mirror plane is missing</string>
+    <string name="core_model_through_all_needs_body">“Through all” needs an existing body</string>
+    <string name="core_model_revolve_axis_gone">the revolve axis (line in “%1$s”) no longer exists</string>
+    <string name="core_model_no_closed_region">no closed profile found in “%1$s”</string>
+    <string name="core_model_face_gone">the selected face no longer exists (changed or removed)</string>
+    <string name="core_model_face_not_planar">the selected face is not planar</string>
+    <string name="core_model_hole_ref_edge_gone">a reference edge of the hole no longer exists (face changed or removed)</string>
+    <string name="core_model_hole_ref_edge_not_in_face">a reference edge is not in the selected face</string>
+    <string name="core_model_hole_ref_edge_not_straight">reference edges must be straight</string>
+    <string name="core_model_hole_ref_edges_parallel">the two reference edges of the hole are parallel</string>
+    <string name="core_model_a_face_gone">a selected face no longer exists (changed or removed)</string>
+    <string name="core_model_an_edge_gone">a selected edge no longer exists (face changed or removed)</string>
+    <string name="core_model_pattern_nesting">patterns can only be nested one level deep</string>
+    <string name="core_model_grid_not_patternable">A grid (two-direction pattern) cannot be patterned again</string>
+    <string name="core_model_pattern_of_pattern_one_way">A pattern of patterns has only one direction</string>
+    <string name="core_model_not_patternable">Only extrusions, revolves, holes and patterns can be patterned</string>
+    <string name="core_model_dimension_not_positive">Dimension must be greater than 0</string>
+    <string name="core_model_length_not_positive">Length must be greater than 0</string>
+    <string name="core_model_revolve_angle_range">Angle must be between 0 and 360°</string>
+    <string name="core_model_thickness_not_positive">Thickness must be greater than 0</string>
+    <string name="core_model_size_not_positive">Size must be greater than 0</string>
+    <string name="core_model_diameter_not_positive">Diameter must be greater than 0</string>
+    <string name="core_model_depth_not_positive">Depth must be greater than 0</string>
+    <string name="core_model_parameter_name_invalid">“%1$s”: letters, digits and _ only, not starting with a digit</string>
+    <string name="core_model_parameter_names_not_unique">Parameter names must be unique</string>
+    <string name="core_model_parameter_error">Parameter %1$s: %2$s</string>
+    <string name="core_model_expression_value_error">“%1$s”: %2$s</string>
+    <string name="core_model_expression_error">Expression: %1$s</string>
+    <string name="core_model_count_range">Count must be between 2 and %1$d</string>
+    <string name="core_model_spacing_zero">Spacing must not be 0</string>
+    <string name="core_model_direction_missing">Direction missing</string>
+    <string name="core_model_count2_range">Count in the second direction must be between 2 and %1$d</string>
+    <string name="core_model_max_instances_grid">At most %1$d instances (%2$d × %3$d = %4$d)</string>
+    <string name="core_model_spacing2_zero">Spacing in the second direction must not be 0</string>
+    <string name="core_model_direction2_missing">Second direction missing</string>
+    <string name="core_model_direction2_parallel">The second direction must not be parallel to the first</string>
+    <string name="core_model_angle_range_360">Angle must be between −360° and 360° and not 0</string>
+    <string name="core_model_axis_missing">Axis missing</string>
+    <string name="core_model_mirror_plane_missing">Mirror plane missing</string>
+    <string name="core_model_distance_invalid">Invalid distance</string>
+    <string name="core_model_plane_angle_range">Angle must be between −180° and 180°</string>
+    <string name="core_model_mirror_origin_missing">Mirror plane position missing</string>
+    <string name="core_model_mirror_normal_missing">Mirror plane direction missing</string>
+    <string name="core_model_region_crosses_axis">The profile crosses the axis – it must lie entirely on one side (touching is allowed)</string>
+    <string name="core_model_region_on_axis">The profile lies on the axis</string>
+    <string name="core_model_model_not_found">Model not found</string>
+    <string name="core_model_model_damaged">“%1$s” is damaged and was not opened (%2$s)</string>
+    <string name="core_model_model_restored_from_backup">“%1$s” was damaged – opened the previous version from the backup</string>
+    <string name="core_model_save_first">Save first – the model is still empty</string>
+    <string name="core_model_copy_failed">Copy failed</string>
+
+    <!-- Skriptsprache: Fehler und Warnungen (core/lang) -->
+    <string name="core_lang_line">Line %1$d: %2$s</string>
+    <string name="core_lang_cancelled">Cancelled</string>
+    <string name="core_lang_invalid_override">Invalid value for \'%1$s\': %2$s</string>
+    <string name="core_lang_too_deep">Nested too deeply (recursion or brackets) – please flatten the structure</string>
+    <string name="core_lang_not_a_number">“%1$s” is not a number (unknown name?)</string>
+    <string name="core_lang_range_too_large">Range has too many elements (%1$d)</string>
+    <string name="core_lang_include_ignored">include/use &lt;%1$s&gt; ignored (no file source)</string>
+    <string name="core_lang_file_not_found">File \'%1$s\' not found</string>
+    <string name="core_lang_include_too_deep">include/use nested too deeply</string>
+    <string name="core_lang_include_missing_gt">include/use: \'&gt;\' missing</string>
+    <string name="core_lang_assert_failed">assert failed: %1$s</string>
+    <string name="core_lang_unknown_function">Unknown function \'%1$s\' (line %2$d)</string>
+    <string name="core_lang_unknown_module">Unknown or unsupported module \'%1$s\' (line %2$d) – children are kept unchanged</string>
+    <string name="core_lang_undefined_variable">Variable \'%1$s\' is not defined (line %2$d)</string>
+    <string name="core_lang_recursion_module">Recursion limit exceeded in module \'%1$s\'</string>
+    <string name="core_lang_recursion_function">Recursion limit exceeded in function \'%1$s\'</string>
+    <string name="core_lang_polyhedron_points_missing">polyhedron: \'points\' missing</string>
+    <string name="core_lang_polyhedron_invalid_point">polyhedron: invalid point</string>
+    <string name="core_lang_polyhedron_faces_missing">polyhedron: \'faces\' missing</string>
+    <string name="core_lang_polyhedron_invalid_face">polyhedron: invalid face</string>
+    <string name="core_lang_polyhedron_index">polyhedron: index %1$d outside 0..%2$d</string>
+    <string name="core_lang_polygon_points_missing">polygon: \'points\' missing</string>
+    <string name="core_lang_polygon_invalid_point">polygon: invalid point</string>
+    <string name="core_lang_polygon_invalid_path">polygon: invalid path</string>
+    <string name="core_lang_multmatrix_invalid">multmatrix: 4x4 or 3x4 matrix expected</string>
+    <string name="core_lang_unclosed_comment">Unclosed comment</string>
+    <string name="core_lang_unclosed_string">Unclosed string</string>
+    <string name="core_lang_unexpected_char">Unexpected character \'%1$s\'</string>
+    <string name="core_lang_trailing_chars">Unexpected characters after the expression</string>
+    <string name="core_lang_unexpected_path">Unexpected path</string>
+    <string name="core_lang_expected_found">\'%1$s\' expected, found \'%2$s\'</string>
+    <string name="core_lang_missing_brace">\'}\' missing</string>
+    <string name="core_lang_expression_expected">Expression expected, found \'%1$s\'</string>
+    <string name="core_lang_end_of_file">end of file</string>
+    <string name="core_lang_path">&lt;path&gt;</string>
+    <string name="core_lang_module_name">module name</string>
+    <string name="core_lang_function_name">function name</string>
+    <string name="core_lang_parameter_name">parameter name</string>
+    <string name="core_lang_variable_name">variable name</string>
+    <string name="core_lang_name">name</string>
+
+    <!-- Bedingungen und Maße (ActionKind) -->
+    <string name="core_action_horizontal">Horizontal</string>
+    <string name="core_action_vertical">Vertical</string>
+    <string name="core_action_parallel">Parallel</string>
+    <string name="core_action_perpendicular">Perpendicular</string>
+    <string name="core_action_collinear">Collinear</string>
+    <string name="core_action_equal">Equal</string>
+    <string name="core_action_coincident">Coincident</string>
+    <string name="core_action_concentric">Concentric</string>
+    <string name="core_action_point_on">On curve</string>
+    <string name="core_action_midpoint">Midpoint</string>
+    <string name="core_action_tangent">Tangent</string>
+    <string name="core_action_symmetric">Symmetric</string>
+    <string name="core_action_fix">Fix</string>
+    <string name="core_action_length">Length</string>
+    <string name="core_action_distance">Distance</string>
+    <string name="core_action_horizontal_distance">Horizontal distance</string>
+    <string name="core_action_vertical_distance">Vertical distance</string>
+    <string name="core_action_radius">Radius</string>
+    <string name="core_action_diameter">Diameter</string>
+    <string name="core_action_angle">Angle</string>
+    <string name="core_action_construction">Construction</string>
+    <string name="core_action_origin_corner">Corner to origin</string>
+    <string name="core_action_origin_center">Center on origin</string>
+    <string name="core_action_face_center">Center on face</string>
+    <string name="core_action_hole_center">Center on hole</string>
+    <string name="core_action_edge_center">Center on edge</string>
+    <string name="core_action_pattern_count">Pattern count</string>
+
+    <!-- Varianten der Zeichenwerkzeuge (RectMode, CircleMode …) -->
+    <string name="core_mode_corners">2 corners</string>
+    <string name="core_mode_center">Center</string>
+    <string name="core_mode_two_points">2 points</string>
+    <string name="core_mode_three_points">3 points</string>
+    <string name="core_mode_two_tangents">2 tangents</string>
+    <string name="core_mode_three_tangents">3 tangents</string>
+    <string name="core_mode_inscribed">Inscribed</string>
+    <string name="core_mode_circumscribed">Circumscribed</string>
+    <string name="core_mode_line">Line</string>
+    <string name="core_mode_tangent">Tangent</string>
+    <string name="core_mode_round">Fillet</string>
+    <string name="core_mode_chamfer">Chamfer</string>
+
+    <!-- Grundebenen (BasePlane): „Kürzel · Ansicht“ -->
+    <string name="core_plane_xy">XY · Top view</string>
+    <string name="core_plane_xz">XZ · Front view</string>
+    <string name="core_plane_yz">YZ · Side view</string>
+</resources>

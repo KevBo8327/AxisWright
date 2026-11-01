@@ -17,7 +17,7 @@ class SketchOpsChamferTest {
         val rect = s.addRectangle(0.0, 0.0, 20.0, 10.0)
         s.add(LengthDim(rect.edges[0], 20.0))
         val r = SketchOps.chamfer(s, rect.corners[1], 3.0)
-        assertTrue(r.ok, r.message ?: "")
+        assertTrue(r.ok, r.message.toString())
         assertFalse(s.exists(rect.corners[1]))
         assertEquals(5, s.lineIds.size)
         assertTrue(s.solve().isSolved, "Skizze muss lösbar bleiben")

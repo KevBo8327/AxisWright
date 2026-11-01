@@ -20,10 +20,10 @@ public fun SketchOps.split(s: Sketch, line: LineId, at: Vec2): OpResult {
     val l = s.line(line)
     val a = s.point(l.p1); val b = s.point(l.p2)
     val len2 = (b.x - a.x) * (b.x - a.x) + (b.y - a.y) * (b.y - a.y)
-    if (len2 < 1e-18) return OpResult.fail("Die Linie hat keine Länge")
+    if (len2 < 1e-18) return OpResult.fail(SketchText.LINE_NO_LENGTH)
     fun tOf(p: Vec2) = ((p.x - a.x) * (b.x - a.x) + (p.y - a.y) * (b.y - a.y)) / len2
     val t = tOf(at)
-    if (t < SPLIT_EPS || t > 1 - SPLIT_EPS) return OpResult.fail("Tippe zwischen die Enden der Linie")
+    if (t < SPLIT_EPS || t > 1 - SPLIT_EPS) return OpResult.fail(SketchText.TAP_BETWEEN_LINE_ENDS)
     val m = s.addPoint(a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t)
     val second = s.addLine(m, l.p2, l.construction)
     s.setLineEndpoints(line, l.p1, m)
@@ -59,7 +59,7 @@ private fun splitArc(s: Sketch, id: ArcId, at: Vec2): OpResult {
     val a0 = angleOf(c, st)
     val sweep = ccwAngle(a0, angleOf(c, s.point(data.end)))
     val sc = ccwAngle(a0, angleOf(c, at))
-    if (sc < SPLIT_EPS || sc > sweep - SPLIT_EPS) return OpResult.fail("Tippe zwischen die Enden des Bogens")
+    if (sc < SPLIT_EPS || sc > sweep - SPLIT_EPS) return OpResult.fail(SketchText.TAP_BETWEEN_ARC_ENDS)
     val m = s.addPoint(c.x + r * cos(a0 + sc), c.y + r * sin(a0 + sc))
     val second = s.addArc(data.center, m, data.end, data.construction)
     s.setArcEnds(id, data.start, m)
@@ -71,7 +71,7 @@ private fun splitArc(s: Sketch, id: ArcId, at: Vec2): OpResult {
 private fun splitCircle(s: Sketch, id: CircleId, at: Vec2): OpResult {
     val data = s.circle(id)
     val c = s.point(data.center)
-    if (hypot(at.x - c.x, at.y - c.y) < 1e-12) return OpResult.fail("Tippe auf den Kreis")
+    if (hypot(at.x - c.x, at.y - c.y) < 1e-12) return OpResult.fail(SketchText.TAP_ON_CIRCLE)
     val ang = angleOf(c, at)
     val r = data.radius
     // shortcut: der Gegenpunkt ist nicht gebunden (die Teilungspunkte können auf dem Kreis wandern); bei Bedarf über eine Hilfslinie binden.

@@ -1,5 +1,6 @@
 package dev.androidcad.lang
 
+import dev.androidcad.text.Msg
 /** Einstiegspunkt des Sprachkerns: Quelltext → CSG-Baum. Reines Kotlin/JVM, keine Android-Abhängigkeit. */
 public object CadLang {
     /**
@@ -22,7 +23,7 @@ public object CadLang {
             try {
                 helper.eval(Parser(Lexer(lit).tokenize()).parseSingleExpr(), Scope(null))
             } catch (e: CadLangException) {
-                throw CadLangException("Ungültiger Wert für '$name': ${e.message}")
+                throw CadLangException(Msg(LangText.INVALID_OVERRIDE, name, e.msg))
             }
         }
         // Parser und Auswertung sind rekursiv: Tiefe Verschachtelung (Rekursion unter der eigenen Grenze, tausende Klammern)
@@ -33,7 +34,7 @@ public object CadLang {
             val root = ev.run(program)
             return RenderResult(root, ev.echoes, ev.warnings)
         } catch (_: StackOverflowError) {
-            throw CadLangException("Zu tief verschachtelt (Rekursion oder Klammern) – bitte flacher aufbauen")
+            throw CadLangException(Msg(LangText.TOO_DEEP))
         }
     }
 
@@ -45,7 +46,7 @@ public object CadLang {
     public fun evalNumber(expression: String, vars: Map<String, Double> = emptyMap()): Double {
         val scope = Scope(null).also { s -> vars.forEach { (k, v) -> s.vars[k] = NumV(v) } }
         val v = Evaluator(emptyMap(), null) { false }.eval(Parser(Lexer(expression).tokenize()).parseSingleExpr(), scope)
-        return (v as? NumV)?.v?.takeIf { it.isFinite() } ?: throw CadLangException("„$expression“ ergibt keine Zahl (unbekannter Name?)")
+        return (v as? NumV)?.v?.takeIf { it.isFinite() } ?: throw CadLangException(Msg(LangText.NOT_A_NUMBER, expression))
     }
 
     /** Customizer-Parameter der Datei (siehe [Customizer]). */

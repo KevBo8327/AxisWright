@@ -1,5 +1,7 @@
 package dev.androidcad.app
 
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -156,7 +158,7 @@ internal fun ModelScreen(hub: ProjectHub) {
     }
     if (newSketch) {
         PlaneDialog(
-            title = "Neue Skizze – Ebene wählen",
+            title = stringResource(R.string.model_new_sketch_title),
             initial = PlaneSpec(BasePlane.XY),
             onConfirm = { newSketch = false; state.addSketch(it) },
             onDismiss = { newSketch = false },
@@ -208,28 +210,28 @@ private fun ModelTopBar(hub: ProjectHub, compact: Boolean) {
         if (state.building) CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
         if (out?.mesh != null && !compact) {
             Text(
-                "%.2f cm³ · %d Flächen".format(out.volumeMm3 / 1000.0, out.faceCount),
+                pluralStringResource(R.plurals.model_stats, out.faceCount, out.volumeMm3 / 1000.0, out.faceCount),
                 style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-        ActionButton(CadIcon.UNDO, "Rückgängig", enabled = state.canUndo, onClick = state::undo)
-        ActionButton(CadIcon.REDO, "Wiederholen", enabled = state.canRedo, onClick = state::redo)
-        TextButton(onClick = { if (Pro.allows()) state.parametersOpen = true }) { Text("Parameter"); ProMark() }
+        ActionButton(CadIcon.UNDO, stringResource(R.string.model_undo), enabled = state.canUndo, onClick = state::undo)
+        ActionButton(CadIcon.REDO, stringResource(R.string.model_redo), enabled = state.canRedo, onClick = state::redo)
+        TextButton(onClick = { if (Pro.allows()) state.parametersOpen = true }) { Text(stringResource(R.string.common_parameters)); ProMark() }
         if (state.parametersOpen) ParameterDialog(state) { state.parametersOpen = false }
-        if (!compact) TextButton(onClick = { exporter.launch("${state.projectName}.stl") }, enabled = out?.mesh != null) { Text("STL exportieren") }
+        if (!compact) TextButton(onClick = { exporter.launch("${state.projectName}.stl") }, enabled = out?.mesh != null) { Text(stringResource(R.string.model_export_stl)) }
         Box {
             TextButton(onClick = { menu = true }, Modifier.width(44.dp), contentPadding = PaddingValues(0.dp)) { Text("⋮") }
             DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
                 if (compact) {
                     out?.takeIf { it.mesh != null }?.let { o ->
-                        DropdownMenuItem(text = { Text("%.2f cm³ · %d Flächen".format(o.volumeMm3 / 1000.0, o.faceCount)) }, onClick = { menu = false }, enabled = false)
+                        DropdownMenuItem(text = { Text(pluralStringResource(R.plurals.model_stats, o.faceCount, o.volumeMm3 / 1000.0, o.faceCount)) }, onClick = { menu = false }, enabled = false)
                     }
-                    DropdownMenuItem(text = { Text("STL exportieren") }, onClick = { menu = false; exporter.launch("${state.projectName}.stl") }, enabled = out?.mesh != null)
+                    DropdownMenuItem(text = { Text(stringResource(R.string.model_export_stl)) }, onClick = { menu = false; exporter.launch("${state.projectName}.stl") }, enabled = out?.mesh != null)
                 }
-                DropdownMenuItem(text = { Text("STEP exportieren (CAD-Austausch)") }, trailingIcon = { ProMark() }, onClick = { menu = false; if (Pro.allows()) stepExporter.launch("${state.projectName}.step") }, enabled = out?.body != null)
-                DropdownMenuItem(text = { Text("3MF exportieren (3D-Druck)") }, trailingIcon = { ProMark() }, onClick = { menu = false; if (Pro.allows()) threeMfExporter.launch("${state.projectName}.3mf") }, enabled = out?.mesh != null)
-                DropdownMenuItem(text = { Text("Projekt exportieren …") }, onClick = { menu = false; projectExporter.launch("${state.projectName}.paramworker.json") })
-                DropdownMenuItem(text = { Text("Zum Skript-Editor (OpenSCAD)") }, onClick = { menu = false; hub.switchTo(ProjectKind.SCRIPT) })
+                DropdownMenuItem(text = { Text(stringResource(R.string.model_export_step)) }, trailingIcon = { ProMark() }, onClick = { menu = false; if (Pro.allows()) stepExporter.launch("${state.projectName}.step") }, enabled = out?.body != null)
+                DropdownMenuItem(text = { Text(stringResource(R.string.model_export_3mf)) }, trailingIcon = { ProMark() }, onClick = { menu = false; if (Pro.allows()) threeMfExporter.launch("${state.projectName}.3mf") }, enabled = out?.mesh != null)
+                DropdownMenuItem(text = { Text(stringResource(R.string.model_export_project)) }, onClick = { menu = false; projectExporter.launch("${state.projectName}.paramworker.json") })
+                DropdownMenuItem(text = { Text(stringResource(R.string.model_to_script)) }, onClick = { menu = false; hub.switchTo(ProjectKind.SCRIPT) })
             }
         }
     }
@@ -249,43 +251,44 @@ internal class ToolGroup(val label: String, val icon: CadIcon, val tools: List<T
 }
 
 /** Alle 3D-Befehle in vier Gruppen; nicht verfügbare sind ausgegraut, laufende Modi hervorgehoben (erneut tippen beendet sie). */
+@Composable
 private fun toolGroups(state: WorkspaceState, onNewSketch: () -> Unit): List<ToolGroup> {
     val hasBody = state.output?.mesh != null
     val canExtrude = state.extrudeReady
     val canPattern = hasBody && state.canPattern
     return listOf(
-        ToolGroup("Skizze", CadIcon.SKETCH, listOf(
-            ToolDef("Neu", CadIcon.SKETCH, false, true, onNewSketch),
-            ToolDef("Auf Fläche", CadIcon.SKETCH_ON_FACE, state.faceSketchPick, hasBody) {
+        ToolGroup(stringResource(R.string.model_group_sketch), CadIcon.SKETCH, listOf(
+            ToolDef(stringResource(R.string.model_tool_new), CadIcon.SKETCH, false, true, onNewSketch),
+            ToolDef(stringResource(R.string.model_tool_on_face), CadIcon.SKETCH_ON_FACE, state.faceSketchPick, hasBody) {
                 if (state.faceSketchPick) state.cancelFaceSketchPick() else state.startFaceSketchPick()
             },
-            ToolDef("Ebene", CadIcon.PLANE, state.planePick, hasBody) { if (state.planePick) state.cancelPlanePick() else state.startPlanePick() },
+            ToolDef(stringResource(R.string.model_tool_plane), CadIcon.PLANE, state.planePick, hasBody) { if (state.planePick) state.cancelPlanePick() else state.startPlanePick() },
         )),
-        ToolGroup("Körper", CadIcon.EXTRUDE, listOf(
-            ToolDef("Extrudieren", CadIcon.EXTRUDE, false, canExtrude) { state.createExtrusion(BodyOp.ADD) },
-            ToolDef("Abtragen", CadIcon.CUT, false, canExtrude && state.canCut) { state.createExtrusion(BodyOp.CUT) },
-            ToolDef("Drehen", CadIcon.REVOLVE, false, canExtrude) { state.createRevolve() },
-            ToolDef("Schale", CadIcon.SHELL, state.shellMode != null, hasBody) { if (state.shellMode != null) state.cancelShellMode() else state.startShellMode() },
-            ToolDef("Bohrung", CadIcon.HOLE, state.holeMode != null, hasBody) { if (state.holeMode != null) state.cancelHoleMode() else state.startHoleMode() },
+        ToolGroup(stringResource(R.string.model_group_body), CadIcon.EXTRUDE, listOf(
+            ToolDef(stringResource(R.string.model_tool_extrude), CadIcon.EXTRUDE, false, canExtrude) { state.createExtrusion(BodyOp.ADD) },
+            ToolDef(stringResource(R.string.model_tool_cut), CadIcon.CUT, false, canExtrude && state.canCut) { state.createExtrusion(BodyOp.CUT) },
+            ToolDef(stringResource(R.string.model_tool_revolve), CadIcon.REVOLVE, false, canExtrude) { state.createRevolve() },
+            ToolDef(stringResource(R.string.model_tool_shell), CadIcon.SHELL, state.shellMode != null, hasBody) { if (state.shellMode != null) state.cancelShellMode() else state.startShellMode() },
+            ToolDef(stringResource(R.string.model_tool_hole), CadIcon.HOLE, state.holeMode != null, hasBody) { if (state.holeMode != null) state.cancelHoleMode() else state.startHoleMode() },
         )),
-        ToolGroup("Kanten", CadIcon.ROUND, listOf(
-            ToolDef("Verrunden", CadIcon.ROUND, state.edgeMode?.kind == EdgeKind.ROUND, hasBody) {
+        ToolGroup(stringResource(R.string.model_group_edges), CadIcon.ROUND, listOf(
+            ToolDef(stringResource(R.string.model_tool_fillet), CadIcon.ROUND, state.edgeMode?.kind == EdgeKind.ROUND, hasBody) {
                 if (state.edgeMode?.kind == EdgeKind.ROUND) state.cancelEdgeMode() else state.startEdgeMode(EdgeKind.ROUND)
             },
-            ToolDef("Fase", CadIcon.CHAMFER, state.edgeMode?.kind == EdgeKind.CHAMFER, hasBody) {
+            ToolDef(stringResource(R.string.model_tool_chamfer), CadIcon.CHAMFER, state.edgeMode?.kind == EdgeKind.CHAMFER, hasBody) {
                 if (state.edgeMode?.kind == EdgeKind.CHAMFER) state.cancelEdgeMode() else state.startEdgeMode(EdgeKind.CHAMFER)
             },
         )),
-        ToolGroup("Messen", CadIcon.MEASURE, listOf(
-            ToolDef("Messen", CadIcon.MEASURE, state.measureMode != null, state.output?.body != null) {
+        ToolGroup(stringResource(R.string.model_group_measure), CadIcon.MEASURE, listOf(
+            ToolDef(stringResource(R.string.model_group_measure), CadIcon.MEASURE, state.measureMode != null, state.output?.body != null) {
                 if (state.measureMode != null) state.cancelMeasure() else state.startMeasure()
             },
         ), direct = true),
-        ToolGroup("Muster", CadIcon.PATTERN_LINEAR, listOf(
-            ToolDef("Reihe", CadIcon.PATTERN_LINEAR, false, canPattern) { state.createPattern(PatternType.LINEAR) },
-            ToolDef("Kreis", CadIcon.PATTERN_CIRCULAR, false, canPattern) { state.createPattern(PatternType.CIRCULAR) },
+        ToolGroup(stringResource(R.string.model_group_pattern), CadIcon.PATTERN_LINEAR, listOf(
+            ToolDef(stringResource(R.string.model_tool_linear), CadIcon.PATTERN_LINEAR, false, canPattern) { state.createPattern(PatternType.LINEAR) },
+            ToolDef(stringResource(R.string.model_tool_circular), CadIcon.PATTERN_CIRCULAR, false, canPattern) { state.createPattern(PatternType.CIRCULAR) },
             // Spiegeln: ein gewähltes Feature (Extrusion, Bohrung, Muster, Verrundung) – sonst den ganzen Körper
-            ToolDef("Spiegeln", CadIcon.MIRROR, false, hasBody) { if (canPattern) state.createPattern(PatternType.MIRROR) else state.createMirrorBody() },
+            ToolDef(stringResource(R.string.model_tool_mirror), CadIcon.MIRROR, false, hasBody) { if (canPattern) state.createPattern(PatternType.MIRROR) else state.createMirrorBody() },
         )),
     )
 }
@@ -366,14 +369,14 @@ private fun ToolStrip(g: ToolGroup, onDone: () -> Unit) {
 private fun SettingsCard(state: WorkspaceState, modifier: Modifier) {
     val selected = state.features.firstOrNull { it.id == state.selectedId }
     val (title, icon) = when {
-        state.faceSketchPick -> "Skizze auf Fläche" to CadIcon.SKETCH_ON_FACE
-        state.planePick -> "Neue Arbeitsebene" to CadIcon.PLANE
-        state.holeMode != null -> "Bohrung setzen" to CadIcon.HOLE
-        state.shellMode != null -> "Aushöhlen" to CadIcon.SHELL
-        state.measureMode != null -> "Messen" to CadIcon.MEASURE
-        state.edgeMode != null -> if (state.edgeMode?.kind == EdgeKind.ROUND) "Verrunden" to CadIcon.ROUND else "Fase" to CadIcon.CHAMFER
+        state.faceSketchPick -> stringResource(R.string.model_card_face_sketch) to CadIcon.SKETCH_ON_FACE
+        state.planePick -> stringResource(R.string.model_card_plane) to CadIcon.PLANE
+        state.holeMode != null -> stringResource(R.string.model_card_hole) to CadIcon.HOLE
+        state.shellMode != null -> stringResource(R.string.model_tool_shell) to CadIcon.SHELL
+        state.measureMode != null -> stringResource(R.string.model_group_measure) to CadIcon.MEASURE
+        state.edgeMode != null -> if (state.edgeMode?.kind == EdgeKind.ROUND) stringResource(R.string.model_tool_fillet) to CadIcon.ROUND else stringResource(R.string.model_tool_chamfer) to CadIcon.CHAMFER
         selected != null -> selected.name to selected.icon()
-        else -> "Eigenschaften" to null
+        else -> stringResource(R.string.model_card_properties) to null
     }
     var collapsed by remember { mutableStateOf(false) }
     // Bearbeiten eines Features: ✓ übernimmt, ✕ verwirft; Werkzeuge (Kanten wählen …) haben eigene Knöpfe, dort schließt ✕ nur
@@ -405,7 +408,8 @@ private fun FloatingCard(
             if (icon != null) CadIconView(icon, colors.primary, 18.dp)
             Text(title, Modifier.weight(1f), style = MaterialTheme.typography.titleSmall, color = colors.primary, maxLines = 1)
             // groß genug zum Treffen: eigener Bereich von 40 dp, Zeichen in Titelgröße (die ganze Kopfzeile klappt ohnehin)
-            if (onToggle != null) Box(Modifier.size(40.dp).semantics { contentDescription = if (collapsed) "Ausklappen" else "Einklappen" }, contentAlignment = Alignment.Center) {
+            val toggleCd = stringResource(if (collapsed) R.string.model_cd_expand else R.string.model_cd_collapse)
+            if (onToggle != null) Box(Modifier.size(40.dp).semantics { contentDescription = toggleCd }, contentAlignment = Alignment.Center) {
                 Text(if (collapsed) "▸" else "▾", color = colors.primary, style = MaterialTheme.typography.titleLarge)
             }
             if (onConfirm == null) TextButton(onClick = onClose) { Text("✕") }
@@ -418,8 +422,8 @@ private fun FloatingCard(
         if (onConfirm != null) {
             HorizontalDivider()
             Row(Modifier.fillMaxWidth().padding(8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedButton(onClick = onClose, modifier = Modifier.weight(1f)) { Text("✕ Abbrechen") }
-                Button(onClick = onConfirm, modifier = Modifier.weight(1f)) { Text("✓ Fertig") }
+                OutlinedButton(onClick = onClose, modifier = Modifier.weight(1f)) { Text("✕ " + stringResource(R.string.common_cancel)) }
+                Button(onClick = onConfirm, modifier = Modifier.weight(1f)) { Text("✓ " + stringResource(R.string.common_done)) }
             }
         }
     }
@@ -462,12 +466,12 @@ private fun ModelViewport(state: WorkspaceState, modifier: Modifier) {
             Text(
                 when {
                     state.extrudeReady && state.features.none { it is dev.androidcad.model.ExtrudeFeature || it is dev.androidcad.model.RevolveFeature } ->
-                        "Skizze fertig – weiter mit Körper › Extrudieren oder Drehen."
+                        stringResource(R.string.model_hint_sketch_ready)
                     state.features.none { it is dev.androidcad.model.ExtrudeFeature || it is dev.androidcad.model.RevolveFeature } ->
-                        "Noch kein Körper – wähle eine Skizze, dann Körper › Extrudieren oder Drehen."
+                        stringResource(R.string.model_hint_no_body)
                     // erster Aufbau läuft noch (z. B. gleich nach dem Öffnen): nicht von einem Fehler sprechen
-                    state.building || out == null -> "Körper wird berechnet …"
-                    else -> "Kein Körper – siehe die Meldung oben."
+                    state.building || out == null -> stringResource(R.string.model_hint_building)
+                    else -> stringResource(R.string.model_hint_see_message)
                 },
                 // mit Skizzenlinien oben unter dem Ansicht-Menü auf eigener Fläche: lesbar und ohne die Linien zu überdecken
                 if (withSketch) Modifier.align(Alignment.TopCenter).padding(start = 16.dp, end = 16.dp, top = 76.dp)
@@ -489,7 +493,7 @@ private fun ErrorBanner(state: WorkspaceState) {
     val errors = state.output?.errors
     if (errors.isNullOrEmpty()) return
     Column(Modifier.fillMaxWidth().background(colors.errorContainer.copy(alpha = 0.92f)).padding(horizontal = 12.dp, vertical = 6.dp)) {
-        errors.forEach { Text(it, style = MaterialTheme.typography.bodySmall, color = colors.onErrorContainer) }
+        errors.forEach { Text(it.text(), style = MaterialTheme.typography.bodySmall, color = colors.onErrorContainer) }
     }
 }
 
@@ -503,11 +507,11 @@ private fun ViewMenu(state: WorkspaceState, modifier: Modifier) {
         TextButton(
             onClick = { open = true },
             modifier = Modifier.glass(shape),
-        ) { Text("Ansicht ▾") }
+        ) { Text(stringResource(R.string.model_view_menu) + " ▾") }
         DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
-            StdView.entries.forEach { v -> DropdownMenuItem(text = { Text(v.label) }, onClick = { open = false; state.showView(v) }) }
-            DropdownMenuItem(text = { Text("Alles einpassen") }, onClick = { open = false; state.fitView() })
-            DropdownMenuItem(text = { Text("Gitter" + if (state.gridOn) "  ✓" else "") }, onClick = { open = false; state.gridOn = !state.gridOn })
+            StdView.entries.forEach { v -> DropdownMenuItem(text = { Text(stringResource(v.label)) }, onClick = { open = false; state.showView(v) }) }
+            DropdownMenuItem(text = { Text(stringResource(R.string.model_fit_all)) }, onClick = { open = false; state.fitView() })
+            DropdownMenuItem(text = { Text(stringResource(R.string.model_grid) + if (state.gridOn) "  ✓" else "") }, onClick = { open = false; state.gridOn = !state.gridOn })
         }
     }
 }

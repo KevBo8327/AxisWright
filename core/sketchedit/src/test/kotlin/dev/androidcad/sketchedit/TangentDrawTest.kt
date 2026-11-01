@@ -81,7 +81,7 @@ class TangentDrawTest {
         e.setTool(Tool.LINE); e.lineMode = LineMode.TANGENT
         e.click(0.0, 0.0); e.click(10.0, 3.0)
         assertEquals(0, e.sketch.lineIds.size)
-        assertTrue(e.message!!.startsWith("Tangential"))
+        assertEquals(EditText.TANGENT_NEEDS_ROUND, e.message?.key)
     }
 
     @Test
@@ -141,7 +141,7 @@ class TangentDrawTest {
         e.cancelOperation()
         assertTrue(!e.drawingInProgress && e.selection.isEmpty())
         e.click(15.0, 15.0)  // ins Leere
-        assertTrue(e.message!!.startsWith("Tippe"))
+        assertEquals(EditText.TAP_ELEMENT, e.message?.key)
     }
 
     @Test
@@ -155,7 +155,7 @@ class TangentDrawTest {
         e.cancelOperation()
         e.setTool(Tool.CIRCLE); e.circleMode = CircleMode.TANGENT2
         e.click(-5.0, 0.0); e.click(15.0, 4.0); e.click(4.0, 9.0)
-        assertEquals(3, s.circleIds.size, e.message ?: "")
+        assertEquals(3, s.circleIds.size, e.message.toString())
         near(5.0, s.circle(a).radius); near(3.0, s.circle(b).radius)
         near(0.0, s.point(s.circle(a).center).x); near(30.0, s.point(s.circle(b).center).x)
     }

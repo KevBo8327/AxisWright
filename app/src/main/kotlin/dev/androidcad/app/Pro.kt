@@ -18,6 +18,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.android.billingclient.api.AcknowledgePurchaseParams
@@ -78,7 +79,7 @@ internal object Pro : PurchasesUpdatedListener {
     var price by mutableStateOf<String?>(null)
         private set
     /** Hinweis im Kaufdialog (ausstehend, Fehler, wiederhergestellt) oder `null`. */
-    var message by mutableStateOf<String?>(null)
+    var message by mutableStateOf<UiText?>(null)
         private set
     /** Kaufdialog offen (Projektmenü oder gesperrte Funktion). */
     var dialogOpen by mutableStateOf(false)
@@ -123,7 +124,7 @@ internal object Pro : PurchasesUpdatedListener {
     fun restore() {
         if (client?.isReady != true) { message = errorText(BillingResponseCode.SERVICE_UNAVAILABLE); return }
         message = null
-        refresh { if (message == null) message = if (isPro) "Kauf wiederhergestellt – Pro ist aktiv." else "Kein Kauf von ParamWorker Pro gefunden." }
+        refresh { if (message == null) message = UiText.Res(if (isPro) R.string.pro_msg_restored else R.string.pro_msg_not_found) }
     }
 
     fun buy(activity: Activity) {
@@ -160,7 +161,7 @@ internal object Pro : PurchasesUpdatedListener {
                     scope.launch { client?.acknowledgePurchase(AcknowledgePurchaseParams.newBuilder().setPurchaseToken(p.purchaseToken).build()) }
                 }
             }
-            ProStatus.PENDING -> message = "Kauf ausstehend – Pro wird freigeschaltet, sobald die Zahlung bestätigt ist."
+            ProStatus.PENDING -> message = UiText.Res(R.string.pro_msg_pending)
             ProStatus.FREE -> if (confirmed) store(false)
         }
     }
@@ -170,18 +171,18 @@ internal object Pro : PurchasesUpdatedListener {
         if (on) prefs?.putText(KEY, "1") else prefs?.removeText(KEY)
     }
 
-    private fun errorText(code: Int) = when (code) {
+    private fun errorText(code: Int): UiText = when (code) {
         BillingResponseCode.BILLING_UNAVAILABLE, BillingResponseCode.SERVICE_UNAVAILABLE, BillingResponseCode.SERVICE_DISCONNECTED,
-        BillingResponseCode.NETWORK_ERROR -> "Google Play ist nicht erreichbar. Kaufen und Wiederherstellen brauchen den Play Store und eine Internetverbindung."
-        BillingResponseCode.ITEM_UNAVAILABLE -> "ParamWorker Pro ist im Play Store derzeit nicht verfügbar."
-        else -> "Kauf nicht möglich (Google Play meldet Code $code)."
+        BillingResponseCode.NETWORK_ERROR -> UiText.Res(R.string.pro_err_unavailable)
+        BillingResponseCode.ITEM_UNAVAILABLE -> UiText.Res(R.string.pro_err_item_unavailable)
+        else -> UiText.Res(R.string.pro_err_other, code)
     }
 }
 
 /** Kennzeichen „(Pro)“ hinter einer Pro-Funktion; nach dem Kauf ausgeblendet. */
 @Composable
 internal fun ProMark() {
-    if (!Pro.isPro) Text(" (Pro)", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+    if (!Pro.isPro) Text(" " + stringResource(R.string.pro_mark), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
 }
 
 /** „ParamWorker Pro“: was frei ist, was Pro bringt, Preis, Kaufen und Wiederherstellen. */
@@ -190,43 +191,43 @@ internal fun ProDialog(activity: Activity?, onDismiss: () -> Unit) {
     val colors = MaterialTheme.colorScheme
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("ParamWorker Pro") },
+        title = { Text(stringResource(R.string.pro_title)) },
         text = {
             Column(Modifier.heightIn(max = 460.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 if (Pro.FREE_DURING_TEST && !Pro.isPro) Text(
-                    "Testphase: Alle Pro-Funktionen sind zurzeit frei nutzbar.",
+                    stringResource(R.string.pro_trial_notice),
                     style = MaterialTheme.typography.bodyMedium, color = colors.primary,
                 )
-                Heading("Pro – einmal kaufen, dauerhaft nutzen")
-                Bullets("STEP-Export (Austausch mit anderen CAD-Programmen)", "3MF-Export (3D-Druck)", "Parameter-Tabelle anlegen und bearbeiten")
-                Heading("Immer frei")
+                Heading(stringResource(R.string.pro_heading_pro))
+                Bullets(stringResource(R.string.pro_feature_step), stringResource(R.string.pro_feature_3mf), stringResource(R.string.pro_feature_param_table))
+                Heading(stringResource(R.string.pro_heading_free))
                 Bullets(
-                    "Modellieren: Skizzen, Körper und alle Werkzeuge", "Messen", "STL-Export", "Projekte teilen und importieren",
-                    "Skript-Editor (OpenSCAD)", "Unbegrenzt viele Projekte",
+                    stringResource(R.string.pro_free_modeling), stringResource(R.string.pro_free_measure), stringResource(R.string.pro_free_stl),
+                    stringResource(R.string.pro_free_share), stringResource(R.string.pro_free_script), stringResource(R.string.pro_free_unlimited),
                 )
                 Text(
-                    "Vorhandene Parameter in Ihren Modellen werden auch ohne Pro weiter berechnet.",
+                    stringResource(R.string.pro_existing_params_note),
                     style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant,
                 )
                 // ohne Play Store kein Preis: dann steht nur die Meldung darunter, nicht „wird geladen“
-                val status = if (Pro.isPro) "Pro aktiv – danke!" else Pro.price?.let { "Preis: $it (einmalig)" }
-                    ?: "Preis wird von Google Play geladen …".takeIf { Pro.message == null }
+                val status = if (Pro.isPro) stringResource(R.string.pro_status_active) else Pro.price?.let { stringResource(R.string.pro_status_price, it) }
+                    ?: stringResource(R.string.pro_status_loading).takeIf { Pro.message == null }
                 if (status != null) Text(
                     status,
                     style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold,
                     color = if (Pro.isPro) colors.primary else colors.onSurface, modifier = Modifier.padding(top = 4.dp),
                 )
-                Pro.message?.let { Text(it, style = MaterialTheme.typography.bodyMedium, color = colors.onSurfaceVariant) }
+                Pro.message?.let { Text(it.text(), style = MaterialTheme.typography.bodyMedium, color = colors.onSurfaceVariant) }
             }
         },
         confirmButton = {
-            if (!Pro.isPro) TextButton(onClick = { activity?.let(Pro::buy) }) { Text("Kaufen") }
-            else TextButton(onClick = onDismiss) { Text("Schließen") }
+            if (!Pro.isPro) TextButton(onClick = { activity?.let(Pro::buy) }) { Text(stringResource(R.string.pro_buy)) }
+            else TextButton(onClick = onDismiss) { Text(stringResource(R.string.common_close)) }
         },
         dismissButton = {
             Row {
-                TextButton(onClick = Pro::restore) { Text("Kauf wiederherstellen") }
-                if (!Pro.isPro) TextButton(onClick = onDismiss) { Text("Schließen") }
+                TextButton(onClick = Pro::restore) { Text(stringResource(R.string.pro_restore)) }
+                if (!Pro.isPro) TextButton(onClick = onDismiss) { Text(stringResource(R.string.common_close)) }
             }
         },
     )

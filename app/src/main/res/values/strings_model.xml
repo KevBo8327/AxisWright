@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Modell-Ansicht (3D): App-Leiste, Werkzeuge, Einstellungskarte, Ansicht-Menü. Deutsch in values-de/strings_model.xml. -->
+<resources>
+    <!-- Neue Skizze -->
+    <string name="model_new_sketch_title">New sketch – select plane</string>
+
+    <!-- App-Leiste -->
+    <plurals name="model_stats">
+        <item quantity="one">%1$.2f cm³ · %2$d face</item>
+        <item quantity="other">%1$.2f cm³ · %2$d faces</item>
+    </plurals>
+    <string name="model_undo">Undo</string>
+    <string name="model_redo">Redo</string>
+    <string name="model_export_stl">Export STL</string>
+    <string name="model_export_step">Export STEP (CAD exchange)</string>
+    <string name="model_export_3mf">Export 3MF (3D printing)</string>
+    <string name="model_export_project">Export project…</string>
+    <string name="model_to_script">Go to script editor (OpenSCAD)</string>
+
+    <!-- Werkzeuggruppen -->
+    <string name="model_group_sketch">Sketch</string>
+    <string name="model_group_body">Body</string>
+    <string name="model_group_edges">Edges</string>
+    <string name="model_group_measure">Measure</string>
+    <string name="model_group_pattern">Pattern</string>
+    <string name="model_tool_new">New</string>
+    <string name="model_tool_on_face">On face</string>
+    <string name="model_tool_plane">Plane</string>
+    <string name="model_tool_extrude">Extrude</string>
+    <string name="model_tool_cut">Cut</string>
+    <string name="model_tool_revolve">Revolve</string>
+    <string name="model_tool_shell">Shell</string>
+    <string name="model_tool_hole">Hole</string>
+    <string name="model_tool_fillet">Fillet</string>
+    <string name="model_tool_chamfer">Chamfer</string>
+    <string name="model_tool_linear">Linear</string>
+    <string name="model_tool_circular">Circular</string>
+    <string name="model_tool_mirror">Mirror</string>
+
+    <!-- Einstellungskarte -->
+    <string name="model_card_face_sketch">Sketch on face</string>
+    <string name="model_card_plane">New construction plane</string>
+    <string name="model_card_hole">Place hole</string>
+    <string name="model_card_properties">Properties</string>
+    <string name="model_cd_expand">Expand</string>
+    <string name="model_cd_collapse">Collapse</string>
+
+    <!-- Hinweise im leeren 3D-Bild -->
+    <string name="model_hint_sketch_ready">Sketch ready – continue with Body › Extrude or Revolve.</string>
+    <string name="model_hint_no_body">No body yet – select a sketch, then Body › Extrude or Revolve.</string>
+    <string name="model_hint_building">Building body…</string>
+    <string name="model_hint_see_message">No body – see the message above.</string>
+
+    <!-- Ansicht-Menü -->
+    <string name="model_view_menu">View</string>
+    <string name="model_view_iso">Iso</string>
+    <string name="model_view_top">Top</string>
+    <string name="model_view_front">Front</string>
+    <string name="model_view_right">Right</string>
+    <string name="model_fit_all">Fit all</string>
+    <string name="model_grid">Grid</string>
+</resources>

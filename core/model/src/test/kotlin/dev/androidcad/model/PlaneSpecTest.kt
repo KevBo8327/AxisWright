@@ -25,9 +25,10 @@ class PlaneSpecTest {
 
     @Test
     fun labelsAreShortAndReadable() {
-        assertEquals("XY", PlaneSpec(BasePlane.XY).label)
-        assertEquals("XZ +12,5 mm", PlaneSpec(BasePlane.XZ, 12.5).label)
-        assertEquals("YZ −3 mm", PlaneSpec(BasePlane.YZ, -3.0).label)
+        assertEquals("XY", PlaneSpec(BasePlane.XY).label())
+        assertEquals("XZ +12,5 mm", PlaneSpec(BasePlane.XZ, 12.5).label(java.util.Locale.GERMAN))
+        assertEquals("XZ +12.5 mm", PlaneSpec(BasePlane.XZ, 12.5).label(java.util.Locale.ENGLISH))
+        assertEquals("YZ −3 mm", PlaneSpec(BasePlane.YZ, -3.0).label())
     }
 
     @Test

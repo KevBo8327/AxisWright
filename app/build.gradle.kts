@@ -66,6 +66,9 @@ android {
     }
 
     buildFeatures { compose = true }
+
+    // Zweisprachig (values = Englisch, values-de = Deutsch): ein Text, der in einer Sprache fehlt, ist ein Fehler
+    lint { error += setOf("MissingTranslation", "ExtraTranslation") }
 }
 
 dependencies {

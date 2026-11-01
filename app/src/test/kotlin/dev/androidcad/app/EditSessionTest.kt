@@ -14,7 +14,7 @@ import kotlin.test.assertTrue
 class EditSessionTest {
     // abgebrochener Scope: kein Aufbau, kein Autosave – nur der Zustand
     private fun workspaceWithRectangle(): WorkspaceState {
-        val ws = WorkspaceState(CoroutineScope(Job().apply { cancel() }), ModelSession(ModelRepository(Files.createTempDirectory("models").toFile())))
+        val ws = WorkspaceState(CoroutineScope(Job().apply { cancel() }), ModelSession(ModelRepository(Files.createTempDirectory("models").toFile())), workspaceTestStrings)
         ws.handle.editor.sketch.addRectangle(0.0, 0.0, 20.0, 10.0)
         ws.handle.editor.recordExternalChange("Rechteck")
         return ws

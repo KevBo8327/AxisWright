@@ -1,5 +1,6 @@
 package dev.androidcad.sketchedit
 
+import dev.androidcad.text.Msg
 import dev.androidcad.sketch.Coincident
 import dev.androidcad.sketch.Fixed
 import dev.androidcad.sketch.Horizontal
@@ -291,7 +292,7 @@ class EditorTest {
         e.setTool(Tool.SELECT)
         e.click(25.0, 20.0); e.click(75.0, 17.5, additive = true)
         e.requestAction(ActionKind.PERPENDICULAR)
-        assertNull(e.message, e.message)
+        assertNull(e.message, e.message.toString())
         assertTrue(e.sketch.constraintEntries.any { it.constraint is Perpendicular })
         near(90.0, abs(e.sketch.angleBetween(e.sketch.lineIds[0], e.sketch.lineIds[1])), 1e-4)
     }
@@ -303,10 +304,10 @@ class EditorTest {
         e.setTool(Tool.SELECT); e.click(30.0, 10.0)
         val before = e.sketch.constraintEntries.size
         e.requestAction(ActionKind.VERTICAL)          // widerspricht „horizontal“
-        assertEquals("Widerspricht vorhandenen Bedingungen", e.message)
+        assertEquals(EditText.CONFLICTS, e.message?.key)
         assertEquals(before, e.sketch.constraintEntries.size)
         e.requestAction(ActionKind.HORIZONTAL)         // schon vorhanden
-        assertTrue(e.message!!.contains("bereits"), e.message)
+        assertEquals(EditText.ALREADY_DETERMINED, e.message?.key)
         assertEquals(before, e.sketch.constraintEntries.size)
         assertTrue(e.status!!.isSolved)
     }
@@ -429,12 +430,12 @@ class EditorTest {
     @Test
     fun statusTextReportsDegreesOfFreedom() {
         val e = editor()
-        assertEquals("Vollständig bestimmt", e.statusText())            // leere Skizze: nur der feste Ursprung
+        assertEquals(Msg(EditText.STATUS_FULLY_CONSTRAINED), e.statusText())            // leere Skizze: nur der feste Ursprung
         e.setTool(Tool.RECTANGLE); e.click(10.0, 10.0); e.click(50.0, 40.0)
-        assertEquals("4 Freiheitsgrade", e.statusText())
+        assertEquals(Msg(EditText.STATUS_DOF, 4), e.statusText())
         e.setTool(Tool.SELECT); e.click(30.0, 10.0)
         e.requestAction(ActionKind.LENGTH); e.confirmPendingAction(40.0)
-        assertEquals("3 Freiheitsgrade", e.statusText())
+        assertEquals(Msg(EditText.STATUS_DOF, 3), e.statusText())
     }
 
     @Test

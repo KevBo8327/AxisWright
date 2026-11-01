@@ -18,6 +18,7 @@ class ModelUndoTest {
     private fun workspace() = WorkspaceState(
         CoroutineScope(Job().apply { cancel() }),
         ModelSession(ModelRepository(Files.createTempDirectory("models").toFile())),
+        workspaceTestStrings,
     )
 
     private fun WorkspaceState.names() = features.map { it.name }

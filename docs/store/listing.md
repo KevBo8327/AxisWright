@@ -17,7 +17,7 @@ Parametrische 3D-Konstruktion auf dem Tablet: skizzieren, bemaßen, drucken.
 
 **Langbeschreibung**
 
-ParamWorker ist ein parametrisches CAD-Programm für Android-Tablets und -Smartphones. Sie zeichnen eine Skizze, bemaßen sie und machen daraus ein Bauteil – mit echter, exakter Geometrie, die sich jederzeit über ihre Maße ändern lässt. Alles läuft direkt auf dem Gerät: ohne Konto, ohne Cloud, ohne Internet.
+ParamWorker ist ein parametrisches CAD-Programm für Android-Tablets und -Smartphones. Sie zeichnen eine Skizze, bemaßen sie und machen daraus ein Bauteil – mit echter, exakter Geometrie, die sich jederzeit über ihre Maße ändern lässt. Alles läuft direkt auf dem Gerät: ohne Konto, ohne Cloud, ohne eigene Server.
 
 SKIZZIEREN
 • Linie, Rechteck (Ecke, Mitte, 3 Punkte), Kreis (Mitte, 2 oder 3 Punkte, tangential), Bogen, Langloch, Vieleck
@@ -49,7 +49,7 @@ FÜR FINGER, STIFT UND MAUS
 • Tablet- und Smartphone-Layout, helles und dunkles Design
 
 IHRE DATEN BLEIBEN BEI IHNEN
-ParamWorker fordert keine Berechtigungen an, braucht kein Internet und enthält weder Werbung noch Tracking. Ihre Projekte liegen auf Ihrem Gerät.
+Internet nur für den Kauf von Pro über Google Play – keine Werbung, kein Tracking, Ihre Projekte bleiben auf Ihrem Gerät.
 
 Hinweis: ParamWorker ist ein Konstruktionswerkzeug. Prüfen Sie Maße und Festigkeit Ihrer Teile vor der Fertigung selbst; für sicherheitsrelevante Bauteile ist die App nicht vorgesehen.
 
@@ -67,7 +67,7 @@ Parametric 3D design on your tablet: sketch, dimension, print.
 
 **Full description**
 
-ParamWorker is a parametric CAD app for Android tablets and phones. Draw a sketch, add dimensions and turn it into a part – with real, exact geometry that you can change at any time through its dimensions. Everything runs on your device: no account, no cloud, no internet.
+ParamWorker is a parametric CAD app for Android tablets and phones. Draw a sketch, add dimensions and turn it into a part – with real, exact geometry that you can change at any time through its dimensions. Everything runs on your device: no account, no cloud, no servers of our own.
 
 SKETCHING
 • Line, rectangle (corner, centre, 3 points), circle (centre, 2 or 3 points, tangent), arc, slot, polygon
@@ -99,7 +99,7 @@ FOR FINGER, PEN AND MOUSE
 • Tablet and phone layouts, light and dark theme
 
 YOUR DATA STAYS WITH YOU
-ParamWorker requests no permissions, needs no internet and contains no ads or tracking. Your projects stay on your device.
+Internet only for buying Pro via Google Play – no ads, no tracking, your projects stay on your device.
 
 Note: ParamWorker is a design tool. Check the dimensions and strength of your parts yourself before manufacturing; the app is not intended for safety-critical components.
 

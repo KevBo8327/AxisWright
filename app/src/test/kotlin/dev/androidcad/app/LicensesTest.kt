@@ -11,8 +11,8 @@ class LicensesTest {
         val dir = listOf(File("src/main/assets/licenses"), File("app/src/main/assets/licenses")).first { it.isDirectory }
         for (t in THIRD_PARTY) for (f in t.files) {
             val file = File(dir, f)
-            assertTrue(file.isFile && file.length() > 200, "${t.name}: $f fehlt oder ist leer")
+            assertTrue(file.isFile && file.length() > 200, "$f fehlt oder ist leer")
         }
-        assertTrue(THIRD_PARTY.any { it.license.contains("LGPL") && it.note != null }, "LGPL-Hinweis zum Austausch der Bibliotheken")
+        assertTrue(THIRD_PARTY.any { it.license == R.string.legal_lib_occt_license && it.note != null }, "LGPL-Hinweis zum Austausch der Bibliotheken")
     }
 }

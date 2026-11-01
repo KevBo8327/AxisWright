@@ -7,7 +7,7 @@ import dev.androidcad.project.ProjectInfo
 import java.io.File
 
 /** Art eines Projekts: parametrisches Modell (Skizze → Körper) oder OpenSCAD-Skript. */
-enum class ProjectKind(val label: String) { MODEL("Modell"), SCRIPT("Skript") }
+enum class ProjectKind(@androidx.annotation.StringRes val label: Int) { MODEL(R.string.start_kind_model), SCRIPT(R.string.start_kind_script) }
 
 /** Ein Eintrag der gemeinsamen Projektliste. */
 data class ProjectEntry(val kind: ProjectKind, val info: ProjectInfo)
@@ -67,7 +67,7 @@ class ProjectHub(val workspace: WorkspaceState, val script: CadState, private va
         activate(ProjectKind.MODEL)
     }
 
-    fun newScript(name: String = "Neues Skript", source: String = "cube(10);\n") {
+    fun newScript(name: String, source: String = "cube(10);\n") {
         flushActive()
         script.newProject(name, source)
         activate(ProjectKind.SCRIPT)

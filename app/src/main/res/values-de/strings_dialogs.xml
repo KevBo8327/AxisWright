@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Export -->
+    <string name="export_target_unavailable">Ziel lässt sich nicht öffnen</string>
+    <string name="export_failed">Export fehlgeschlagen: %1$s</string>
+
+    <!-- Pro-Dialog -->
+    <string name="pro_title">ParamWorker Pro</string>
+    <string name="pro_mark">(Pro)</string>
+    <string name="pro_trial_notice">Testphase: Alle Pro-Funktionen sind zurzeit frei nutzbar.</string>
+    <string name="pro_heading_pro">Pro – einmal kaufen, dauerhaft nutzen</string>
+    <string name="pro_feature_step">STEP-Export (Austausch mit anderen CAD-Programmen)</string>
+    <string name="pro_feature_3mf">3MF-Export (3D-Druck)</string>
+    <string name="pro_feature_param_table">Parameter-Tabelle anlegen und bearbeiten</string>
+    <string name="pro_heading_free">Immer frei</string>
+    <string name="pro_free_modeling">Modellieren: Skizzen, Körper und alle Werkzeuge</string>
+    <string name="pro_free_measure">Messen</string>
+    <string name="pro_free_stl">STL-Export</string>
+    <string name="pro_free_share">Projekte teilen und importieren</string>
+    <string name="pro_free_script">Skript-Editor (OpenSCAD)</string>
+    <string name="pro_free_unlimited">Unbegrenzt viele Projekte</string>
+    <string name="pro_existing_params_note">Vorhandene Parameter in Ihren Modellen werden auch ohne Pro weiter berechnet.</string>
+    <string name="pro_status_active">Pro aktiv – danke!</string>
+    <string name="pro_status_price">Preis: %1$s (einmalig)</string>
+    <string name="pro_status_loading">Preis wird von Google Play geladen …</string>
+    <string name="pro_buy">Kaufen</string>
+    <string name="pro_restore">Kauf wiederherstellen</string>
+    <string name="pro_msg_restored">Kauf wiederhergestellt – Pro ist aktiv.</string>
+    <string name="pro_msg_not_found">Kein Kauf von ParamWorker Pro gefunden.</string>
+    <string name="pro_msg_pending">Kauf ausstehend – Pro wird freigeschaltet, sobald die Zahlung bestätigt ist.</string>
+    <string name="pro_err_unavailable">Google Play ist nicht erreichbar. Kaufen und Wiederherstellen brauchen den Play Store und eine Internetverbindung.</string>
+    <string name="pro_err_item_unavailable">ParamWorker Pro ist im Play Store derzeit nicht verfügbar.</string>
+    <string name="pro_err_other">Kauf nicht möglich (Google Play meldet Code %1$d).</string>
+
+    <!-- Hilfe -->
+    <string name="help_title_welcome">Willkommen bei ParamWorker</string>
+    <string name="help_title">Hilfe</string>
+    <string name="help_open_example">Beispiel öffnen</string>
+    <string name="help_start_empty">Leer beginnen</string>
+    <string name="help_section_build">So entsteht ein Bauteil</string>
+    <string name="help_build_1">1. Skizze zeichnen: Linie, Rechteck, Kreis … – Linien enden an Punkten, geschlossene Umrisse werden zur Fläche.</string>
+    <string name="help_build_2">2. Bemaßen: eine Linie antippen ergibt ihre Länge, ein Kreis den Durchmesser, zwei Elemente Abstand oder Winkel. Ein Maß antippen ändert es.</string>
+    <string name="help_build_3">3. „Fertig“, dann Körper › Extrudieren (oder Drehen). Danach Bohrungen, Verrundungen, Muster, Schale …</string>
+    <string name="help_build_4">Jeder Schritt bleibt änderbar: in der Zeitleiste unten antippen wählt ihn aus, nochmal antippen bearbeitet ihn, lange drücken öffnet Umbenennen und Löschen. Das Modell baut sich neu; Parameter machen Maße zu Formeln.</string>
+    <string name="help_section_start">Start und Projekte</string>
+    <string name="help_start_1">Die Startseite zeigt Schnellstart und die zuletzt bearbeiteten Projekte. Zurück dorthin: Zurück-Taste oder Projektmenü › Startseite. Gespeichert wird automatisch.</string>
+    <string name="help_section_sketch">Skizze</string>
+    <string name="help_sketch_1">Antippen wählt aus, erneutes Antippen hebt die Auswahl wieder auf; für mehrere Elemente einfach nacheinander antippen. Ein Tipp ins Leere hebt alles auf und schließt offene Leisten.</string>
+    <string name="help_sketch_2">Ein Zeichenwerkzeug endet nach einer fertigen Form, beim erneuten Antippen seines Knopfs oder mit ✕. Zwei Finger: verschieben und zoomen.</string>
+    <string name="help_sketch_3">Stift-Radierer: löscht, was er berührt. Maus: Rad zoomt, mittlere Taste verschiebt, rechte Taste bricht ab.</string>
+    <string name="help_sketch_4">Tastatur: L Linie, R Rechteck, C Kreis, A Bogen, S Werkzeug beenden · Entf löscht · Esc bricht ab · Strg+Z/Y rückgängig/wiederholen · Strg+A alles.</string>
+    <string name="help_section_3d">3D-Ansicht</string>
+    <string name="help_3d_1">Ziehen dreht, zwei Finger zoomen, das Mausrad auch. „Ansicht“ wechselt zu Oben/Vorne/Rechts und passt ein.</string>
+    <string name="help_3d_2">Kanten und Flächen antippen, wenn ein Werkzeug danach fragt (Verrunden, Bohrung, Schale, Messen). ↶ ↷ machen Änderungen rückgängig.</string>
+</resources>

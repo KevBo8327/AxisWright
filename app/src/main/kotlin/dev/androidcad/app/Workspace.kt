@@ -1,5 +1,6 @@
 package dev.androidcad.app
 
+import androidx.annotation.StringRes
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -65,7 +66,7 @@ class ModelOutput(
     val edges: FloatArray?,
     val volumeMm3: Double,
     val faceCount: Int,
-    val errors: List<String>,
+    val errors: List<UiText>,
     val millis: Long,
     /** Kanten als Polylinien (Punkte hintereinander, je Kante [edgeCounts] Punkte) – für das Antippen im Viewer. */
     val polylines: FloatArray = FloatArray(0),
@@ -99,10 +100,12 @@ class ModelOutput(
 )
 
 /** Messmodus: bis zu zwei angetippte Teile des Körpers ([picks]) und das Ergebnis als Textzeilen. */
-class MeasureMode(val picks: List<BrepShape.Part>, val lines: List<String> = emptyList(), val segment: FloatArray? = null)
+class MeasureMode(val picks: List<BrepShape.Part>, val lines: List<UiText> = emptyList(), val segment: FloatArray? = null)
 
 /** Standardansichten des 3D-Viewers. */
-enum class StdView(val label: String) { ISO("Iso"), TOP("Oben"), FRONT("Vorne"), RIGHT("Rechts") }
+enum class StdView(@androidx.annotation.StringRes val label: Int) {
+    ISO(R.string.model_view_iso), TOP(R.string.model_view_top), FRONT(R.string.model_view_front), RIGHT(R.string.model_view_right)
+}
 
 /** Art der Vervielfältigung beim Anlegen (siehe [WorkspaceState.createPattern]). */
 enum class PatternType { LINEAR, CIRCULAR, MIRROR }
@@ -174,9 +177,12 @@ class EditorHandle(editor: SketchEditor) {
  * Änderungen werden entprellt automatisch im Projektspeicher gesichert ([session]); [flush] sichert sofort (onStop).
  * Beim Start wird das zuletzt geöffnete Modell wiederhergestellt.
  */
-class WorkspaceState(private val scope: CoroutineScope, private val session: ModelSession, val prefs: UiPrefs = UiPrefs()) {
+// [string] löst Texte auf, die beim Anlegen gespeichert werden (Standardnamen neuer Features, Beispielname) – später sind sie Nutzerdaten
+class WorkspaceState(
+    private val scope: CoroutineScope, private val session: ModelSession, private val string: (Int) -> String, val prefs: UiPrefs = UiPrefs(),
+) {
     private var doc = Document()
-    private var activeSketch: SketchFeature = doc.addSketch("Skizze 1")
+    private var activeSketch: SketchFeature = doc.addSketch("${string(R.string.ws_name_sketch)} 1")
 
     val handle = EditorHandle(SketchEditor(activeSketch.sketch))
 
@@ -361,7 +367,7 @@ class WorkspaceState(private val scope: CoroutineScope, private val session: Mod
     var currentProjectId by mutableStateOf<String?>(null)
         private set
     /** Hinweis an den Nutzer (z. B. „beschädigt, Sicherung geöffnet“, „Speichern fehlgeschlagen“). */
-    var notice by mutableStateOf<String?>(null)
+    var notice by mutableStateOf<UiText?>(null)
 
     private var job: Job? = null
     private var cameraJob: Job? = null
@@ -394,7 +400,7 @@ class WorkspaceState(private val scope: CoroutineScope, private val session: Mod
     init {
         val restored = session.restoreLast()
         adopt(restored?.document ?: doc)
-        notice = restored?.notice
+        notice = restored?.notice?.let(UiText::Core)
         syncProject()
     }
 
@@ -450,7 +456,7 @@ class WorkspaceState(private val scope: CoroutineScope, private val session: Mod
                     }
                 }
             }
-            result.onFailure { notice = "Speichern fehlgeschlagen: ${it.message}" }
+            result.onFailure { notice = UiText.Res(R.string.ws_notice_save_failed, it.message.orEmpty()) }
         }
     }
 
@@ -469,7 +475,7 @@ class WorkspaceState(private val scope: CoroutineScope, private val session: Mod
             }
             syncProject()
         } catch (e: Exception) {
-            notice = "Speichern fehlgeschlagen: ${e.message}"
+            notice = UiText.Res(R.string.ws_notice_save_failed, e.message.orEmpty())
         }
     }
 
@@ -492,7 +498,7 @@ class WorkspaceState(private val scope: CoroutineScope, private val session: Mod
     /** Übernimmt ein Dokument: das letzte Feature wird gewählt, der Körper wird neu gebaut. */
     private fun adopt(newDoc: Document) {
         doc = newDoc
-        if (doc.features.none { it is SketchFeature }) doc.addSketch("Skizze 1")
+        if (doc.features.none { it is SketchFeature }) doc.addSketch("${string(R.string.ws_name_sketch)} 1")
         history = dev.androidcad.project.UndoHistory(DocumentCodec.encode(doc))
         canUndo = false; canRedo = false
         job?.cancel()
@@ -634,7 +640,7 @@ class WorkspaceState(private val scope: CoroutineScope, private val session: Mod
         flush()
         val r = session.open(id)
         r.document?.let { adopt(it) }
-        notice = r.notice
+        notice = r.notice?.let(UiText::Core)
         markClean()
         syncProject()
     }
@@ -649,7 +655,7 @@ class WorkspaceState(private val scope: CoroutineScope, private val session: Mod
         flush()
         val r = session.duplicate()
         r.document?.let { adopt(it) }
-        notice = r.notice
+        notice = r.notice?.let(UiText::Core)
         markClean()
         syncProject()
     }
@@ -693,12 +699,12 @@ class WorkspaceState(private val scope: CoroutineScope, private val session: Mod
         val imported = try {
             DocumentCodec.decode(text)
         } catch (e: Exception) { // fremde Datei: jeder Fehler beim Einlesen ist eine Meldung, kein Absturz
-            notice = "Import fehlgeschlagen: ${e.message}"
+            notice = UiText.Res(R.string.ws_notice_import_failed, e.message.orEmpty())
             return
         }
         flush()
         session.startNew()
-        session.rename(if (session.list().any { it.name == name }) "$name (Import)" else name)
+        session.rename(if (session.list().any { it.name == name }) string(R.string.ws_import_name).format(name) else name)
         adopt(imported)
         notice = null
         markDirty()
@@ -712,7 +718,7 @@ class WorkspaceState(private val scope: CoroutineScope, private val session: Mod
         val m = PlateModel()
         m.solveSketch()
         adopt(m.document)
-        session.rename(EXAMPLE_NAME)
+        session.rename(string(R.string.ws_example_name))
         notice = null
         markDirty()
         syncProject()
@@ -720,7 +726,8 @@ class WorkspaceState(private val scope: CoroutineScope, private val session: Mod
 
     // ---- Features bearbeiten ----------------------------------------------------------------------
 
-    private fun nextName(prefix: String): String {
+    private fun nextName(@StringRes prefixRes: Int): String {
+        val prefix = string(prefixRes)
         var n = 1
         while (doc.features.any { it.name == "$prefix $n" }) n++
         return "$prefix $n"
@@ -728,7 +735,7 @@ class WorkspaceState(private val scope: CoroutineScope, private val session: Mod
 
     /** Neue leere Skizze auf [plane]; sie wird aktiv. */
     fun addSketch(plane: PlaneSpec) {
-        val f = doc.addSketch(nextName("Skizze"), plane.toWorkplane())
+        val f = doc.addSketch(nextName(R.string.ws_name_sketch), plane.toWorkplane())
         select(f.id)
         markDirty()
         mode = WorkMode.SKETCH
@@ -746,7 +753,7 @@ class WorkspaceState(private val scope: CoroutineScope, private val session: Mod
     /** Extrudiert alle geschlossenen Flächen der aktiven Skizze: hinzufügen oder (von vorhandenem Material) abtragen. */
     fun createExtrusion(op: BodyOp = BodyOp.ADD, distance: Double = 10.0) {
         if (regionCount == 0) return
-        val name = nextName(if (op == BodyOp.ADD) "Extrusion" else "Abtrag")
+        val name = nextName(if (op == BodyOp.ADD) R.string.ws_name_extrusion else R.string.ws_name_cut)
         // Abtragen läuft standardmäßig gegen die Ebenennormale, also in das Material hinein, wenn die Skizze auf der Oberseite liegt
         val f = doc.addExtrude(name, activeSketch, if (op == BodyOp.CUT) -distance else distance, op)
         select(f.id)
@@ -775,7 +782,7 @@ class WorkspaceState(private val scope: CoroutineScope, private val session: Mod
         val candidates = revolveAxisOptions(activeSketch.id) + listOf(RevolveAxis.SketchY, RevolveAxis.SketchX)
         val axis = candidates.firstOrNull { a -> RevolveGeometry.resolve(sk, a)?.let { RevolveGeometry.problem(regions, it) } == null }
             ?: candidates.first()
-        val f = doc.addRevolve(nextName(if (op == BodyOp.ADD) "Drehung" else "Drehabtrag"), activeSketch, axis, 360.0, op)
+        val f = doc.addRevolve(nextName(if (op == BodyOp.ADD) R.string.ws_name_revolve else R.string.ws_name_revolve_cut), activeSketch, axis, 360.0, op)
         select(f.id)
         markDirty()
         scheduleBuild(0)
@@ -924,7 +931,7 @@ class WorkspaceState(private val scope: CoroutineScope, private val session: Mod
         if (index < 0) return
         val ref = output?.edgeRefs?.getOrNull(index)
         if (ref == null) {
-            notice = "Diese Kante lässt sich nicht wählen (Naht oder noch unbenannte Fläche)."
+            notice = UiText.Res(R.string.ws_notice_edge_not_selectable)
             return
         }
         edgeMode = EdgeMode(mode.kind, if (ref in mode.selected) mode.selected - ref else mode.selected + ref)
@@ -935,7 +942,7 @@ class WorkspaceState(private val scope: CoroutineScope, private val session: Mod
     fun applyEdgeMode() {
         val mode = edgeMode ?: return
         if (mode.selected.isEmpty()) return
-        val f = doc.addFillet(nextName(if (mode.kind == EdgeKind.ROUND) "Verrundung" else "Fase"), mode.selected, edgeSize, mode.kind)
+        val f = doc.addFillet(nextName(if (mode.kind == EdgeKind.ROUND) R.string.ws_name_fillet else R.string.ws_name_chamfer), mode.selected, edgeSize, mode.kind)
         select(f.id) // beendet den Kantenmodus
         markDirty()
         scheduleBuild(0)
@@ -943,9 +950,9 @@ class WorkspaceState(private val scope: CoroutineScope, private val session: Mod
 
     fun updateFillet(size: Double, kind: EdgeKind) {
         val f = fillet ?: return
-        // ein Standardname folgt der Art („Verrundung 2“ ↔ „Fase 2“), ein eigener Name bleibt
-        val defaultName = Regex("""(Verrundung|Fase) \d+""").matches(f.name)
-        val name = if (kind != f.kind && defaultName) nextName(if (kind == EdgeKind.ROUND) "Verrundung" else "Fase") else f.name
+        // ein Standardname folgt der Art („Verrundung 2“ ↔ „Fase 2“, in der Sprache des Anlegens), ein eigener Name bleibt
+        val defaultName = Regex("(${Regex.escape(string(R.string.ws_name_fillet))}|${Regex.escape(string(R.string.ws_name_chamfer))}) \\d+").matches(f.name)
+        val name = if (kind != f.kind && defaultName) nextName(if (kind == EdgeKind.ROUND) R.string.ws_name_fillet else R.string.ws_name_chamfer) else f.name
         doc.update(f.copy(size = size, kind = kind, name = name))
         refresh()
         markDirty()
@@ -1028,7 +1035,7 @@ class WorkspaceState(private val scope: CoroutineScope, private val session: Mod
         val (lo, hi) = bodyBounds() ?: return
         val onDatum = datum
         val origin = Vec3(lo.x, (lo.y + hi.y) / 2, (lo.z + hi.z) / 2)
-        val f = doc.addMirrorBody(nextName("Körperspiegelung"), origin, Vec3(1.0, 0.0, 0.0), onDatum?.id)
+        val f = doc.addMirrorBody(nextName(R.string.ws_name_mirror_body), origin, Vec3(1.0, 0.0, 0.0), onDatum?.id)
         select(f.id)
         markDirty()
         scheduleBuild(0)
@@ -1066,7 +1073,7 @@ class WorkspaceState(private val scope: CoroutineScope, private val session: Mod
             PatternType.CIRCULAR -> PatternKind.Circular(c, Vec3(0.0, 0.0, 1.0), 4)
             PatternType.MIRROR -> PatternKind.Mirror(c, Vec3(1.0, 0.0, 0.0))
         }
-        var f = doc.addPattern(nextName(if (type == PatternType.MIRROR) "Spiegelung" else "Muster"), src.id, kind)
+        var f = doc.addPattern(nextName(if (type == PatternType.MIRROR) R.string.ws_name_mirror else R.string.ws_name_pattern), src.id, kind)
         // Hat die Quelle Verrundungen/Fasen, nehmen die Kopien sie standardmäßig mit
         if (doc.patternFillets(f).isNotEmpty()) { f = f.copy(withFillets = true); doc.update(f) }
         select(f.id)
@@ -1111,7 +1118,7 @@ class WorkspaceState(private val scope: CoroutineScope, private val session: Mod
     private fun createPlane(face: FaceRef, planar: PlanarFace) {
         planePick = false
         val def = PlaneDef.Offset(face, 10.0)
-        val f = doc.addPlane(nextName("Ebene"), def, DatumPlane.offset(planar, 10.0))
+        val f = doc.addPlane(nextName(R.string.ws_name_plane), def, DatumPlane.offset(planar, 10.0))
         select(f.id)
         markDirty()
         scheduleBuild(0)
@@ -1142,7 +1149,7 @@ class WorkspaceState(private val scope: CoroutineScope, private val session: Mod
     /** Neue Skizze auf der gewählten Arbeitsebene (öffnet den Skizzenmodus). */
     fun createSketchOnDatum() {
         val f = datum ?: return
-        val sk = doc.addSketchOnPlane(nextName("Skizze"), f.id)
+        val sk = doc.addSketchOnPlane(nextName(R.string.ws_name_sketch), f.id)
         select(sk.id)
         markDirty()
         mode = WorkMode.SKETCH
@@ -1169,7 +1176,7 @@ class WorkspaceState(private val scope: CoroutineScope, private val session: Mod
 
     /** Legt eine neue Skizze auf die ebene Fläche [face] und öffnet sie zum Zeichnen. */
     private fun createFaceSketch(face: FaceRef, plane: PlanarFace) {
-        val f = doc.addSketchOnFace(nextName("Skizze"), face, FacePlane.workplane(plane))
+        val f = doc.addSketchOnFace(nextName(R.string.ws_name_sketch), face, FacePlane.workplane(plane))
         select(f.id)
         markDirty()
         mode = WorkMode.SKETCH
@@ -1223,11 +1230,11 @@ class WorkspaceState(private val scope: CoroutineScope, private val session: Mod
         if (f.onFace == null) return
         val edges = output?.projectable?.get(f.id)
         if (edges == null) {
-            notice = if (building) "Der Körper wird noch berechnet." else "Von dieser Fläche lassen sich keine Kanten projizieren."
+            notice = UiText.Res(if (building) R.string.ws_notice_project_building else R.string.ws_notice_project_none)
             return
         }
         if (doc.addProjections(f.id, edges) == 0) {
-            notice = "Alle Kanten dieser Fläche sind schon projiziert."
+            notice = UiText.Res(R.string.ws_notice_project_already)
             return
         }
         activeSketch = doc.sketch(f.id)
@@ -1282,7 +1289,7 @@ class WorkspaceState(private val scope: CoroutineScope, private val session: Mod
         try {
             doc.setParameters(list)
         } catch (e: IllegalArgumentException) {
-            notice = e.message
+            notice = if (e is dev.androidcad.model.ModelException) UiText.Core(e.msg) else UiText.Raw(e.message.orEmpty())
             refresh()
             return
         }
@@ -1303,12 +1310,12 @@ class WorkspaceState(private val scope: CoroutineScope, private val session: Mod
         null
     }
 
-    private var parameterNotice: String? = null
+    private var parameterNotice: UiText? = null
 
     private fun applyParameters(coalesceKey: Any? = selectedId) {
         val r = doc.applyParameters()
         // Fehler in der Tabelle selbst zeigt ihre Zeile („ungültig“); oben nur Fehler an gebundenen Werten – und nur, solange sie bestehen
-        val text = r.errors.filterNot { it.startsWith("Parameter ") }.joinToString("\n").ifEmpty { null }
+        val text = r.errors.filterNot { it.key == dev.androidcad.model.ModelText.PARAMETER_ERROR }.map(UiText::Core).ifEmpty { null }?.let(UiText::Lines)
         if (text != null) notice = text else if (notice == parameterNotice) notice = null
         parameterNotice = text
         activeSketch = doc.sketch(activeSketch.id)
@@ -1345,7 +1352,7 @@ class WorkspaceState(private val scope: CoroutineScope, private val session: Mod
         measureMode = try {
             measure(picks)
         } catch (e: dev.androidcad.brep.BrepException) {
-            MeasureMode(picks, listOf("Messung fehlgeschlagen: ${e.message}"))
+            MeasureMode(picks, listOf(UiText.Res(R.string.ws_measure_failed, e.message.orEmpty())))
         }
         refreshHighlight()
     }
@@ -1353,7 +1360,6 @@ class WorkspaceState(private val scope: CoroutineScope, private val session: Mod
     private fun measure(picks: List<BrepShape.Part>): MeasureMode {
         val out = output ?: return MeasureMode(picks)
         val body = out.body ?: return MeasureMode(picks)
-        fun mm(v: Double) = "%.2f mm".format(v)
         fun v(t: Triple<Double, Double, Double>) = Vec3(t.first, t.second, t.third)
         fun line(p: BrepShape.Part) = (p as? BrepShape.Part.Edge)?.let { out.edgeInfos.getOrNull(it.id - 1) }?.takeIf { it.isLine }
             ?.let { v(it.end) + v(it.start) * -1.0 }
@@ -1361,16 +1367,17 @@ class WorkspaceState(private val scope: CoroutineScope, private val session: Mod
         val lines = picks.map { p ->
             when (p) {
                 is BrepShape.Part.Edge -> out.edgeInfos.getOrNull(p.id - 1)?.let { e ->
-                    "Kante: Länge ${mm(e.length)}" + if (e.isCircle) " · Radius ${mm(e.radius)} · Ø ${mm(2 * e.radius)}" else ""
-                } ?: "Kante"
-                is BrepShape.Part.Face -> "Fläche: %.2f mm²".format(body.faceArea(p.id)) + if (normal(p) == null) " (gekrümmt)" else ""
+                    if (e.isCircle) UiText.Res(R.string.ws_measure_edge_circle, e.length, e.radius, 2 * e.radius)
+                    else UiText.Res(R.string.ws_measure_edge_line, e.length)
+                } ?: UiText.Res(R.string.ws_measure_edge)
+                is BrepShape.Part.Face -> UiText.Res(if (normal(p) == null) R.string.ws_measure_face_curved else R.string.ws_measure_face, body.faceArea(p.id))
             }
         }.toMutableList()
         var segment: FloatArray? = null
         if (picks.size == 2) {
             val (a, b) = picks
             val d = body.distance(a, b)
-            lines += "Abstand: ${mm(d.value)}"
+            lines += UiText.Res(R.string.ws_measure_distance, d.value)
             if (d.value > 1e-9) segment = floatArrayOf(
                 d.onA.first.toFloat(), d.onA.second.toFloat(), d.onA.third.toFloat(), d.onB.first.toFloat(), d.onB.second.toFloat(), d.onB.third.toFloat(),
             )
@@ -1382,7 +1389,7 @@ class WorkspaceState(private val scope: CoroutineScope, private val session: Mod
                 na != null && lb != null -> MeasureMath.lineToPlane(lb, na)
                 else -> null // gekrümmte Fläche oder Bogen: kein eindeutiger Winkel
             }
-            angle?.let { lines += "Winkel: %.2f°".format(it) }
+            angle?.let { lines += UiText.Res(R.string.ws_measure_angle, it) }
         }
         return MeasureMode(picks, lines, segment)
     }
@@ -1411,7 +1418,7 @@ class WorkspaceState(private val scope: CoroutineScope, private val session: Mod
     fun applyShellMode() {
         val mode = shellMode ?: return
         if (mode.selected.isEmpty()) return
-        val f = doc.addShell(nextName("Schale"), mode.selected, shellThickness)
+        val f = doc.addShell(nextName(R.string.ws_name_shell), mode.selected, shellThickness)
         select(f.id) // beendet den Schalenmodus
         markDirty()
         scheduleBuild(0)
@@ -1434,18 +1441,18 @@ class WorkspaceState(private val scope: CoroutineScope, private val session: Mod
         val ref = out.faceRefs.getOrNull(hit.faceId - 1)
         shellMode?.let { mode ->
             // Öffnungen dürfen auch gekrümmt sein; erneut tippen hebt die Wahl auf
-            if (ref == null) { notice = "Diese Fläche hat noch keinen Namen und lässt sich nicht referenzieren."; return }
+            if (ref == null) { notice = UiText.Res(R.string.ws_notice_face_unnamed); return }
             shellMode = ShellMode(if (ref in mode.selected) mode.selected - ref else mode.selected + ref)
             refreshHighlight()
             return
         }
         val plane = out.facePlanes.getOrNull(hit.faceId - 1)
         if (plane == null) {
-            notice = "Das geht nur mit ebenen Flächen."
+            notice = UiText.Res(R.string.ws_notice_planar_only)
             return
         }
         if (ref == null) {
-            notice = "Diese Fläche hat noch keinen Namen und lässt sich nicht referenzieren."
+            notice = UiText.Res(R.string.ws_notice_face_unnamed)
             return
         }
         if (faceSketchPick) {
@@ -1469,7 +1476,7 @@ class WorkspaceState(private val scope: CoroutineScope, private val session: Mod
         val first = cands.minByOrNull { kotlin.math.abs(it.dist) }
         val second = first?.let { f -> cands.filter { it !== f && (f.dir cross it.dir).length > 0.3 }.minByOrNull { kotlin.math.abs(it.dist) } }
         val anchors = if (first != null && second != null) EdgeDistance(first.ref, first.dist) to EdgeDistance(second.ref, second.dist) else null
-        if (anchors == null) notice = "Keine zwei geraden Randkanten gefunden – die Position der Bohrung bleibt ein fester Punkt."
+        if (anchors == null) notice = UiText.Res(R.string.ws_notice_hole_no_edges)
         holeMode = HoleMode(
             ref, doubleArrayOf(p.x, p.y, p.z), doubleArrayOf(n.x, n.y, n.z), plane, anchors,
             if (first != null && second != null) first.line to second.line else null,
@@ -1488,7 +1495,7 @@ class WorkspaceState(private val scope: CoroutineScope, private val session: Mod
         val mode = holeMode ?: return
         val face = mode.face ?: return
         val p = mode.point ?: return
-        val f = doc.addHole(nextName("Bohrung"), face, p[0], p[1], p[2], holeDiameter, if (holeThrough) null else holeDepth, mode.anchors)
+        val f = doc.addHole(nextName(R.string.ws_name_hole), face, p[0], p[1], p[2], holeDiameter, if (holeThrough) null else holeDepth, mode.anchors)
         select(f.id) // beendet den Bohrungsmodus
         markDirty()
         scheduleBuild(0)
@@ -1608,7 +1615,7 @@ class WorkspaceState(private val scope: CoroutineScope, private val session: Mod
         val id = selectedId ?: return
         val f = doc.feature(id)
         doc.remove(id)
-        if (doc.features.none { it is SketchFeature }) doc.addSketch("Skizze 1")
+        if (doc.features.none { it is SketchFeature }) doc.addSketch("${string(R.string.ws_name_sketch)} 1")
         val sketchOf = (f as? ExtrudeFeature)?.sketch ?: (f as? RevolveFeature)?.sketch
         val next = sketchOf?.takeIf { s -> doc.features.any { it.id == s } }
         select(next ?: doc.features.last().id)
@@ -1628,9 +1635,9 @@ class WorkspaceState(private val scope: CoroutineScope, private val session: Mod
                 try {
                     compute(snapshot)
                 } catch (e: dev.androidcad.brep.BrepException) {
-                    ModelOutput(null, null, 0.0, 0, listOf("Körper konnte nicht dargestellt werden: ${e.message}"), 0)
+                    ModelOutput(null, null, 0.0, 0, listOf(UiText.Res(R.string.ws_error_body_failed, e.message.orEmpty())), 0)
                 } catch (_: StackOverflowError) {
-                    ModelOutput(null, null, 0.0, 0, listOf("Das Modell ist zu tief verschachtelt, um es aufzubauen"), 0)
+                    ModelOutput(null, null, 0.0, 0, listOf(UiText.Res(R.string.ws_error_too_deep)), 0)
                 }
             }
             replaceOutput(built)
@@ -1664,7 +1671,7 @@ class WorkspaceState(private val scope: CoroutineScope, private val session: Mod
     private fun compute(d: Document): ModelOutput {
         val t0 = System.nanoTime()
         val r = d.build()
-        val errors = r.errors.values.toList()
+        val errors = r.errors.values.map(UiText::Core)
         val body = r.body ?: return ModelOutput(
             null, null, 0.0, 0, errors, (System.nanoTime() - t0) / 1_000_000, sketchPlanes = r.sketchPlanes, errorIds = r.errors.keys,
         )
@@ -1729,7 +1736,6 @@ private const val AUTOSAVE_DELAY_MS = 700L
 /** Schlüssel für den Verlauf: Änderungen an der Parameter-Tabelle kurz hintereinander werden ein Rückgängig-Schritt. */
 private const val PARAMETER_EDIT = "parameters"
 private const val GRID_OFF = "view.grid.off"
-private const val EXAMPLE_NAME = "Platte mit vier Bohrungen"
 
 /** Polylinien der Kanten → einzelne Liniensegmente für `GL_LINES`. */
 internal fun BrepMesh.edgeSegments(): FloatArray {

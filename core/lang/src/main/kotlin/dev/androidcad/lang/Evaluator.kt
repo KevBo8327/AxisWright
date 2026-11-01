@@ -1,5 +1,6 @@
 package dev.androidcad.lang
 
+import dev.androidcad.text.Msg
 import kotlin.math.PI
 import kotlin.math.ceil
 import kotlin.math.max
@@ -13,7 +14,7 @@ public fun interface SourceProvider {
 public class RenderResult(
     public val root: Node,
     public val echoes: List<String>,
-    public val warnings: List<String>,
+    public val warnings: List<Msg>,
 )
 
 internal class Scope(val parent: Scope?, val dyn: Scope? = null) {
@@ -39,7 +40,7 @@ internal class Evaluator(
     private val isCancelled: () -> Boolean,
 ) {
     val echoes = ArrayList<String>()
-    val warnings = ArrayList<String>()
+    val warnings = ArrayList<Msg>()
 
     private val childStack = ArrayList<ChildCtx>()
     private var depth = 0
@@ -76,7 +77,7 @@ internal class Evaluator(
     }
 
     private fun exec(s: Stmt, scope: Scope, topLevel: Boolean = false): List<Node> {
-        if (isCancelled()) throw CadLangException("Abgebrochen")
+        if (isCancelled()) throw CadLangException(Msg(LangText.CANCELLED))
         return when (s) {
             EmptyStmt, is ModuleDef, is FunctionDef -> emptyList()
             is AssignStmt -> {
@@ -128,14 +129,14 @@ internal class Evaluator(
         if (r.step == 0.0 || r.start.isNaN() || r.end.isNaN()) return emptySequence()
         if ((r.step > 0 && r.start > r.end) || (r.step < 0 && r.start < r.end)) return emptySequence()
         val n = Math.floor((r.end - r.start) / r.step + 1e-9).toLong() + 1
-        if (n > maxRangeItems) throw CadLangException("Bereich hat zu viele Elemente ($n)")
+        if (n > maxRangeItems) throw CadLangException(Msg(LangText.RANGE_TOO_LARGE, n))
         return (0 until n).asSequence().map { NumV(r.start + it * r.step) }
     }
 
     private fun include(s: IncludeStmt, scope: Scope): List<Node> {
-        val provider = files ?: run { warn("include/use <${s.path}> ignoriert (keine Dateiquelle)"); return emptyList() }
-        val text = provider.read(s.path) ?: throw CadLangException("Datei '${s.path}' nicht gefunden", s.line)
-        if (includeDepth > 16) throw CadLangException("include/use zu tief verschachtelt", s.line)
+        val provider = files ?: run { warn(Msg(LangText.INCLUDE_IGNORED, s.path)); return emptyList() }
+        val text = provider.read(s.path) ?: throw CadLangException(Msg(LangText.FILE_NOT_FOUND, s.path), s.line)
+        if (includeDepth > 16) throw CadLangException(Msg(LangText.INCLUDE_TOO_DEEP), s.line)
         val prog = Parser(Lexer(text).tokenize()).parseProgram()
         includeDepth++
         try {
@@ -156,7 +157,7 @@ internal class Evaluator(
 
     private fun Scope.root(): Scope = parent?.root() ?: this
 
-    private fun warn(msg: String) { warnings += msg }
+    private fun warn(msg: Msg) { warnings += msg }
 
     // ---- Modulaufrufe -------------------------------------------------------
 
@@ -189,7 +190,7 @@ internal class Evaluator(
         return when (c.name) {
             "children" -> childrenBuiltin(args)
             "echo" -> { echo(c.args, scope); emptyList() }
-            "assert" -> { if (!(pos.firstOrNull()?.truthy() ?: false)) throw CadLangException("assert fehlgeschlagen: ${named["message"]?.render() ?: pos.getOrNull(1)?.render() ?: ""}", c.line); emptyList() }
+            "assert" -> { if (!(pos.firstOrNull()?.truthy() ?: false)) throw CadLangException(Msg(LangText.ASSERT_FAILED, named["message"]?.render() ?: pos.getOrNull(1)?.render() ?: ""), c.line); emptyList() }
             "cube" -> listOf(cube(args))
             "sphere" -> listOf(sphere(args, scope))
             "cylinder" -> listOf(cylinder(args, scope))
@@ -213,14 +214,14 @@ internal class Evaluator(
             "offset" -> listOf(offset(args, scope, kids()))
             "render", "group" -> listOf(Group(kids()))
             else -> {
-                warn("Unbekanntes oder nicht unterstütztes Modul '${c.name}' (Zeile ${c.line}) – Kinder werden unverändert übernommen")
+                warn(Msg(LangText.UNKNOWN_MODULE, c.name, c.line))
                 kids()
             }
         }
     }
 
     private fun callUserModule(def: ModuleDef, defScope: Scope, c: ModuleCall, caller: Scope): List<Node> {
-        if (++depth > maxDepth) { depth = 0; throw CadLangException("Rekursionstiefe überschritten in Modul '${def.name}'", c.line) }
+        if (++depth > maxDepth) { depth = 0; throw CadLangException(Msg(LangText.RECURSION_MODULE, def.name), c.line) }
         try {
             val sc = Scope(defScope, dyn = caller)
             bindParams(def.params, c.args, caller, sc)
@@ -291,7 +292,7 @@ internal class Evaluator(
         is BoolLit -> BoolV(e.v)
         UndefLit -> UndefV
         is Ident -> scope.lookup(e.name) ?: run {
-            if (!e.name.startsWith("$")) warn("Variable '${e.name}' ist nicht definiert (Zeile ${e.line})")
+            if (!e.name.startsWith("$")) warn(Msg(LangText.UNDEFINED_VARIABLE, e.name, e.line))
             UndefV
         }
         is RangeExpr -> {
@@ -438,7 +439,7 @@ internal class Evaluator(
 
     private fun callFunction(c: Call, scope: Scope): Value {
         scope.function(c.name)?.let { (def, defScope) ->
-            if (++depth > maxDepth) { depth = 0; throw CadLangException("Rekursionstiefe überschritten in Funktion '${def.name}'", c.line) }
+            if (++depth > maxDepth) { depth = 0; throw CadLangException(Msg(LangText.RECURSION_FUNCTION, def.name), c.line) }
             try {
                 val sc = Scope(defScope, dyn = scope)
                 bindParams(def.params, c.args, scope, sc)
@@ -499,12 +500,12 @@ internal class Evaluator(
 
     private fun polyhedron(a: Args, line: Int): Node {
         val pts = (a.get("points", 0) as? VecV)?.items?.map { p -> p.numVec()?.takeIf { it.size >= 3 }?.let { Triple(it[0], it[1], it[2]) } }
-            ?: throw CadLangException("polyhedron: 'points' fehlt", line)
-        if (pts.any { it == null }) throw CadLangException("polyhedron: ungültiger Punkt", line)
+            ?: throw CadLangException(Msg(LangText.POLYHEDRON_POINTS_MISSING), line)
+        if (pts.any { it == null }) throw CadLangException(Msg(LangText.POLYHEDRON_INVALID_POINT), line)
         val facesV = (a.named["faces"] ?: a.named["triangles"] ?: a.pos.getOrNull(1)) as? VecV
-            ?: throw CadLangException("polyhedron: 'faces' fehlt", line)
-        val faces = facesV.items.map { f -> f.numVec()?.map { it.toInt() } ?: throw CadLangException("polyhedron: ungültige Fläche", line) }
-        for (f in faces) for (i in f) if (i < 0 || i >= pts.size) throw CadLangException("polyhedron: Index $i außerhalb von 0..${pts.size - 1}", line)
+            ?: throw CadLangException(Msg(LangText.POLYHEDRON_FACES_MISSING), line)
+        val faces = facesV.items.map { f -> f.numVec()?.map { it.toInt() } ?: throw CadLangException(Msg(LangText.POLYHEDRON_INVALID_FACE), line) }
+        for (f in faces) for (i in f) if (i < 0 || i >= pts.size) throw CadLangException(Msg(LangText.POLYHEDRON_INDEX, i, pts.size - 1), line)
         return Polyhedron(pts.filterNotNull(), faces)
     }
 
@@ -525,9 +526,9 @@ internal class Evaluator(
 
     private fun polygon(a: Args, line: Int): Node {
         val pts = (a.get("points", 0) as? VecV)?.items?.map { p -> p.numVec()?.takeIf { it.size >= 2 }?.let { it[0] to it[1] } }
-            ?: throw CadLangException("polygon: 'points' fehlt", line)
-        if (pts.any { it == null }) throw CadLangException("polygon: ungültiger Punkt", line)
-        val paths = (a.get("paths", 1) as? VecV)?.items?.map { p -> p.numVec()?.map { it.toInt() } ?: throw CadLangException("polygon: ungültiger Pfad", line) }
+            ?: throw CadLangException(Msg(LangText.POLYGON_POINTS_MISSING), line)
+        if (pts.any { it == null }) throw CadLangException(Msg(LangText.POLYGON_INVALID_POINT), line)
+        val paths = (a.get("paths", 1) as? VecV)?.items?.map { p -> p.numVec()?.map { it.toInt() } ?: throw CadLangException(Msg(LangText.POLYGON_INVALID_PATH), line) }
         return Polygon2D(pts.filterNotNull(), paths)
     }
 
@@ -593,7 +594,7 @@ internal class Evaluator(
 
     private fun multMat(a: Args, line: Int): Mat4 {
         val rows = (a.get("m", 0) as? VecV)?.items?.map { it.numVec() }
-        if (rows == null || rows.size < 3 || rows.any { it == null || it.size < 3 }) throw CadLangException("multmatrix: 4x4- oder 3x4-Matrix erwartet", line)
+        if (rows == null || rows.size < 3 || rows.any { it == null || it.size < 3 }) throw CadLangException(Msg(LangText.MULTMATRIX_INVALID), line)
         val m = DoubleArray(16)
         m[15] = 1.0
         for (i in 0..2) for (j in 0..3) m[i * 4 + j] = rows[i]!!.getOrElse(j) { 0.0 }

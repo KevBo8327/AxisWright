@@ -14,7 +14,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 
 /** Darstellung: dem System folgen oder fest dunkel/hell. Standard ist Dunkel (CAD-Gewohnheit: starke Kontraste). */
-enum class ThemeMode(val label: String) { DARK("Dunkel"), LIGHT("Hell"), SYSTEM("Wie das System") }
+enum class ThemeMode(@androidx.annotation.StringRes val label: Int) {
+    DARK(R.string.start_theme_dark), LIGHT(R.string.start_theme_light), SYSTEM(R.string.start_theme_system)
+}
 
 /**
  * Farben jenseits von Material: 3D-Ansicht, Skizze (Zustandsfarben) und Glas-Flächen. Teil des Farbkonzepts „Blaupause“

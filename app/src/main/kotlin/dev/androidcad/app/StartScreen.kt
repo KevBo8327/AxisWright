@@ -36,6 +36,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import java.text.DateFormat
 import java.util.Date
@@ -50,6 +51,7 @@ fun StartScreen(hub: ProjectHub) {
     var showExamples by remember { mutableStateOf(false) }
     var showHelp by remember { mutableStateOf(false) }
     val import = rememberImporter(hub)
+    val scriptName = stringResource(R.string.menu_script_default_name)
     LaunchedEffect(Unit) { hub.refreshProjects() }
     val entries = hub.entries
     val format = remember { DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT) }
@@ -65,20 +67,20 @@ fun StartScreen(hub: ProjectHub) {
             item(span = { GridItemSpan(maxLineSpan) }) {
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text("ParamWorker", style = MaterialTheme.typography.headlineMedium, color = colors.onBackground)
-                    Text("Parametrisch konstruieren – Skizze, Maße, Körper.", style = MaterialTheme.typography.bodyMedium, color = colors.onSurfaceVariant)
+                    Text(stringResource(R.string.start_tagline), style = MaterialTheme.typography.bodyMedium, color = colors.onSurfaceVariant)
                 }
             }
             // Kacheln als Zellen des Rasters: gleiche Spalten wie die Projektkarten, auf schmalen Smartphones zwei nebeneinander
-            item { QuickTile("Neues Modell", "Skizze → Körper", CadIcon.SKETCH, primary = true) { hub.newModel() } }
-            item { QuickTile("Neues Skript", "OpenSCAD", CadIcon.SCRIPT) { hub.newScript() } }
-            item { QuickTile("Beispiele", "zum Ausprobieren", CadIcon.EXTRUDE) { showExamples = true } }
-            item { QuickTile("Importieren", "Modell oder .scad", CadIcon.PLANE) { import() } }
-            item { QuickTile("Hilfe & Gesten", "Einführung", CadIcon.MEASURE) { showHelp = true } }
+            item { QuickTile(stringResource(R.string.start_tile_new_model), stringResource(R.string.start_tile_new_model_sub), CadIcon.SKETCH, primary = true) { hub.newModel() } }
+            item { QuickTile(stringResource(R.string.start_tile_new_script), stringResource(R.string.start_tile_new_script_sub), CadIcon.SCRIPT) { hub.newScript(scriptName) } }
+            item { QuickTile(stringResource(R.string.start_tile_examples), stringResource(R.string.start_tile_examples_sub), CadIcon.EXTRUDE) { showExamples = true } }
+            item { QuickTile(stringResource(R.string.start_tile_import), stringResource(R.string.start_tile_import_sub), CadIcon.PLANE) { import() } }
+            item { QuickTile(stringResource(R.string.start_tile_help), stringResource(R.string.start_tile_help_sub), CadIcon.MEASURE) { showHelp = true } }
             item(span = { GridItemSpan(maxLineSpan) }) {
-                Text("Zuletzt bearbeitet", Modifier.padding(top = 12.dp), style = MaterialTheme.typography.titleMedium, color = colors.onBackground)
+                Text(stringResource(R.string.start_recent), Modifier.padding(top = 12.dp), style = MaterialTheme.typography.titleMedium, color = colors.onBackground)
             }
             if (entries.isEmpty()) item(span = { GridItemSpan(maxLineSpan) }) {
-                Text("Noch keine Projekte – starte mit „Neues Modell“ oder einem Beispiel.", style = MaterialTheme.typography.bodyMedium, color = colors.onSurfaceVariant)
+                Text(stringResource(R.string.start_empty), style = MaterialTheme.typography.bodyMedium, color = colors.onSurfaceVariant)
             }
             items(entries, key = { "${it.kind}/${it.info.id}" }) { e ->
                 val shape = RoundedCornerShape(14.dp)
@@ -89,12 +91,12 @@ fun StartScreen(hub: ProjectHub) {
                     // Vorschau: Bild des Körpers, sonst das Symbol der Art (Skript, Modell ohne Körper oder noch ohne Bild)
                     val thumb = if (e.kind == ProjectKind.MODEL) hub.workspace.thumbnailFile(e.info.id).let { f -> rememberThumbnail(f, f?.lastModified() ?: 0L) } else null
                     Box(Modifier.fillMaxWidth().aspectRatio(4f / 3f).background(colors.surfaceContainerHighest), contentAlignment = Alignment.Center) {
-                        if (thumb != null) Image(thumb, contentDescription = "Vorschau von ${e.info.name}", Modifier.fillMaxSize().padding(8.dp))
+                        if (thumb != null) Image(thumb, contentDescription = stringResource(R.string.start_thumb_cd, e.info.name), Modifier.fillMaxSize().padding(8.dp))
                         else CadIconView(e.kind.icon(), colors.onSurfaceVariant.copy(alpha = 0.6f), 40.dp)
                     }
                     Column(Modifier.padding(horizontal = 14.dp, vertical = 10.dp)) {
                         Text(e.info.name, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.titleSmall, color = colors.onSurface)
-                        Text("${e.kind.label} · ${format.format(Date(e.info.updatedAt))}", maxLines = 1, style = MaterialTheme.typography.labelSmall, color = colors.onSurfaceVariant)
+                        Text("${stringResource(e.kind.label)} · ${format.format(Date(e.info.updatedAt))}", maxLines = 1, style = MaterialTheme.typography.labelSmall, color = colors.onSurfaceVariant)
                     }
                 }
             }

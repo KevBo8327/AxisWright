@@ -14,6 +14,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 
@@ -29,24 +30,24 @@ fun HelpDialog(hub: ProjectHub, firstStart: Boolean, onDismiss: () -> Unit) {
     AlertDialog(
         // beim ersten Start nur über die Knöpfe schließen: ein Tipp daneben soll die Einführung nicht unbemerkt wegnehmen
         onDismissRequest = { if (!firstStart) onDismiss() },
-        title = { Text(if (firstStart) "Willkommen bei ParamWorker" else "Hilfe") },
+        title = { Text(stringResource(if (firstStart) R.string.help_title_welcome else R.string.help_title)) },
         text = {
             Column(Modifier.heightIn(max = 460.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Section("So entsteht ein Bauteil")
-                Line("1. Skizze zeichnen: Linie, Rechteck, Kreis … – Linien enden an Punkten, geschlossene Umrisse werden zur Fläche.")
-                Line("2. Bemaßen: eine Linie antippen ergibt ihre Länge, ein Kreis den Durchmesser, zwei Elemente Abstand oder Winkel. Ein Maß antippen ändert es.")
-                Line("3. „Fertig“, dann Körper › Extrudieren (oder Drehen). Danach Bohrungen, Verrundungen, Muster, Schale …")
-                Line("Jeder Schritt bleibt änderbar: in der Zeitleiste unten antippen wählt ihn aus, nochmal antippen bearbeitet ihn, lange drücken öffnet Umbenennen und Löschen. Das Modell baut sich neu; Parameter machen Maße zu Formeln.")
-                Section("Start und Projekte")
-                Line("Die Startseite zeigt Schnellstart und die zuletzt bearbeiteten Projekte. Zurück dorthin: Zurück-Taste oder Projektmenü › Startseite. Gespeichert wird automatisch.")
-                Section("Skizze")
-                Line("Antippen wählt aus, erneutes Antippen hebt die Auswahl wieder auf; für mehrere Elemente einfach nacheinander antippen. Ein Tipp ins Leere hebt alles auf und schließt offene Leisten.")
-                Line("Ein Zeichenwerkzeug endet nach einer fertigen Form, beim erneuten Antippen seines Knopfs oder mit ✕. Zwei Finger: verschieben und zoomen.")
-                Line("Stift-Radierer: löscht, was er berührt. Maus: Rad zoomt, mittlere Taste verschiebt, rechte Taste bricht ab.")
-                Line("Tastatur: L Linie, R Rechteck, C Kreis, A Bogen, S Werkzeug beenden · Entf löscht · Esc bricht ab · Strg+Z/Y rückgängig/wiederholen · Strg+A alles.")
-                Section("3D-Ansicht")
-                Line("Ziehen dreht, zwei Finger zoomen, das Mausrad auch. „Ansicht“ wechselt zu Oben/Vorne/Rechts und passt ein.")
-                Line("Kanten und Flächen antippen, wenn ein Werkzeug danach fragt (Verrunden, Bohrung, Schale, Messen). ↶ ↷ machen Änderungen rückgängig.")
+                Section(stringResource(R.string.help_section_build))
+                Line(stringResource(R.string.help_build_1))
+                Line(stringResource(R.string.help_build_2))
+                Line(stringResource(R.string.help_build_3))
+                Line(stringResource(R.string.help_build_4))
+                Section(stringResource(R.string.help_section_start))
+                Line(stringResource(R.string.help_start_1))
+                Section(stringResource(R.string.help_section_sketch))
+                Line(stringResource(R.string.help_sketch_1))
+                Line(stringResource(R.string.help_sketch_2))
+                Line(stringResource(R.string.help_sketch_3))
+                Line(stringResource(R.string.help_sketch_4))
+                Section(stringResource(R.string.help_section_3d))
+                Line(stringResource(R.string.help_3d_1))
+                Line(stringResource(R.string.help_3d_2))
                 // Version für Rückmeldungen (welcher Stand wurde getestet)
                 val context = LocalContext.current
                 val version = remember { runCatching { context.packageManager.getPackageInfo(context.packageName, 0).versionName }.getOrNull() }
@@ -54,10 +55,10 @@ fun HelpDialog(hub: ProjectHub, firstStart: Boolean, onDismiss: () -> Unit) {
             }
         },
         confirmButton = {
-            if (firstStart) Button(onClick = { onDismiss(); hub.loadModelExample() }) { Text("Beispiel öffnen") }
-            else TextButton(onClick = onDismiss) { Text("Schließen") }
+            if (firstStart) Button(onClick = { onDismiss(); hub.loadModelExample() }) { Text(stringResource(R.string.help_open_example)) }
+            else TextButton(onClick = onDismiss) { Text(stringResource(R.string.common_close)) }
         },
-        dismissButton = { if (firstStart) TextButton(onClick = onDismiss) { Text("Leer beginnen") } },
+        dismissButton = { if (firstStart) TextButton(onClick = onDismiss) { Text(stringResource(R.string.help_start_empty)) } },
     )
 }
 

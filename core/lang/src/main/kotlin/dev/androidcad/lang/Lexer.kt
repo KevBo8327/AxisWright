@@ -1,8 +1,12 @@
 package dev.androidcad.lang
 
-/** Fehler beim Parsen oder Auswerten von Quelltext. [line] ist 1-basiert (0 = unbekannt). */
-public class CadLangException(message: String, public val line: Int = 0) :
-    RuntimeException(if (line > 0) "Zeile $line: $message" else message)
+import dev.androidcad.text.Msg
+/**
+ * Fehler beim Parsen oder Auswerten von Quelltext. [msg] ist die Meldung als Schlüssel ([LangText]) – den Wortlaut liefert die App;
+ * [line] ist 1-basiert (0 = unbekannt). [message] dient nur Logs.
+ */
+public class CadLangException(public val msg: Msg, public val line: Int = 0) :
+    RuntimeException(if (line > 0) "line $line: $msg" else msg.toString())
 
 internal enum class T {
     NUM, STR, ID, INCLUDE_PATH,
@@ -50,7 +54,7 @@ internal class Lexer(private val src: String) {
                         if (src[i] == '\n') line++
                         i++
                     }
-                    if (i >= src.length) throw CadLangException("Kommentar nicht geschlossen", line)
+                    if (i >= src.length) throw CadLangException(Msg(LangText.UNCLOSED_COMMENT), line)
                     i += 2
                 }
                 else -> return
@@ -89,7 +93,7 @@ internal class Lexer(private val src: String) {
             sb.append(c)
             i++
         }
-        if (i >= src.length) throw CadLangException("Zeichenkette nicht geschlossen", line)
+        if (i >= src.length) throw CadLangException(Msg(LangText.UNCLOSED_STRING), line)
         i++
         out += Token(T.STR, sb.toString(), line)
     }
@@ -108,7 +112,7 @@ internal class Lexer(private val src: String) {
         while (j < src.length && src[j].isWhitespace() && src[j] != '\n') j++
         if (j < src.length && src[j] == '<') {
             val end = src.indexOf('>', j)
-            if (end < 0) throw CadLangException("include/use: '>' fehlt", line)
+            if (end < 0) throw CadLangException(Msg(LangText.INCLUDE_MISSING_GT), line)
             out += Token(T.INCLUDE_PATH, src.substring(j + 1, end).trim(), line)
             i = end + 1
         }
@@ -129,7 +133,7 @@ internal class Lexer(private val src: String) {
                 ':' -> T.COLON; '?' -> T.QUESTION; '.' -> T.DOT; '=' -> T.ASSIGN
                 '<' -> T.LT; '>' -> T.GT; '!' -> T.NOT; '+' -> T.PLUS; '-' -> T.MINUS
                 '*' -> T.STAR; '/' -> T.SLASH; '%' -> T.PERCENT; '^' -> T.CARET; '#' -> T.HASH
-                else -> throw CadLangException("Unerwartetes Zeichen '$c'", line)
+                else -> throw CadLangException(Msg(LangText.UNEXPECTED_CHAR, c.toString()), line)
             } to 1
         }
         out += Token(type, src.substring(i, i + len), line)

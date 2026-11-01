@@ -11,11 +11,12 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 
 /**
- * Anbieterkennzeichnung nach § 5 DDG, offline in der App (die App hat kein Internet, ein Link allein wäre nicht erreichbar).
+ * Anbieterkennzeichnung nach § 5 DDG, in der App (Internet nur für den Pro-Kauf über Google Play, ein Link allein wäre ohne Netz nicht erreichbar).
  * Platzhalter in eckigen Klammern vor der Veröffentlichung ersetzen – dieselben wie in docs/privacy/index.html; scripts/play-check.py
  * meldet sie, solange sie stehen.
  */
@@ -32,35 +33,23 @@ internal object Imprint {
 internal fun ImprintDialog(onDismiss: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Impressum & Datenschutz") },
+        title = { Text(stringResource(R.string.legal_imprint_title)) },
         text = {
             Column(Modifier.heightIn(max = 460.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Heading("Impressum")
-                Text("Angaben gemäß § 5 DDG", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text("${Imprint.NAME}\n${Imprint.ADDRESS}\nTelefon: ${Imprint.PHONE}\nE-Mail: ${Imprint.EMAIL}", style = MaterialTheme.typography.bodyMedium)
-                Heading("Haftung")
-                Text(
-                    "ParamWorker ist ein Werkzeug zum Konstruieren. Prüfen Sie Maße, Toleranzen und Festigkeit Ihrer Teile vor der Fertigung " +
-                        "selbst; für sicherheitsrelevante Bauteile ist die App nicht vorgesehen. Die gesetzliche Haftung bei Vorsatz, grober " +
-                        "Fahrlässigkeit und für Schäden an Leben, Körper oder Gesundheit bleibt unberührt.",
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-                Heading("Datenschutz")
-                Text(
-                    "ParamWorker selbst erhebt keine personenbezogenen Daten. Die App hat keinen Internetzugang, keine Werbung, keine Analyse- " +
-                        "oder Tracking-Werkzeuge und kein Benutzerkonto. Projekte werden lokal gespeichert; Android kann sie abhängig von " +
-                        "Ihren Systemeinstellungen in einer Gerätesicherung sichern. Beim Feedback öffnet sich Ihr E-Mail-Programm.",
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-                Text(
-                    "„Feedback senden“ öffnet nur Ihr E-Mail-Programm mit einer vorbereiteten Nachricht (App-Version, Gerät, Android-Version); " +
-                        "gesendet wird sie erst, wenn Sie sie selbst abschicken.",
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-                Text("Vollständige Datenschutzerklärung: ${Imprint.PRIVACY_URL}", style = MaterialTheme.typography.bodyMedium)
+                val body = MaterialTheme.typography.bodyMedium
+                Heading(stringResource(R.string.legal_imprint_heading))
+                Text(stringResource(R.string.legal_imprint_info), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(stringResource(R.string.legal_imprint_contact, Imprint.NAME, Imprint.ADDRESS, Imprint.PHONE, Imprint.EMAIL), style = body)
+                Heading(stringResource(R.string.legal_liability_heading))
+                Text(stringResource(R.string.legal_liability_text), style = body)
+                Heading(stringResource(R.string.legal_privacy_heading))
+                Text(stringResource(R.string.legal_privacy_text), style = body)
+                Text(stringResource(R.string.legal_privacy_purchase), style = body)
+                Text(stringResource(R.string.legal_privacy_feedback), style = body)
+                Text(stringResource(R.string.legal_privacy_full, Imprint.PRIVACY_URL), style = body)
             }
         },
-        confirmButton = { TextButton(onClick = onDismiss) { Text("Schließen") } },
+        confirmButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.common_close)) } },
     )
 }
 

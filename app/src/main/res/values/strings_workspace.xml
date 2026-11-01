@@ -1,0 +1,154 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Skizzen-Arbeitsbereich (WorkspaceScreen, SketchCanvas, Workspace). Englisch = Grundsprache; Deutsch in values-de/. -->
+<resources>
+
+    <!-- Fangmarken auf der Zeichenfläche -->
+    <string name="ws_snap_point">Point</string>
+    <string name="ws_snap_midpoint">Midpoint</string>
+    <string name="ws_snap_on_line">On line</string>
+    <string name="ws_snap_on_curve">On curve</string>
+    <string name="ws_snap_axis">Axis</string>
+
+    <!-- Ebenen-Dialog der Skizze -->
+    <string name="ws_plane_title_start">Start on which plane?</string>
+    <string name="ws_plane_title_change">Change sketch plane</string>
+
+    <!-- Kopfzeile der Skizze -->
+    <string name="ws_top_plane_button">Plane…</string>
+    <string name="ws_top_project_edges">Project edges</string>
+    <string name="ws_top_undo">Undo</string>
+    <string name="ws_top_redo">Redo</string>
+    <string name="ws_top_delete_selection">Delete selection</string>
+    <string name="ws_top_grid_snap">Snap to grid</string>
+    <string name="ws_top_fit_all">Fit all</string>
+    <string name="ws_top_plane_current">Plane: %1$s</string>
+    <string name="ws_top_change_plane">Change plane…</string>
+    <string name="ws_top_parameters_menu">Parameters…</string>
+
+    <!-- Werkzeuggruppen und Werkzeuge -->
+    <string name="ws_group_dimension">Dimension</string>
+    <string name="ws_group_draw">Draw</string>
+    <string name="ws_group_edit">Edit</string>
+    <string name="ws_group_pattern">Pattern</string>
+    <string name="ws_tool_line">Line</string>
+    <string name="ws_tool_rectangle">Rectangle</string>
+    <string name="ws_tool_circle">Circle</string>
+    <string name="ws_tool_arc">Arc</string>
+    <string name="ws_tool_slot">Slot</string>
+    <string name="ws_tool_polygon">Polygon</string>
+    <string name="ws_tool_point">Point</string>
+    <string name="ws_tool_trim">Trim</string>
+    <string name="ws_tool_split">Split</string>
+    <string name="ws_tool_extend">Extend</string>
+    <string name="ws_tool_offset">Offset</string>
+    <string name="ws_tool_corner">Corner</string>
+    <string name="ws_tool_mirror">Mirror</string>
+    <string name="ws_tool_pattern_linear">Linear</string>
+    <string name="ws_tool_pattern_circular">Circular</string>
+
+    <!-- Kontextleiste -->
+    <string name="ws_ctx_cd_end_tool">End tool</string>
+    <string name="ws_ctx_field_distance">Distance (mm)</string>
+    <string name="ws_ctx_field_spacing">Spacing (mm)</string>
+    <string name="ws_ctx_field_radius">Radius (mm)</string>
+    <string name="ws_ctx_field_count">Count</string>
+    <string name="ws_ctx_field_angle">Angle (°)</string>
+    <string name="ws_ctx_field_sides">Sides</string>
+    <string name="ws_ctx_mirror_x">⇋ Across X axis</string>
+    <string name="ws_ctx_mirror_y">⇋ Across Y axis</string>
+    <string name="ws_ctx_pattern_along_x">→ Along X</string>
+    <string name="ws_ctx_pattern_along_y">↑ Along Y</string>
+    <string name="ws_ctx_pattern_around_origin">◎ Around origin</string>
+    <string name="ws_ctx_finish_chain">✓ Finish chain</string>
+    <string name="ws_ctx_no_constraints">No constraints for this selection – e.g. select two lines or a circle.</string>
+    <string name="ws_ctx_align">⊕ Align ▾</string>
+
+    <!-- Hinweise zum aktiven Werkzeug -->
+    <string name="ws_hint_select">Tap items or drag a box to select them. Dragging moves them – constraints are kept.</string>
+    <string name="ws_hint_line">Line: tap points one after another (stylus: drag). “Done” or Esc ends the chain.</string>
+    <string name="ws_hint_line_tangent">Tangent: tap start and end – one end on a circle or arc (or both: tangent between two circles).</string>
+    <string name="ws_hint_rect_corners">Rectangle: tap or drag two opposite corners.</string>
+    <string name="ws_hint_rect_center_first">Rectangle: tap the center first (e.g. the origin).</string>
+    <string name="ws_hint_rect_center_corner">Rectangle: now tap a corner – the shape stays centered.</string>
+    <string name="ws_hint_rect_three_start">Rectangle: tap the start of an edge.</string>
+    <string name="ws_hint_rect_three_end">Rectangle: tap the end of the edge – angled is fine.</string>
+    <string name="ws_hint_rect_three_height">Rectangle: now tap the height.</string>
+    <string name="ws_hint_circle_center">Circle: center, then a point on the circle.</string>
+    <string name="ws_hint_circle_two_points">Circle: tap two opposite points (diameter).</string>
+    <string name="ws_hint_circle_three_points">Circle: tap three points on the circle (%1$d of 3).</string>
+    <string name="ws_hint_circle_tangent2_pick">Circle: tap two lines, circles or arcs it should touch (%1$d of 2).</string>
+    <string name="ws_hint_circle_tangent2_place">Circle: now tap the position – it sets the size.</string>
+    <string name="ws_hint_circle_tangent3">Circle: tap three lines, circles or arcs it should touch (%1$d of 3) – near the touch point.</string>
+    <string name="ws_hint_slot_first">Slot: tap the center of the first end.</string>
+    <string name="ws_hint_slot_second">Slot: tap the center of the second end.</string>
+    <string name="ws_hint_slot_width">Slot: now tap the width.</string>
+    <string name="ws_hint_polygon_center">Polygon: tap the center.</string>
+    <string name="ws_hint_polygon_inscribed_corner">Polygon: tap a corner (size and rotation).</string>
+    <string name="ws_hint_polygon_circumscribed_side">Polygon: tap the middle of a side – the circle diameter is the across-flats width.</string>
+    <string name="ws_hint_arc_center">Arc: center, start point, then the direction of the end (counterclockwise).</string>
+    <string name="ws_hint_arc_three_start">Arc: tap the start point.</string>
+    <string name="ws_hint_arc_three_end">Arc: tap the end point.</string>
+    <string name="ws_hint_arc_three_through">Arc: tap a point it passes through.</string>
+    <string name="ws_hint_arc_tangent_start">Arc: tap the end of a line or arc – the arc continues it tangentially.</string>
+    <string name="ws_hint_arc_tangent_end">Arc: tap the end point; further taps continue the chain tangentially.</string>
+    <string name="ws_hint_point">Point: tap where the point should go – on a line, circle or axis it snaps to that element.</string>
+    <string name="ws_hint_trim">Trim: tap the part of a line, circle or arc to remove, up to the nearest intersections.</string>
+    <string name="ws_hint_split">Split: tap a line or arc where it should be split – tapping a circle splits it into two semicircles.</string>
+    <string name="ws_hint_extend">Extend: tap the end of a line or arc – it then extends to the next element.</string>
+    <string name="ws_hint_offset_element">Offset: tap the element (for lines, with its connected chain), then the side.</string>
+    <string name="ws_hint_offset_side">Offset: now tap the side to offset to.</string>
+    <string name="ws_hint_dimension">Dimension: tap a line, circle or arc. Distance or angle: a point and a second element – for two lines, tap both with no tool active, then “Distance” or “Angle”. Tap empty space to finish.</string>
+    <string name="ws_hint_corner_chamfer">Chamfer corner: tap the corner – the point where two lines end.</string>
+    <string name="ws_hint_corner_fillet">Fillet corner: tap the corner – the point where two lines end.</string>
+    <string name="ws_hint_mirror">Mirror: tap a line as the axis or select the X or Y axis.</string>
+    <string name="ws_hint_pattern_linear">Linear pattern: tap a line as the direction – on the side the pattern should grow – or select X or Y.</string>
+    <string name="ws_hint_pattern_circular">Circular pattern: tap a point or circle as the center, or use the origin. 360° = full circle.</string>
+
+    <!-- Wert- oder Ausdruckseingabe -->
+    <string name="ws_value_label">Value or expression</string>
+    <string name="ws_value_invalid">Not a valid value – check the parameter names</string>
+    <string name="ws_value_follows">= %1$s (follows the parameters)</string>
+    <string name="ws_value_example">Expressions like “%1$s / 2” work too</string>
+
+    <!-- Meldungen -->
+    <string name="ws_notice_save_failed">Save failed: %1$s</string>
+    <string name="ws_notice_import_failed">Import failed: %1$s</string>
+    <string name="ws_notice_edge_not_selectable">This edge can’t be selected (seam or face without a name yet).</string>
+    <string name="ws_notice_project_building">The body is still being computed.</string>
+    <string name="ws_notice_project_none">No edges can be projected from this face.</string>
+    <string name="ws_notice_project_already">All edges of this face are already projected.</string>
+    <string name="ws_notice_face_unnamed">This face has no name yet and can’t be referenced.</string>
+    <string name="ws_notice_planar_only">This only works with planar faces.</string>
+    <string name="ws_notice_hole_no_edges">No two straight boundary edges found – the hole position stays a fixed point.</string>
+    <string name="ws_error_body_failed">The body couldn’t be displayed: %1$s</string>
+    <string name="ws_error_too_deep">The model is nested too deeply to be built</string>
+
+    <!-- Messen -->
+    <string name="ws_measure_failed">Measurement failed: %1$s</string>
+    <string name="ws_measure_edge">Edge</string>
+    <string name="ws_measure_edge_line">Edge: length %1$.2f mm</string>
+    <string name="ws_measure_edge_circle">Edge: length %1$.2f mm · radius %2$.2f mm · Ø %3$.2f mm</string>
+    <string name="ws_measure_face">Face: %1$.2f mm²</string>
+    <string name="ws_measure_face_curved">Face: %1$.2f mm² (curved)</string>
+    <string name="ws_measure_distance">Distance: %1$.2f mm</string>
+    <string name="ws_measure_angle">Angle: %1$.2f°</string>
+
+    <!-- Standardnamen neuer Features (werden beim Anlegen gespeichert: „Sketch 1“, „Extrusion 2“ …) -->
+    <string name="ws_name_sketch">Sketch</string>
+    <string name="ws_name_extrusion">Extrusion</string>
+    <string name="ws_name_cut">Cut</string>
+    <string name="ws_name_revolve">Revolve</string>
+    <string name="ws_name_revolve_cut">Revolve cut</string>
+    <string name="ws_name_fillet">Fillet</string>
+    <string name="ws_name_chamfer">Chamfer</string>
+    <string name="ws_name_mirror_body">Mirror body</string>
+    <string name="ws_name_mirror">Mirror</string>
+    <string name="ws_name_pattern">Pattern</string>
+    <string name="ws_name_plane">Plane</string>
+    <string name="ws_name_shell">Shell</string>
+    <string name="ws_name_hole">Hole</string>
+
+    <!-- Modellnamen -->
+    <string name="ws_import_name">%1$s (import)</string>
+    <string name="ws_example_name">Plate with four holes</string>
+</resources>

@@ -35,6 +35,8 @@ import dev.androidcad.sketch.Sketch
 import dev.androidcad.sketch.AngleDim
 import dev.androidcad.sketch.Vec2
 import dev.androidcad.sketch.Vertical
+import dev.androidcad.sketch.SketchText
+import dev.androidcad.text.Msg
 import kotlin.math.abs
 import kotlin.math.atan2
 import kotlin.math.hypot
@@ -91,33 +93,33 @@ public enum class Tool {
 }
 
 /** Varianten des Rechteck-Werkzeugs. */
-public enum class RectMode(public val label: String) {
+public enum class RectMode {
     /** Zwei gegenüberliegende Ecken (achsparallel). */
-    CORNERS("Ecke–Ecke"),
+    CORNERS,
 
     /** Mittelpunkt, dann eine Ecke – das Rechteck bleibt über eine Hilfsdiagonale mittig auf dem Punkt. */
-    CENTER("Mittelpunkt"),
+    CENTER,
 
     /** Zwei Punkte einer Kante (beliebig schräg), dann die Höhe. */
-    THREE_POINTS("3 Punkte"),
+    THREE_POINTS,
 }
 
 /** Varianten des Kreis-Werkzeugs. */
-public enum class CircleMode(public val label: String) {
+public enum class CircleMode {
     /** Mittelpunkt, dann ein Punkt auf dem Kreis. */
-    CENTER("Mittelpunkt"),
+    CENTER,
 
     /** Zwei gegenüberliegende Punkte (Durchmesser). */
-    TWO_POINTS("2 Punkte"),
+    TWO_POINTS,
 
     /** Drei Punkte auf dem Kreis. */
-    THREE_POINTS("3 Punkte"),
+    THREE_POINTS,
 
     /** Berührt zwei Elemente (Linien, Kreise, Bögen); ein dritter Tipp gibt die Lage und damit die Größe vor. */
-    TANGENT2("2 Tangenten"),
+    TANGENT2,
 
     /** Berührt drei Elemente – Lage und Größe folgen daraus. */
-    TANGENT3("3 Tangenten"),
+    TANGENT3,
     ;
 
     /** Anzahl der Elemente, die der Kreis berühren soll (0 = keine Tangenten-Variante). */
@@ -125,42 +127,42 @@ public enum class CircleMode(public val label: String) {
 }
 
 /** Varianten des Vieleck-Werkzeugs: wie das Vieleck an seinem (Hilfs-)Kreis liegt. */
-public enum class PolygonMode(public val label: String) {
+public enum class PolygonMode {
     /** Ecken auf dem Kreis (Kreis = Umkreis); der zweite Tipp setzt eine Ecke. */
-    INSCRIBED("Ecken auf Kreis"),
+    INSCRIBED,
 
     /** Seiten berühren den Kreis (Kreis = Inkreis, Durchmesser = Schlüsselweite); der zweite Tipp setzt eine Seitenmitte. */
-    CIRCUMSCRIBED("Seiten am Kreis"),
+    CIRCUMSCRIBED,
 }
 
 /** Varianten des Linien-Werkzeugs. */
-public enum class LineMode(public val label: String) {
+public enum class LineMode {
     /** Gerade Linie(n) von Punkt zu Punkt. */
-    NORMAL("Linie"),
+    NORMAL,
 
     /** Endet die Linie auf einem Kreis oder Bogen, berührt sie ihn dort (an einem Ende oder an beiden: Tangente zwischen zwei Kreisen). */
-    TANGENT("Tangential"),
+    TANGENT,
 }
 
 /** Varianten des Bogen-Werkzeugs. */
-public enum class ArcMode(public val label: String) {
+public enum class ArcMode {
     /** Mittelpunkt, Start, dann die Richtung des Endes (gegen den Uhrzeigersinn). */
-    CENTER("Mittelpunkt"),
+    CENTER,
 
     /** Start, Ende, dann ein Punkt auf dem Bogen. */
-    THREE_POINTS("3 Punkte"),
+    THREE_POINTS,
 
     /** Beginnt am Ende einer Linie oder eines Bogens und setzt sie tangential fort (Zug wie beim Linienwerkzeug). */
-    TANGENT("Tangential"),
+    TANGENT,
 }
 
 /** Varianten des Ecken-Werkzeugs. */
-public enum class CornerMode(public val label: String) {
+public enum class CornerMode {
     /** Bogen mit Radius zwischen den beiden Linien. */
-    ROUND("Runden"),
+    ROUND,
 
     /** Gerade Verbindungslinie, beide Linien um denselben Abstand gekürzt. */
-    CHAMFER("Fase"),
+    CHAMFER,
 }
 
 public enum class PointerKind { MOUSE, TOUCH, STYLUS }
@@ -187,10 +189,10 @@ public sealed interface Preview {
 }
 
 /** Eine Aktion wartet auf einen Zahlenwert (Maß anlegen). */
-public data class PendingAction(val kind: ActionKind, val title: String, val initial: Double)
+public data class PendingAction(val kind: ActionKind, val title: Msg, val initial: Double)
 
 /** Der Wert eines vorhandenen Maßes soll geändert werden. */
-public data class ValueEdit(val constraint: ConstraintId, val title: String, val initial: Double)
+public data class ValueEdit(val constraint: ConstraintId, val title: Msg, val initial: Double)
 
 /**
  * Zustandsautomat der Skizzieroberfläche, unabhängig von Compose und Android: Zeigereingaben (Maus, Stift, Touch)
@@ -215,7 +217,7 @@ public class SketchEditor(public val sketch: Sketch) {
         private set
     public var preview: Preview? = null
         private set
-    public var message: String? = null
+    public var message: Msg? = null
         private set(v) { field = v; messageIsInfo = false }
 
     /** `true`, wenn [message] eine Erfolgsmeldung ist (z. B. „3 Kopien …“) statt eines Hinweises oder Fehlers. */
@@ -360,7 +362,7 @@ public class SketchEditor(public val sketch: Sketch) {
      */
     public fun startMirror() {
         val source = selection.filter { it is Sel.L || it is Sel.C || it is Sel.A }.toSet()
-        if (source.isEmpty()) { message = "Wähle zuerst die Elemente, die gespiegelt werden sollen."; changed(); return }
+        if (source.isEmpty()) { message = Msg(EditText.SELECT_TO_MIRROR); changed(); return }
         cancelOperation()
         mirrorSource = source
         tool = Tool.MIRROR
@@ -375,7 +377,7 @@ public class SketchEditor(public val sketch: Sketch) {
      */
     public fun startPattern(circular: Boolean) {
         val source = selection.filter { it is Sel.L || it is Sel.C || it is Sel.A }.toSet()
-        if (source.isEmpty()) { message = "Wähle zuerst die Elemente, die vervielfältigt werden sollen."; changed(); return }
+        if (source.isEmpty()) { message = Msg(EditText.SELECT_TO_PATTERN); changed(); return }
         cancelOperation()
         patternSource = source
         tool = if (circular) Tool.PATTERN_CIRCULAR else Tool.PATTERN_LINEAR
@@ -790,7 +792,7 @@ public class SketchEditor(public val sketch: Sketch) {
                         start == null -> {
                             val p = first.point
                             if (p != null && tangentAt(p) != null) pending = first
-                            else message = "Tangential: am Ende einer Linie oder eines Bogens beginnen."
+                            else message = Msg(EditText.TANGENT_START_AT_END)
                         }
                         else -> finishTangentArc(start.point!!, up)?.let { pending = SnapResult(sketch.point(it), SnapKind.POINT, point = it) }
                     }
@@ -819,10 +821,10 @@ public class SketchEditor(public val sketch: Sketch) {
     /** Führt [op] auf der Skizze aus, löst sie und nimmt alles zurück, wenn es nicht ging oder die Bedingungen widerspricht. */
     private fun runOp(label: String, op: () -> OpResult): Boolean {
         val before = sketch.copy()
-        val result = try { op() } catch (e: IllegalArgumentException) { OpResult.fail(e.message ?: "Nicht möglich") }
+        val result = try { op() } catch (e: IllegalArgumentException) { OpResult.fail(SketchText.NOT_POSSIBLE) }
         if (!result.ok) { sketch.restore(before); message = result.message; changed(); return false }
         val res = sketch.solve(SolveOptions(analyze = true))
-        if (!res.isSolved) { sketch.restore(before); message = "Das widerspricht den vorhandenen Bedingungen."; changed(); return false }
+        if (!res.isSolved) { sketch.restore(before); message = Msg(EditText.CONFLICTS_WITH_CONSTRAINTS); changed(); return false }
         selection = emptySet()
         commit(label, analyze = true, solved = res)
         result.message?.let { message = it; messageIsInfo = true; changed() }
@@ -841,25 +843,25 @@ public class SketchEditor(public val sketch: Sketch) {
                 is Sel.L -> runOp("Trimmen") { SketchOps.trim(sketch, hit.id, world) }
                 is Sel.C -> runOp("Trimmen") { SketchOps.trim(sketch, hit.id, world) }
                 is Sel.A -> runOp("Trimmen") { SketchOps.trim(sketch, hit.id, world) }
-                else -> { message = "Tippe auf eine Linie, einen Kreis oder Bogen."; }
+                else -> { message = Msg(EditText.TAP_LINE_CIRCLE_ARC); }
             }
             Tool.SPLIT -> when (hit) {
                 is Sel.L -> runOp("Teilen") { SketchOps.split(sketch, hit.id, world) }
                 is Sel.C -> runOp("Teilen") { SketchOps.split(sketch, hit.id, world) }
                 is Sel.A -> runOp("Teilen") { SketchOps.split(sketch, hit.id, world) }
-                else -> { message = "Tippe auf eine Linie, einen Kreis oder Bogen." }
+                else -> { message = Msg(EditText.TAP_LINE_CIRCLE_ARC) }
             }
             Tool.EXTEND -> when (hit) {
                 is Sel.L -> runOp("Verlängern") { SketchOps.extend(sketch, hit.id, world) }
                 is Sel.A -> runOp("Verlängern") { SketchOps.extend(sketch, hit.id, world) }
-                else -> { message = "Tippe auf das Ende einer Linie oder eines Bogens." }
+                else -> { message = Msg(EditText.TAP_END_OF_LINE_OR_ARC) }
             }
             Tool.OFFSET -> offsetTap(hit, world)
             Tool.DIMENSION -> dimensionTap(hit, additive)
             Tool.FILLET -> when (hit) {
                 is Sel.P -> if (cornerMode == CornerMode.CHAMFER) runOp("Ecke fasen") { SketchOps.chamfer(sketch, hit.id, chamferDistance) }
                     else runOp("Ecke runden") { SketchOps.fillet(sketch, hit.id, filletRadius) }
-                else -> { message = "Tippe auf die Ecke – den Punkt, an dem zwei Linien enden." }
+                else -> { message = Msg(EditText.TAP_CORNER) }
             }
             Tool.MIRROR -> when (hit) {
                 is Sel.L -> {
@@ -868,7 +870,7 @@ public class SketchEditor(public val sketch: Sketch) {
                     runOp("Spiegeln") { SketchOps.mirror(sketch, source.linesOf(), source.roundsOf(), hit.id) }
                     tool = Tool.SELECT
                 }
-                else -> { message = "Tippe eine Linie als Spiegelachse an." }
+                else -> { message = Msg(EditText.TAP_MIRROR_AXIS) }
             }
             Tool.PATTERN_LINEAR -> when (hit) {
                 is Sel.L -> {
@@ -880,13 +882,13 @@ public class SketchEditor(public val sketch: Sketch) {
                     if (from != null && (world.x - from.x) * d.x + (world.y - from.y) * d.y < 0) d = Vec2(-d.x, -d.y)
                     finishPattern { src -> SketchOps.linearPattern(sketch, src.linesOf(), src.roundsOf(), d, patternCount, patternSpacing, along = hit.id) }
                 }
-                else -> { message = "Tippe eine Linie als Richtung an – auf der Seite, in die die Reihe wachsen soll." }
+                else -> { message = Msg(EditText.TAP_PATTERN_DIRECTION) }
             }
             Tool.PATTERN_CIRCULAR -> when (hit) {
                 is Sel.P -> finishPattern { src -> SketchOps.circularPattern(sketch, src.linesOf(), src.roundsOf(), hit.id, patternCount, patternAngle) }
                 is Sel.C -> finishPattern { src -> SketchOps.circularPattern(sketch, src.linesOf(), src.roundsOf(), sketch.circle(hit.id).center, patternCount, patternAngle) }
                 is Sel.A -> finishPattern { src -> SketchOps.circularPattern(sketch, src.linesOf(), src.roundsOf(), sketch.arc(hit.id).center, patternCount, patternAngle) }
-                else -> { message = "Tippe einen Punkt (oder Kreis) als Mittelpunkt an." }
+                else -> { message = Msg(EditText.TAP_PATTERN_CENTER) }
             }
             else -> Unit
         }
@@ -909,7 +911,7 @@ public class SketchEditor(public val sketch: Sketch) {
             first == null && hit is Sel.L && !additive -> { selection = setOf(hit); ActionKind.LENGTH }
             first == null -> {
                 selection = setOf(hit)
-                message = if (hit is Sel.L) "Zweites Element antippen (Abstand, Winkel) – oder eine freie Stelle für die Länge." else "Zweites Element antippen (Punkt oder Linie)."
+                message = if (hit is Sel.L) Msg(EditText.DIM_SECOND_AFTER_LINE) else Msg(EditText.DIM_SECOND_AFTER_POINT)
                 messageIsInfo = true
                 return
             }
@@ -927,15 +929,15 @@ public class SketchEditor(public val sketch: Sketch) {
         existingDimension(kind, selection)?.let { id -> selection = emptySet(); requestValueEdit(id); return }
         if (alreadyDetermined(kind)) {
             selection = emptySet()
-            message = "Schon durch andere Maße oder Bedingungen festgelegt – tippe das bestimmende Maß an, um es zu ändern."
+            message = Msg(EditText.DIM_ALREADY_DETERMINED)
             return
         }
         requestAction(kind)
         val p = pendingAction
-        if (p == null) { selection = emptySet(); message = "Diese Elemente lassen sich nicht miteinander bemaßen." }
+        if (p == null) { selection = emptySet(); message = Msg(EditText.DIM_NOT_POSSIBLE) }
         // z. B. ein Endpunkt und seine eigene Linie: ein Abstand von 0 ist kein sinnvolles Maß
         else if (kind == ActionKind.DISTANCE && p.initial < 1e-9) {
-            pendingAction = null; selection = emptySet(); message = "Der Punkt liegt auf der Linie – wähle ein anderes Element."
+            pendingAction = null; selection = emptySet(); message = Msg(EditText.POINT_ON_LINE)
         }
     }
 
@@ -978,7 +980,7 @@ public class SketchEditor(public val sketch: Sketch) {
             if (hit is Sel.L || hit is Sel.C || hit is Sel.A) {
                 offsetSource = hit
                 selection = setOf(hit)
-            } else message = "Tippe eine Linie, einen Kreis oder Bogen an."
+            } else message = Msg(EditText.TAP_ELEMENT)
             return
         }
         // zweiter Tipp: Seite; zu nah am Element ist mehrdeutig
@@ -988,7 +990,7 @@ public class SketchEditor(public val sketch: Sketch) {
             is Sel.A -> sketch.arc(src.id).let { nearestOnArc(world, sketch.point(it.center), sketch.point(it.start), sketch.point(it.end)).distance }
             else -> Double.MAX_VALUE
         }
-        if (near < view.worldLength(HIT_TOLERANCE_PX * uiScale)) { message = "Tippe weiter vom Element entfernt, um die Seite zu wählen."; return }
+        if (near < view.worldLength(HIT_TOLERANCE_PX * uiScale)) { message = Msg(EditText.TAP_FARTHER); return }
         offsetSource = null
         selection = emptySet()
         val d = offsetDistance
@@ -1028,7 +1030,7 @@ public class SketchEditor(public val sketch: Sketch) {
 
     /** Punkt-Werkzeug: Einzelpunkt mit den Bedingungen aus dem Fangen (auf Linie, Kreis, Achse …). */
     private fun finishPoint(at: SnapResult) {
-        if (at.point != null) { message = "Hier liegt schon ein Punkt."; return }
+        if (at.point != null) { message = Msg(EditText.POINT_EXISTS); return }
         val extra = ArrayList<Constraint>()
         val p = materialize(at, extra)
         sketch.markStandalone(p)
@@ -1113,11 +1115,11 @@ public class SketchEditor(public val sketch: Sketch) {
     }
 
     private fun finishTangentLine(a: SnapResult, b: SnapResult): PointId? {
-        if (roundOf(a) == null && roundOf(b) == null) { message = "Tangential: Anfang oder Ende auf einen Kreis oder Bogen legen."; return null }
+        if (roundOf(a) == null && roundOf(b) == null) { message = Msg(EditText.TANGENT_NEEDS_ROUND); return null }
         val before = sketch.copy()
         val line = placeNew(sketch) { s -> tangentLine(s, a, b) }
         if (line == null) {
-            sketch.restore(before); message = "Hier gibt es keine Tangente."; return null
+            sketch.restore(before); message = Msg(EditText.NO_TANGENT); return null
         }
         commit("Tangente", analyze = true)
         return sketch.line(line).p2
@@ -1160,8 +1162,8 @@ public class SketchEditor(public val sketch: Sketch) {
         if (tangentPicks.size < need) {
             val tol = view.worldLength(hitTolerancePx(d.kind))
             val hit = HitTest.hitCurve(sketch, d.world, tol) ?: axisAt(d.world, tol)
-            if (hit == null || hit is Sel.P || hit is Sel.K) { message = "Tippe eine Linie, einen Kreis oder Bogen an."; return }
-            if (tangentPicks.any { it.first == hit }) { message = "Dieses Element ist schon gewählt."; return }
+            if (hit == null || hit is Sel.P || hit is Sel.K) { message = Msg(EditText.TAP_ELEMENT); return }
+            if (tangentPicks.any { it.first == hit }) { message = Msg(EditText.ALREADY_SELECTED); return }
             tangentPicks = tangentPicks + (hit to d.world)
             selection = tangentPicks.map { it.first }.toSet()
             if (need == 3 && tangentPicks.size == 3) {
@@ -1178,7 +1180,7 @@ public class SketchEditor(public val sketch: Sketch) {
         val before = sketch.copy()
         val circle = placeNew(sketch) { s -> tangentCircle(s, elements, center) }
         if (circle == null || sketch.circle(circle).radius < MIN_SIZE) {
-            sketch.restore(before); message = "Kein Kreis gefunden, der alle gewählten Elemente berührt."; return
+            sketch.restore(before); message = Msg(EditText.NO_TANGENT_CIRCLE); return
         }
         commit("Kreis", analyze = true)
     }
@@ -1326,7 +1328,7 @@ public class SketchEditor(public val sketch: Sketch) {
     }
 
     private fun finishCircle3(a: SnapResult, b: SnapResult, c: SnapResult) {
-        val m = circumcenter(a.position, b.position, c.position) ?: run { message = "Die drei Punkte liegen auf einer Geraden."; return }
+        val m = circumcenter(a.position, b.position, c.position) ?: run { message = Msg(EditText.POINTS_COLLINEAR); return }
         val r = dist(m, a.position)
         if (r < MIN_SIZE) return
         val circle = sketch.addCircle(sketch.addPoint(m.x, m.y), r)
@@ -1343,7 +1345,7 @@ public class SketchEditor(public val sketch: Sketch) {
     }
 
     private fun finishArc3(s: SnapResult, e: SnapResult, through: SnapResult) {
-        val (c, start, _) = arc3(s.position, e.position, through.position) ?: run { message = "Die drei Punkte liegen auf einer Geraden."; return }
+        val (c, start, _) = arc3(s.position, e.position, through.position) ?: run { message = Msg(EditText.POINTS_COLLINEAR); return }
         if (dist(c, s.position) < MIN_SIZE) return
         val extra = ArrayList<Constraint>()
         val ps = materialize(s, extra)
@@ -1397,7 +1399,7 @@ public class SketchEditor(public val sketch: Sketch) {
     private fun finishTangentArc(start: PointId, end: SnapResult): PointId? {
         val (t, source) = tangentAt(start) ?: return null
         val s = sketch.point(start)
-        val (c, from, _) = tangentArc(s, t, end.position) ?: run { message = "Das Ende liegt geradeaus – dafür das Linienwerkzeug nehmen."; return null }
+        val (c, from, _) = tangentArc(s, t, end.position) ?: run { message = Msg(EditText.END_STRAIGHT_AHEAD); return null }
         val extra = ArrayList<Constraint>()
         val pe = materialize(end, extra)
         if (pe == start) return null
@@ -1495,7 +1497,7 @@ public class SketchEditor(public val sketch: Sketch) {
         message = null
         if (kind.needsValue) {
             val opt = actionOptions().firstOrNull { it.kind == kind } ?: return
-            pendingAction = PendingAction(kind, kind.label, opt.defaultValue ?: 0.0)
+            pendingAction = PendingAction(kind, Msg(kind), opt.defaultValue ?: 0.0)
             changed()
         } else applyAction(kind, null)
     }
@@ -1504,7 +1506,7 @@ public class SketchEditor(public val sketch: Sketch) {
         val p = pendingAction ?: return false
         pendingAction = null
         if (!validDimension(p.kind, value)) {
-            message = if (p.kind == ActionKind.PATTERN_COUNT) "Anzahl: ganze Zahl von 2 bis ${SketchOps.MAX_PATTERN_COUNT}" else "Ungültiger Wert"
+            message = if (p.kind == ActionKind.PATTERN_COUNT) Msg(EditText.PATTERN_COUNT_RANGE, SketchOps.MAX_PATTERN_COUNT) else Msg(EditText.INVALID_VALUE)
             if (tool == Tool.DIMENSION) selection = emptySet()
             changed(); return false
         }
@@ -1528,7 +1530,7 @@ public class SketchEditor(public val sketch: Sketch) {
         if (kind == ActionKind.ORIGIN_CORNER) return runOp("Ecke auf Ursprung") { SketchOps.cornerToOrigin(sketch, info.lines, info.rounds) }
         if (kind == ActionKind.ORIGIN_CENTER) return runOp("Mittig auf Ursprung") { SketchOps.centerOnOrigin(sketch, info.lines, info.rounds) }
         if (kind == ActionKind.HOLE_CENTER || kind == ActionKind.EDGE_CENTER) {
-            val (edge, hole) = ConstraintActions.referenceTarget(sketch, info) ?: run { message = "Wähle die Form und genau eine projizierte Bohrung bzw. Kante."; changed(); return false }
+            val (edge, hole) = ConstraintActions.referenceTarget(sketch, info) ?: run { message = Msg(EditText.SELECT_SHAPE_AND_REFERENCE); changed(); return false }
             if (hole != null) return runOp("Mittig auf Bohrung") {
                 SketchOps.centerOn(sketch, info.lines, info.rounds.filter { it != hole }, SketchOps.CenterTarget.Point(sketch.centerOf(hole)))
             }
@@ -1536,11 +1538,11 @@ public class SketchEditor(public val sketch: Sketch) {
         }
         if (kind == ActionKind.PATTERN_COUNT) return runOp("Anzahl im Muster") {
             val pattern = SketchOps.patternOf(sketch, info.points, info.lines, info.rounds)
-                ?: return@runOp dev.androidcad.sketch.OpResult.fail("Die Auswahl gehört zu keinem Muster.")
+                ?: return@runOp dev.androidcad.sketch.OpResult.fail(Msg(EditText.NOT_A_PATTERN))
             SketchOps.setPatternCount(sketch, pattern, value!!.toInt())
         }
         if (kind == ActionKind.FACE_CENTER) return runOp("Mittig auf Fläche") {
-            val target = faceCenter?.invoke() ?: return@runOp dev.androidcad.sketch.OpResult.fail("Der Umriss der Fläche ist noch nicht bekannt – gleich noch einmal versuchen.")
+            val target = faceCenter?.invoke() ?: return@runOp dev.androidcad.sketch.OpResult.fail(Msg(EditText.FACE_OUTLINE_UNKNOWN))
             SketchOps.centerOn(sketch, info.lines, info.rounds, target)
         }
         if (kind == ActionKind.CONSTRUCTION) {
@@ -1555,23 +1557,23 @@ public class SketchEditor(public val sketch: Sketch) {
             return true
         }
         val constraints = ConstraintActions.build(sketch, kind, info, value)
-        if (constraints.isNullOrEmpty()) { message = "Für diese Auswahl nicht möglich"; changed(); return false }
+        if (constraints.isNullOrEmpty()) { message = Msg(EditText.NOT_POSSIBLE_FOR_SELECTION); changed(); return false }
         val before = sketch.copy()
         val ids = constraints.map { sketch.add(it) }
         val res = sketch.solve()
         if (!res.isSolved) {
             sketch.restore(before)
-            message = "Widerspricht vorhandenen Bedingungen"
+            message = Msg(EditText.CONFLICTS)
             changed(); return false
         }
         // Abgelehnt wird nur, wenn die Aktion gar nichts Neues sagt; teilweise Überschneidung (z. B. Punkt fixieren,
         // dessen y schon bestimmt ist) ist in Ordnung.
         if (ids.all { it in res.redundant }) {
             sketch.restore(before)
-            message = "Ist bereits durch andere Bedingungen bestimmt"
+            message = Msg(EditText.ALREADY_DETERMINED)
             changed(); return false
         }
-        commit(kind.label, analyze = true, solved = res)
+        commit(kind.name, analyze = true, solved = res)
         return true
     }
 
@@ -1594,14 +1596,14 @@ public class SketchEditor(public val sketch: Sketch) {
             is DiameterDim -> ActionKind.DIAMETER
             else -> ActionKind.ANGLE
         }
-        if (!validDimension(kind, value)) { message = "Ungültiger Wert"; changed(); return false }
+        if (!validDimension(kind, value)) { message = Msg(EditText.INVALID_VALUE); changed(); return false }
         val before = sketch.copy()
         // Richtung beibehalten: ein negativer Abstand bleibt negativ, auch wenn der Betrag eingegeben wird
         sketch.setDimension(e.constraint, if (isSignedDistance(c) && c.value < 0) -abs(value) else if (isSignedDistance(c)) abs(value) else value)
         val res = sketch.solve()
         if (!res.isSolved) {
             sketch.restore(before)
-            message = "Mit diesem Wert nicht lösbar"
+            message = Msg(EditText.NOT_SOLVABLE_WITH_VALUE)
             changed(); return false
         }
         commit("Maß ändern", analyze = true, solved = res)
@@ -1613,15 +1615,15 @@ public class SketchEditor(public val sketch: Sketch) {
         changed()
     }
 
-    private fun titleOf(c: Dimension): String = when (c) {
-        is LengthDim -> "Länge"
-        is DistanceDim -> "Abstand"
-        is dev.androidcad.sketch.HorizontalDistanceDim -> "Horizontaler Abstand"
-        is dev.androidcad.sketch.VerticalDistanceDim -> "Vertikaler Abstand"
-        is PointLineDistanceDim -> "Abstand"
-        is RadiusDim -> "Radius"
-        is DiameterDim -> "Durchmesser"
-        is dev.androidcad.sketch.AngleDim -> "Winkel (°)"
+    private fun titleOf(c: Dimension): Msg = when (c) {
+        is LengthDim -> Msg(ActionKind.LENGTH)
+        is DistanceDim -> Msg(ActionKind.DISTANCE)
+        is dev.androidcad.sketch.HorizontalDistanceDim -> Msg(ActionKind.HORIZONTAL_DISTANCE)
+        is dev.androidcad.sketch.VerticalDistanceDim -> Msg(ActionKind.VERTICAL_DISTANCE)
+        is PointLineDistanceDim -> Msg(ActionKind.DISTANCE)
+        is RadiusDim -> Msg(ActionKind.RADIUS)
+        is DiameterDim -> Msg(ActionKind.DIAMETER)
+        is dev.androidcad.sketch.AngleDim -> Msg(EditText.ANGLE_DEG)
     }
 
     // ---- Verlauf --------------------------------------------------------------------------------
@@ -1670,7 +1672,7 @@ public class SketchEditor(public val sketch: Sketch) {
         status = solved ?: sketch.solve(SolveOptions(analyze = true))
         history.record(sketch.copy())
         selection = selection.filter { exists(it) }.toSet()
-        message = if (status?.isSolved == false) "Skizze ist widersprüchlich" else null
+        message = if (status?.isSolved == false) Msg(EditText.SKETCH_CONFLICTING) else null
         onSketchChanged?.invoke()
         changed()
     }
@@ -1691,7 +1693,6 @@ public class SketchEditor(public val sketch: Sketch) {
 
     private fun labelAt(screen: Vec2): DimLabel? = dimensionLabels().lastOrNull { it.contains(screen) }
 
-    /** Kurzer Statustext für die Statuszeile. */
     /** Ursprung und Achsen: Bezüge, die eine Rahmen- oder Gesamtauswahl nicht mit erfasst. */
     private fun isReference(s: Sel): Boolean = when (s) {
         is Sel.P -> s.id == sketch.origin || SketchOps.isAxisPoint(sketch, s.id)
@@ -1724,16 +1725,16 @@ public class SketchEditor(public val sketch: Sketch) {
         return Sel.L(id)
     }
 
-    public fun statusText(): String {
-        val s = status ?: return ""
+    /** Kurzer Statustext für die Statuszeile; `null`, wenn es nichts zu melden gibt. */
+    public fun statusText(): Msg? {
+        val s = status ?: return null
         return when {
-            !s.isSolved -> "Widerspruch in den Bedingungen"
-            s.degreesOfFreedom == 0 -> "Vollständig bestimmt"
-            s.degreesOfFreedom < 0 -> ""
-            placementFree() == 2 -> "Form bestimmt – Lage noch frei: mit Ursprung oder Achsen verbinden"
-            placementFree() == 3 -> "Form bestimmt – Lage und Drehung noch frei: mit Ursprung oder Achsen verbinden"
-            s.degreesOfFreedom == 1 -> "1 Freiheitsgrad"
-            else -> "${s.degreesOfFreedom} Freiheitsgrade"
+            !s.isSolved -> Msg(EditText.STATUS_CONFLICT)
+            s.degreesOfFreedom == 0 -> Msg(EditText.STATUS_FULLY_CONSTRAINED)
+            s.degreesOfFreedom < 0 -> null
+            placementFree() == 2 -> Msg(EditText.STATUS_POSITION_FREE)
+            placementFree() == 3 -> Msg(EditText.STATUS_POSITION_ROTATION_FREE)
+            else -> Msg(EditText.STATUS_DOF, s.degreesOfFreedom)
         }
     }
 

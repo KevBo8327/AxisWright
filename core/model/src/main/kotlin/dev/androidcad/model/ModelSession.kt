@@ -1,10 +1,11 @@
 package dev.androidcad.model
 
+import dev.androidcad.text.Msg
 import dev.androidcad.project.ModelRepository
 import dev.androidcad.project.ProjectInfo
 
 /** Ergebnis von [ModelSession.open]/[ModelSession.restoreLast]: entweder ein Dokument oder nur ein Hinweis, warum keines geöffnet wurde. */
-class OpenResult(val document: Document?, val notice: String?)
+class OpenResult(val document: Document?, val notice: Msg?)
 
 /**
  * Das aktuell bearbeitete Modell und seine Ablage. Verbindet [Document]/[DocumentCodec] mit dem [ModelRepository]:
@@ -14,10 +15,14 @@ class OpenResult(val document: Document?, val notice: String?)
  * wird nie überschrieben: [open] öffnet dann die Sicherung oder gar nichts und lässt die Datei unberührt.
  * Nicht thread-sicher; der Aufrufer serialisiert.
  */
-class ModelSession(private val repo: ModelRepository) {
+class ModelSession(
+    private val repo: ModelRepository,
+    /** Grundname neuer Modelle („Model“ → „Model 1“, „Model 2“ …); die App gibt ihn in der Gerätesprache vor. */
+    private val baseName: String = "Model",
+) {
     var currentId: String? = null
         private set
-    var name: String = DEFAULT_NAME
+    var name: String = "$baseName 1"
         private set
 
     fun list(): List<ProjectInfo> = repo.list()
@@ -29,18 +34,17 @@ class ModelSession(private val repo: ModelRepository) {
     fun restoreLast(): OpenResult? = repo.lastOpenedId?.let(::open)
 
     fun open(id: String): OpenResult {
-        val data = repo.load(id) ?: return OpenResult(null, "Modell nicht gefunden")
-        val label = "„${data.info.name}“"
+        val data = repo.load(id) ?: return OpenResult(null, Msg(ModelText.MODEL_NOT_FOUND))
         try {
             return adopt(data.info, DocumentCodec.decode(data.content), notice = null)
         } catch (e: Exception) { // nicht nur JSON-Fehler: ein unlesbares Modell darf die App nie beenden
             val backup = repo.loadBackup(id)?.let { runCatching { DocumentCodec.decode(it) }.getOrNull() }
-                ?: return OpenResult(null, "$label ist beschädigt und wurde nicht geöffnet (${e.message})")
-            return adopt(data.info, backup, notice = "$label war beschädigt – vorheriger Stand aus der Sicherung geöffnet")
+                ?: return OpenResult(null, Msg(ModelText.MODEL_DAMAGED, data.info.name, e.message.orEmpty()))
+            return adopt(data.info, backup, notice = Msg(ModelText.MODEL_RESTORED_FROM_BACKUP, data.info.name))
         }
     }
 
-    private fun adopt(info: ProjectInfo, doc: Document, notice: String?): OpenResult {
+    private fun adopt(info: ProjectInfo, doc: Document, notice: Msg?): OpenResult {
         currentId = info.id
         name = info.name
         repo.lastOpenedId = info.id
@@ -82,8 +86,8 @@ class ModelSession(private val repo: ModelRepository) {
 
     /** Kopiert das gespeicherte Modell und macht die Kopie zum aktuellen. Der Aufrufer speichert vorher. */
     fun duplicate(): OpenResult {
-        val id = currentId ?: return OpenResult(null, "Erst speichern – das Modell ist noch leer")
-        val copy = repo.duplicate(id) ?: return OpenResult(null, "Kopieren fehlgeschlagen")
+        val id = currentId ?: return OpenResult(null, Msg(ModelText.SAVE_FIRST))
+        val copy = repo.duplicate(id) ?: return OpenResult(null, Msg(ModelText.COPY_FAILED))
         return open(copy.info.id)
     }
 
@@ -101,11 +105,7 @@ class ModelSession(private val repo: ModelRepository) {
     private fun freshName(): String {
         val taken = repo.list().map { it.name }.toSet()
         var n = repo.list().size + 1
-        while ("Modell $n" in taken) n++
-        return "Modell $n"
-    }
-
-    private companion object {
-        const val DEFAULT_NAME = "Modell 1"
+        while ("$baseName $n" in taken) n++
+        return "$baseName $n"
     }
 }

@@ -1,5 +1,6 @@
 package dev.androidcad.lang
 
+import dev.androidcad.text.Msg
 import kotlin.math.abs
 import kotlin.math.sqrt
 
@@ -9,7 +10,7 @@ internal object Builtins {
     private fun math1(args: List<Value>, f: (Double) -> Double): Value =
         d(args.firstOrNull())?.let { NumV(f(it)) } ?: UndefV
 
-    fun call(name: String, args: List<Value>, named: Map<String, Value>, line: Int, warn: (String) -> Unit): Value = when (name) {
+    fun call(name: String, args: List<Value>, named: Map<String, Value>, line: Int, warn: (Msg) -> Unit): Value = when (name) {
         "sin" -> math1(args) { Math.sin(Math.toRadians(it)) }
         "cos" -> math1(args) { Math.cos(Math.toRadians(it)) }
         "tan" -> math1(args) { Math.tan(Math.toRadians(it)) }
@@ -43,7 +44,7 @@ internal object Builtins {
         "ord" -> (args.firstOrNull() as? StrV)?.v?.firstOrNull()?.let { NumV(it.code.toDouble()) } ?: UndefV
         "lookup" -> lookup(args)
         else -> {
-            warn("Unbekannte Funktion '$name' (Zeile $line)")
+            warn(Msg(LangText.UNKNOWN_FUNCTION, name, line))
             UndefV
         }
     }

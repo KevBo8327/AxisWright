@@ -52,7 +52,7 @@ class TwoWayPatternModelTest {
         val plate = doc.addExtrude("Platte", doc.addSketch("Platte"), 8.0)
         val g = doc.addPattern("Raster", plate.id, grid)
         val e = assertFailsWith<IllegalArgumentException> { doc.addPattern("Mehr", g.id, PatternKind.Linear(Vec3(0.0, 0.0, 1.0), 2, 10.0)) }
-        assertTrue(e.message!!.contains("Raster"))
+        assertEquals(ModelText.GRID_NOT_PATTERNABLE, (e as ModelException).msg.key)
         val row = doc.addPattern("Reihe", plate.id, PatternKind.Linear(x, 2, 30.0))
         assertFailsWith<IllegalArgumentException> { doc.addPattern("Raster von Reihen", row.id, grid) }
     }

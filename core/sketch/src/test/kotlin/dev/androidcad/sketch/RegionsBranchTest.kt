@@ -65,7 +65,7 @@ class RegionsBranchTest {
         assertEquals(1, r.regions.size, r.problems.toString())
         near(100.0, r.regions[0].area)
         assertEquals(4, r.regions[0].outer.segments.size)
-        assertTrue(r.problems.any { it.startsWith("Offenes Ende") }, r.problems.toString())
+        assertTrue(r.problems.any { it.key == SketchText.OPEN_END }, r.problems.toString())
     }
 
     @Test

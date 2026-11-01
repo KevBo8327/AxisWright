@@ -1,5 +1,6 @@
 package dev.androidcad.sketchedit
 
+import dev.androidcad.text.Msg
 import dev.androidcad.sketch.Sketch
 import dev.androidcad.sketch.SketchOps
 import dev.androidcad.sketch.Vec2
@@ -70,17 +71,17 @@ class PlacementEditorTest {
         e.requestAction(ActionKind.LENGTH) // ohne Auswahl: nichts
         e.click(30.0, 10.0) // untere Kante – irgendwas, damit der Editor neu löst
         e.clearSelection()
-        assertTrue(e.statusText().startsWith("Form bestimmt – Lage noch frei"), e.statusText())
+        assertEquals(Msg(EditText.STATUS_POSITION_FREE), e.statusText())
         e.selectAll()
         assertTrue(ActionKind.ORIGIN_CENTER in e.actionOptions().map { it.kind }, e.actionOptions().toString())
         e.requestAction(ActionKind.ORIGIN_CENTER)
         assertEquals(null, e.message)
-        assertEquals("Vollständig bestimmt", e.statusText())
+        assertEquals(Msg(EditText.STATUS_FULLY_CONSTRAINED), e.statusText())
         // rückgängig, dann mit der Ecke
         e.undo()
         e.selectAll()
         e.requestAction(ActionKind.ORIGIN_CORNER)
-        assertEquals("Vollständig bestimmt", e.statusText())
+        assertEquals(Msg(EditText.STATUS_FULLY_CONSTRAINED), e.statusText())
         val xs = s.pointIds.filter { it != s.origin && !SketchOps.isAxisPoint(s, it) }.map { s.point(it).x }
         near(0.0, xs.min()); near(40.0, xs.max())
     }
@@ -99,7 +100,7 @@ class PlacementEditorTest {
         assertTrue(ActionKind.FACE_CENTER in e.actionOptions().map { it.kind })
         e.requestAction(ActionKind.FACE_CENTER)
         near(30.0, s.point(r.corners[0]).x); near(20.0, s.point(r.corners[0]).y)
-        assertEquals("Vollständig bestimmt", e.statusText())
+        assertEquals(Msg(EditText.STATUS_FULLY_CONSTRAINED), e.statusText())
     }
     @Test
     fun holeAndEdgeCenteringNeedTheShapeAndExactlyOneProjectedReference() {

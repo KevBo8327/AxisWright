@@ -18,7 +18,7 @@ class SketchPatternTest {
         val s = Sketch()
         val c = s.addCircle(10.0, 5.0, 2.0)
         val r = SketchOps.linearPattern(s, emptyList(), listOf(c), Vec2(1.0, 0.0), 4, 15.0)
-        assertTrue(r.ok, r.message ?: "")
+        assertTrue(r.ok, r.message.toString())
         s.solved()
         val copies = s.circleIds.filter { it != c }
         assertEquals(3, copies.size)
@@ -69,7 +69,7 @@ class SketchPatternTest {
         val spoke = s.addLine(hub, s.addPoint(10.0, 0.0))
         val hole = s.addCircle(20.0, 0.0, 2.0)
         val r = SketchOps.circularPattern(s, listOf(spoke), listOf(hole), hub, 4)
-        assertTrue(r.ok, r.message ?: "")
+        assertTrue(r.ok, r.message.toString())
         s.solved()
         val spokes = s.lineIds.filter { it != spoke }
         assertEquals(3, spokes.size)
