@@ -214,7 +214,7 @@ private fun ModelTopBar(hub: ProjectHub, compact: Boolean) {
         }
         ActionButton(CadIcon.UNDO, "Rückgängig", enabled = state.canUndo, onClick = state::undo)
         ActionButton(CadIcon.REDO, "Wiederholen", enabled = state.canRedo, onClick = state::redo)
-        TextButton(onClick = { state.parametersOpen = true }) { Text("Parameter") }
+        TextButton(onClick = { if (Pro.allows()) state.parametersOpen = true }) { Text("Parameter"); ProMark() }
         if (state.parametersOpen) ParameterDialog(state) { state.parametersOpen = false }
         if (!compact) TextButton(onClick = { exporter.launch("${state.projectName}.stl") }, enabled = out?.mesh != null) { Text("STL exportieren") }
         Box {
@@ -226,8 +226,8 @@ private fun ModelTopBar(hub: ProjectHub, compact: Boolean) {
                     }
                     DropdownMenuItem(text = { Text("STL exportieren") }, onClick = { menu = false; exporter.launch("${state.projectName}.stl") }, enabled = out?.mesh != null)
                 }
-                DropdownMenuItem(text = { Text("STEP exportieren (CAD-Austausch)") }, onClick = { menu = false; stepExporter.launch("${state.projectName}.step") }, enabled = out?.body != null)
-                DropdownMenuItem(text = { Text("3MF exportieren (3D-Druck)") }, onClick = { menu = false; threeMfExporter.launch("${state.projectName}.3mf") }, enabled = out?.mesh != null)
+                DropdownMenuItem(text = { Text("STEP exportieren (CAD-Austausch)") }, trailingIcon = { ProMark() }, onClick = { menu = false; if (Pro.allows()) stepExporter.launch("${state.projectName}.step") }, enabled = out?.body != null)
+                DropdownMenuItem(text = { Text("3MF exportieren (3D-Druck)") }, trailingIcon = { ProMark() }, onClick = { menu = false; if (Pro.allows()) threeMfExporter.launch("${state.projectName}.3mf") }, enabled = out?.mesh != null)
                 DropdownMenuItem(text = { Text("Projekt exportieren …") }, onClick = { menu = false; projectExporter.launch("${state.projectName}.paramworker.json") })
                 DropdownMenuItem(text = { Text("Zum Skript-Editor (OpenSCAD)") }, onClick = { menu = false; hub.switchTo(ProjectKind.SCRIPT) })
             }

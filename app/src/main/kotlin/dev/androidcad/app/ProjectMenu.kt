@@ -126,6 +126,7 @@ internal fun ProjectMenu(hub: ProjectHub, modifier: Modifier = Modifier) {
             // eine Zeile statt drei: Tippen wechselt zur nächsten Darstellung, das Menü bleibt offen
             val theme = hub.workspace.prefs.themeMode
             MenuItem("Darstellung", CadIcon.THEME, trailing = theme.label) { hub.workspace.prefs.themeMode = ThemeMode.entries[(theme.ordinal + 1) % ThemeMode.entries.size] }
+            MenuItem("ParamWorker Pro …", CadIcon.PRO, trailing = when { Pro.isPro -> "aktiv"; Pro.FREE_DURING_TEST -> "Testphase frei"; else -> Pro.price }) { open = false; Pro.dialogOpen = true }
             MenuItem("Hilfe & Gesten …", CadIcon.HELP) { open = false; showHelp = true }
             MenuItem("Feedback senden …", CadIcon.MAIL) { open = false; sendFeedback(context) }
             MenuItem("Impressum & Datenschutz …", CadIcon.INFO) { open = false; showImprint = true }

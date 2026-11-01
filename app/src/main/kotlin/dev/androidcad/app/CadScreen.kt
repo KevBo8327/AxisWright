@@ -261,7 +261,7 @@ internal fun ScriptTopBar(hub: ProjectHub) {
         Box {
             TextButton(onClick = { menu = true }) { Text("⋮") }
             DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
-                DropdownMenuItem(text = { Text("3MF exportieren (3D-Druck)") }, onClick = { menu = false; threeMfExporter.launch("${state.project.name.ifBlank { "modell" }}.3mf") }, enabled = state.mesh?.isEmpty == false)
+                DropdownMenuItem(text = { Text("3MF exportieren (3D-Druck)") }, trailingIcon = { ProMark() }, onClick = { menu = false; if (Pro.allows()) threeMfExporter.launch("${state.project.name.ifBlank { "modell" }}.3mf") }, enabled = state.mesh?.isEmpty == false)
                 DropdownMenuItem(text = { Text("Quelltext exportieren (.scad) …") }, onClick = { menu = false; scadExporter.launch("${state.project.name.ifBlank { "projekt" }}.scad") })
                 DropdownMenuItem(text = { Text("Zum Modell-Editor") }, onClick = { menu = false; hub.switchTo(ProjectKind.MODEL) })
             }

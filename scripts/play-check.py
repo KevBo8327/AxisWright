@@ -63,7 +63,10 @@ def check_package():
     perms = re.findall(r"uses-permission: name='([^']+)'", badging)
     # vom Build selbst erzeugt (AndroidX), keine Nutzerberechtigung und nicht in der Datensicherheit anzugeben
     internal = [p for p in perms if p.endswith(".DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION")]
-    other = [p for p in perms if p not in internal]
+    # aus der Play Billing Library (Einmalkauf „ParamWorker Pro“): erlaubt nur die Bindung an den Play Store, keine Nutzerdaten
+    billing = "com.android.vending.BILLING"
+    if billing in perms: ok("Berechtigung com.android.vending.BILLING (In-App-Kauf über Google Play)")
+    other = [p for p in perms if p not in internal and p != billing]
     if other: warn("Berechtigungen (in der Datensicherheit begründen): " + ", ".join(other))
     else: ok("keine Berechtigungen (passt zu „keine Daten erhoben“, kein Internet)")
     abis = re.search(r"native-code: (.*)", badging)

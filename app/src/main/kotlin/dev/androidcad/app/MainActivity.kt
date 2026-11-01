@@ -32,6 +32,7 @@ class MainActivity : ComponentActivity() {
         // Startbildschirm (Icon auf Indigo) – einheitlich ab Android 8 über die SplashScreen-Bibliothek, vor super.onCreate
         installSplashScreen()
         super.onCreate(savedInstanceState)
+        Pro.start(this, workspace.prefs)
         setContent {
             val mode = workspace.prefs.themeMode
             val dark = isDarkTheme(mode)
@@ -49,6 +50,11 @@ class MainActivity : ComponentActivity() {
                 AppRoot(hub)
             }
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        Pro.refresh() // ausstehende Käufe können inzwischen bezahlt sein
     }
 
     override fun onStop() {

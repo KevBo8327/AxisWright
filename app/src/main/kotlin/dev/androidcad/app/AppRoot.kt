@@ -1,6 +1,7 @@
 package dev.androidcad.app
 
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.LocalActivity
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -29,6 +30,9 @@ fun AppRoot(hub: ProjectHub) {
     // Einführung einmal beim ersten Start; danach über Projektmenü › Hilfe
     var intro by remember { mutableStateOf(prefs.text(INTRO_SEEN) == null) }
     if (intro) HelpDialog(hub, firstStart = true) { intro = false; prefs.putText(INTRO_SEEN, "1") }
+    // ein Kaufdialog für die ganze App: Projektmenü und gesperrte Pro-Funktionen öffnen ihn
+    val activity = LocalActivity.current
+    if (Pro.dialogOpen) ProDialog(activity) { Pro.dialogOpen = false }
     Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         Box(Modifier.fillMaxSize().safeDrawingPadding()) {
             // Zurück-Taste im Editor: zur Startseite (Dialoge und Modi im Editor fangen sie vorher ab)

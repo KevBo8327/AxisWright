@@ -52,6 +52,8 @@ import dev.androidcad.sketchedit.Sel
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.foundation.layout.widthIn
@@ -145,7 +147,7 @@ private fun SketchPanel(state: WorkspaceState, modifier: Modifier) {
         val narrow = maxWidth < SKETCH_COMPACT_WIDTH
         val compact = maxWidth < BOTTOM_TOOLS_WIDTH || maxWidth < maxHeight || maxHeight < SKETCH_TOOLS_HEIGHT
         val density = LocalDensity.current
-        handle.insetTop = with(density) { 44.dp.toPx().toDouble() }
+        val topGap = with(density) { 12.dp.toPx().toDouble() }
         handle.editor.uiScale = density.density.toDouble()
         handle.insetLeft = if (compact) 0.0 else with(density) { 80.dp.toPx().toDouble() }
         val e = handle.editor
@@ -157,9 +159,13 @@ private fun SketchPanel(state: WorkspaceState, modifier: Modifier) {
             NoticeRow(state)
             Box(Modifier.weight(1f).fillMaxWidth()) {
                 SketchCanvas(handle, Modifier.fillMaxSize().hazeSource(glassSource), reference = state.referenceLines)
-                StatusPill(handle, Modifier.align(Alignment.TopCenter).padding(top = 8.dp))
-                // Meldungen des Editors oben im Zeichenfeld – wie die Fehlerzeile im Modellmodus
-                MessageBand(handle, Modifier.align(Alignment.TopStart).fillMaxWidth())
+                // Plakette und Meldung gemessen: „Einpassen“ hält genau ihre Höhe frei (die Meldung kann mehrzeilig sein).
+                // Direkt im Messrückruf statt über Zustand, damit schon das erste Einpassen die Höhe kennt
+                Box(Modifier.align(Alignment.TopStart).fillMaxWidth().onSizeChanged { handle.insetTop = it.height + topGap }) {
+                    StatusPill(handle, Modifier.align(Alignment.TopCenter).padding(top = 8.dp))
+                    // Meldungen des Editors oben im Zeichenfeld – wie die Fehlerzeile im Modellmodus
+                    MessageBand(handle, Modifier.align(Alignment.TopStart).fillMaxWidth())
+                }
                 ContextBar(handle, state.prefs, bottomGap = if (compact) 12.dp else 16.dp)
                 DismissLayer(openGroup != null) { openGroup = null }
                 if (!compact) GroupBar(groups, vertical = true, openGroup, { openGroup = it }, Modifier.align(Alignment.TopStart).padding(8.dp).padding(top = 40.dp))
@@ -216,7 +222,7 @@ private fun SketchTopBar(state: WorkspaceState, compact: Boolean, onPlaneDialog:
             }
         }
         // Parameter schon beim Skizzieren anlegen und in Maßen verwenden
-        if (!compact) TextButton(onClick = { state.parametersOpen = true }) { Text("Parameter") }
+        if (!compact) TextButton(onClick = { if (Pro.allows()) state.parametersOpen = true }) { Text("Parameter"); ProMark() }
         if (state.parametersOpen) ParameterDialog(state) { state.parametersOpen = false }
         ActionButton(CadIcon.UNDO, "Rückgängig", enabled = e.canUndo) { e.undo() }
         ActionButton(CadIcon.REDO, "Wiederholen", enabled = e.canRedo) { e.redo() }
@@ -231,7 +237,7 @@ private fun SketchTopBar(state: WorkspaceState, compact: Boolean, onPlaneDialog:
                     DropdownMenuItem(text = { Text("Ebene: ${planeLabel(state.sketch)}") }, onClick = { menu = false }, enabled = false)
                     if (!state.sketch.planeIsDerived) DropdownMenuItem(text = { Text("Ebene ändern …") }, onClick = { menu = false; onPlaneDialog() })
                     else if (state.sketch.onFace != null) DropdownMenuItem(text = { Text("Kanten projizieren") }, onClick = { menu = false; state.projectFaceEdges() })
-                    DropdownMenuItem(text = { Text("Parameter …") }, onClick = { menu = false; state.parametersOpen = true })
+                    DropdownMenuItem(text = { Text("Parameter …") }, trailingIcon = { ProMark() }, onClick = { menu = false; if (Pro.allows()) state.parametersOpen = true })
                     DropdownMenuItem(text = { Text(if (e.gridSnap) "Am Raster fangen ✓" else "Am Raster fangen") }, onClick = { menu = false; e.gridSnap = !e.gridSnap })
                     DropdownMenuItem(text = { Text("Alles einpassen") }, onClick = { menu = false; fit() })
                 }
@@ -392,28 +398,17 @@ private fun BoxScope.ContextBar(handle: EditorHandle, prefs: UiPrefs, bottomGap:
         val w = constraints.maxWidth.toFloat(); val h = constraints.maxHeight.toFloat()
         val margin = with(density) { 8.dp.toPx() }
         val gap = with(density) { 18.dp.toPx() }
-        val x: Float; val y: Float
-        if (box != null) {
-            x = (box.center.x - size.width / 2f).coerceIn(margin, (w - size.width - margin).coerceAtLeast(margin))
-            // bevorzugt unter der Auswahl (die Form bleibt sichtbar, die Leiste ist nah am Daumen), sonst darüber
-            val below = box.bottom + gap
-            val above = box.top - size.height - gap
-            y = when {
-                below + size.height <= h - margin -> below
-                above >= margin + with(density) { 36.dp.toPx() } -> above
-                else -> (h - size.height - margin).coerceAtLeast(margin)
-            }
-        } else {
-            x = ((w - size.width) / 2f).coerceAtLeast(margin)
-            y = (h - size.height - with(density) { bottomGap.toPx() }).coerceAtLeast(margin)
-        }
+        val place = if (box != null) contextBarPlace(
+            box, size.width.toFloat(), size.height.toFloat(), w, h, margin, gap, handle.insetTop.toFloat(), with(density) { 160.dp.toPx() },
+        ) else Rect(Offset(((w - size.width) / 2f).coerceAtLeast(margin), (h - size.height - with(density) { bottomGap.toPx() }).coerceAtLeast(margin)), androidx.compose.ui.geometry.Size(w - 2 * margin, 0f))
+        val x = place.left; val y = place.top
         Column(
             Modifier.offset { IntOffset(x.toInt(), y.toInt()) }.onSizeChanged { size = it }
                 // Tipps auf Hinweis oder Hintergrund der Leiste dürfen nicht auf der Zeichenfläche landen (sonst entstünden dort Punkte):
                 // eine eigene Eingabe genügt, Compose gibt die Berührung dann nicht an die Zeichenfläche darunter weiter. Nicht verbrauchen –
                 // sonst bricht das seitliche Scrollen der Chips ab (es prüft, ob die Bewegung schon verbraucht ist)
                 .pointerInput(Unit) { awaitPointerEventScope { while (true) awaitPointerEvent() } }
-                .widthIn(max = with(density) { (w - 2 * margin).toDp() })
+                .widthIn(max = with(density) { place.width.toDp() })
                 .glass(shape)
                 .padding(horizontal = 8.dp, vertical = 6.dp),
             verticalArrangement = Arrangement.spacedBy(4.dp),
@@ -482,8 +477,35 @@ private fun BoxScope.ContextBar(handle: EditorHandle, prefs: UiPrefs, bottomGap:
     }
 }
 
-/** Hülle der gewählten Elemente in Bildschirmkoordinaten der Zeichenfläche (`null` ohne geometrische Auswahl). */
-private fun selectionBox(e: SketchEditor): androidx.compose.ui.geometry.Rect? {
+/**
+ * Platz der Kontextleiste ([barW]×[barH], gemessen) zur Auswahl [box] in der Zeichenfläche [w]×[h]: links oben die Lage, die
+ * Breite ist die höchstens erlaubte. Bevorzugt unter der Auswahl (die Form bleibt sichtbar, die Leiste ist nah am Daumen), sonst
+ * darüber (unterhalb von [top], dem Streifen der Plakette), sonst daneben auf der Seite mit mehr Platz – dort schmaler bis
+ * [minSide], die Chips scrollen dann –, sonst am unteren Rand.
+ */
+internal fun contextBarPlace(box: Rect, barW: Float, barH: Float, w: Float, h: Float, margin: Float, gap: Float, top: Float, minSide: Float): Rect {
+    val full = w - 2 * margin
+    fun at(x: Float, y: Float, maxW: Float = full) = Rect(x, y, x + maxW, y + barH)
+    val centeredX = (box.center.x - barW / 2f).coerceIn(margin, (w - barW - margin).coerceAtLeast(margin))
+    val below = box.bottom + gap
+    val above = box.top - barH - gap
+    if (below + barH <= h - margin) return at(centeredX, below)
+    if (above >= top) return at(centeredX, above)
+    val leftSide = box.left > w - box.right
+    val space = if (leftSide) box.left - gap - margin else w - margin - box.right - gap
+    if (space >= minOf(barW, minSide) && barH <= h - top - margin) {
+        val sideW = minOf(barW, space)
+        val y = (box.center.y - barH / 2f).coerceIn(top, h - barH - margin)
+        return at(if (leftSide) box.left - gap - sideW else box.right + gap, y, space)
+    }
+    return at(centeredX, (h - barH - margin).coerceAtLeast(margin))
+}
+
+/**
+ * Hülle der gewählten Elemente samt ihrer Maße und Bedingungssymbole in Bildschirmkoordinaten der Zeichenfläche
+ * (`null` ohne Auswahl) – die Leiste soll auch diese nicht verdecken.
+ */
+private fun selectionBox(e: SketchEditor): Rect? {
     val sk = e.sketch
     val pts = ArrayList<dev.androidcad.sketch.Vec2>()
     for (sel in e.selection) when (sel) {
@@ -499,11 +521,22 @@ private fun selectionBox(e: SketchEditor): androidx.compose.ui.geometry.Rect? {
         }
         is Sel.K -> Unit
     }
-    if (pts.isEmpty()) return null
-    val screen = pts.map { e.view.toScreen(it) }
-    return androidx.compose.ui.geometry.Rect(
-        screen.minOf { it.x }.toFloat(), screen.minOf { it.y }.toFloat(), screen.maxOf { it.x }.toFloat(), screen.maxOf { it.y }.toFloat(),
-    )
+    val screen = pts.mapTo(ArrayList()) { e.view.toScreen(it) }
+    // Maße und Symbole an genau den Stellen, an denen die Zeichenfläche sie zeichnet; dazu gehört, was ein gewähltes Element
+    // referenziert oder selbst gewählt ist
+    val ids = e.selection.mapNotNullTo(HashSet<Any>()) { when (it) { is Sel.P -> it.id; is Sel.L -> it.id; is Sel.C -> it.id; is Sel.A -> it.id; is Sel.K -> null } }
+    fun belongs(c: dev.androidcad.sketch.ConstraintId) = Sel.K(c) in e.selection || sk.constraint(c).refs.any { it in ids }
+    for (l in e.dimensionLabels()) if (belongs(l.id)) {
+        l.lines.forEach { (a, b) -> screen += a; screen += b }
+        screen += dev.androidcad.sketch.Vec2(l.center.x - l.halfWidth, l.center.y - l.halfHeight)
+        screen += dev.androidcad.sketch.Vec2(l.center.x + l.halfWidth, l.center.y + l.halfHeight)
+    }
+    // Symbole: Kreis mit 9 px Radius (siehe SketchCanvas)
+    for (b in e.badges()) if (belongs(b.id)) {
+        screen += dev.androidcad.sketch.Vec2(b.center.x - 9, b.center.y - 9); screen += dev.androidcad.sketch.Vec2(b.center.x + 9, b.center.y + 9)
+    }
+    if (screen.isEmpty()) return null
+    return Rect(screen.minOf { it.x }.toFloat(), screen.minOf { it.y }.toFloat(), screen.maxOf { it.x }.toFloat(), screen.maxOf { it.y }.toFloat())
 }
 
 /** Aktionen, die die Lage einer Form festlegen – in der Leiste unter „Ausrichten ▾“ zusammengefasst. */
