@@ -1,6 +1,10 @@
 package dev.androidcad.brep
 
-class BrepException(message: String, cause: Throwable? = null) : RuntimeException(message, cause)
+import dev.androidcad.text.Msg
+
+class BrepException(val msg: Msg, cause: Throwable? = null) : RuntimeException(msg.toString(), cause) {
+    constructor(message: String, cause: Throwable? = null) : this(Msg(BrepText.BREP_ERROR_DETAIL, message), cause)
+}
 
 internal object NativeBrep {
     init {
@@ -130,7 +134,7 @@ class BrepShape private constructor(private val handle: Long) : AutoCloseable {
      */
     fun transform(matrix3x4: DoubleArray): BrepShape {
         require(matrix3x4.size == 12) { "3x4-Matrix erwartet (12 Werte)" }
-        if (!isRigid(matrix3x4)) throw BrepException("Transformation ist keine starre Bewegung (Drehung + Verschiebung)")
+        if (!isRigid(matrix3x4)) throw BrepException(Msg(BrepText.NOT_RIGID_TRANSFORM))
         return wrap { NativeBrep.transform(handle, matrix3x4) }
     }
 
@@ -295,7 +299,7 @@ class BrepShape private constructor(private val handle: Long) : AutoCloseable {
         return try {
             block()
         } catch (e: IllegalStateException) {
-            throw BrepException(e.message ?: "B-Rep-Fehler", e)
+            throw BrepException(if (e.message.isNullOrBlank()) Msg(BrepText.BREP_ERROR) else Msg(BrepText.BREP_ERROR_DETAIL, e.message!!), e)
         }
     }
 
@@ -308,12 +312,12 @@ class BrepShape private constructor(private val handle: Long) : AutoCloseable {
          * [bottomTag]/[topTag] benennen die untere (kleineres z) und die obere Stirnfläche, die [ProfileSegment.tag]s die Seitenflächen.
          */
         fun extrude(profile: Profile, height: Double, symmetric: Boolean = false, bottomTag: Long = 0, topTag: Long = 0): BrepShape {
-            if (height == 0.0) throw BrepException("Extrusionshöhe darf nicht 0 sein")
+            if (height == 0.0) throw BrepException(Msg(BrepText.EXTRUSION_HEIGHT_ZERO))
             val h = kotlin.math.abs(height)
             val up = try {
                 BrepShape(NativeBrep.extrude(profile.encode(), h, profile.segmentTags(), bottomTag, topTag))
             } catch (e: IllegalStateException) {
-                throw BrepException(e.message ?: "B-Rep-Fehler", e)
+                throw BrepException(if (e.message.isNullOrBlank()) Msg(BrepText.BREP_ERROR) else Msg(BrepText.BREP_ERROR_DETAIL, e.message!!), e)
             }
             // Die Richtung wird durch Verschieben des positiv extrudierten Körpers erreicht (vermeidet ein verkehrtes Solid).
             val dz = when {
@@ -339,8 +343,8 @@ class BrepShape private constructor(private val handle: Long) : AutoCloseable {
             startTag: Long = 0, endTag: Long = 0,
         ): BrepShape {
             val len = kotlin.math.hypot(dx, dy)
-            if (len < 1e-12) throw BrepException("Drehachse braucht eine Richtung")
-            if (angle == 0.0 || !angle.isFinite() || kotlin.math.abs(angle) > 360.0 + 1e-9) throw BrepException("Drehwinkel muss zwischen 0 und 360 Grad liegen")
+            if (len < 1e-12) throw BrepException(Msg(BrepText.REVOLVE_AXIS_NO_DIRECTION))
+            if (angle == 0.0 || !angle.isFinite() || kotlin.math.abs(angle) > 360.0 + 1e-9) throw BrepException(Msg(BrepText.REVOLVE_ANGLE_RANGE))
             val a = kotlin.math.abs(angle).coerceAtMost(360.0)
             // andersherum = um die umgekehrte Achse; dabei tauschen Anfangs- und Endfläche nicht (Anfang bleibt in der Profilebene)
             val s = if (angle < 0) -1.0 else 1.0
@@ -348,7 +352,7 @@ class BrepShape private constructor(private val handle: Long) : AutoCloseable {
             val turned = try {
                 BrepShape(NativeBrep.revolve(profile.encode(), doubleArrayOf(ax, ay, ux, uy), a, profile.segmentTags(), startTag, endTag))
             } catch (e: IllegalStateException) {
-                throw BrepException(e.message ?: "B-Rep-Fehler", e)
+                throw BrepException(if (e.message.isNullOrBlank()) Msg(BrepText.BREP_ERROR) else Msg(BrepText.BREP_ERROR_DETAIL, e.message!!), e)
             }
             if (!symmetric || a >= 360.0) return turned
             return turned.use { it.transform(rotationAbout(ax, ay, ux, uy, -a / 2)) }

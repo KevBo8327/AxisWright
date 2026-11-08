@@ -59,6 +59,20 @@
         <item quantity="one">%1$d Exemplar entfernt – jetzt %2$d.</item>
         <item quantity="other">%1$d Exemplare entfernt – jetzt %2$d.</item>
     </plurals>
+    <string name="core_sketch_scale_not_positive">Skalierungsfaktor muss größer als 0 sein</string>
+    <string name="core_sketch_nothing_to_transform">Nichts zum Transformieren</string>
+    <plurals name="core_sketch_constraints_adapted">
+        <item quantity="one">%1$d Bedingung angepasst</item>
+        <item quantity="other">%1$d Bedingungen angepasst</item>
+    </plurals>
+    <plurals name="core_sketch_constraints_removed">
+        <item quantity="one">%1$d widersprüchliche Bedingung entfernt</item>
+        <item quantity="other">%1$d widersprüchliche Bedingungen entfernt</item>
+    </plurals>
+    <plurals name="core_sketch_copies_created">
+        <item quantity="one">%1$d Kopie erstellt</item>
+        <item quantity="other">%1$d Kopien erstellt</item>
+    </plurals>
     <string name="core_sketch_tap_between_line_ends">Tippe zwischen die Enden der Linie</string>
     <string name="core_sketch_tap_between_arc_ends">Tippe zwischen die Enden des Bogens</string>
     <string name="core_sketch_tap_on_circle">Tippe auf den Kreis</string>
@@ -69,6 +83,8 @@
     <!-- Skizzen-Editor: Hinweise, Status (core/sketchedit) -->
     <string name="core_edit_select_to_mirror">Wähle zuerst die Elemente, die gespiegelt werden sollen.</string>
     <string name="core_edit_select_to_pattern">Wähle zuerst die Elemente, die vervielfältigt werden sollen.</string>
+    <string name="core_edit_select_to_transform">Wähle zuerst die Elemente, die transformiert werden sollen.</string>
+    <string name="core_edit_tap_transform_pivot">Bezugspunkt antippen.</string>
     <string name="core_edit_tangent_start_at_end">Tangential: am Ende einer Linie oder eines Bogens beginnen.</string>
     <string name="core_edit_conflicts_with_constraints">Das widerspricht den vorhandenen Bedingungen.</string>
     <string name="core_edit_tap_line_circle_arc">Tippe auf eine Linie, einen Kreis oder Bogen.</string>
@@ -248,6 +264,7 @@
     <string name="core_action_hole_center">Mittig auf Bohrung</string>
     <string name="core_action_edge_center">Mittig zur Kante</string>
     <string name="core_action_pattern_count">Anzahl im Muster</string>
+    <string name="core_action_transform">Transformieren</string>
 
     <!-- Varianten der Zeichenwerkzeuge (RectMode, CircleMode …) -->
     <string name="core_mode_corners">Ecke–Ecke</string>
@@ -267,4 +284,16 @@
     <string name="core_plane_xy">XY · Draufsicht</string>
     <string name="core_plane_xz">XZ · Vorderansicht</string>
     <string name="core_plane_yz">YZ · Seitenansicht</string>
+
+    <!-- Geometriekern (B-Rep / OpenCascade) -->
+    <string name="core_brep_not_rigid_transform">Transformation ist keine starre Bewegung (Drehung + Verschiebung)</string>
+    <string name="core_brep_error">B-Rep-Fehler</string>
+    <string name="core_brep_error_detail">B-Rep-Fehler: %1$s</string>
+    <string name="core_brep_extrusion_height_zero">Extrusionshöhe darf nicht 0 sein</string>
+    <string name="core_brep_revolve_axis_no_direction">Drehachse braucht eine Richtung</string>
+    <string name="core_brep_revolve_angle_range">Drehwinkel muss zwischen 0 und 360 Grad liegen</string>
+
+    <!-- Geometriekern (Manifold/CSG) -->
+    <string name="core_geometry_error">Geometriefehler</string>
+    <string name="core_geometry_error_detail">Geometriefehler: %1$s</string>
 </resources>

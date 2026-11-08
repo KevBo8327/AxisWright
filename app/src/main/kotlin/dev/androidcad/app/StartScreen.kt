@@ -66,7 +66,7 @@ fun StartScreen(hub: ProjectHub) {
         ) {
             item(span = { GridItemSpan(maxLineSpan) }) {
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text("ParamWorker", style = MaterialTheme.typography.headlineMedium, color = colors.onBackground)
+                    Text(stringResource(R.string.app_name), style = MaterialTheme.typography.headlineMedium, color = colors.onBackground)
                     Text(stringResource(R.string.start_tagline), style = MaterialTheme.typography.bodyMedium, color = colors.onSurfaceVariant)
                 }
             }

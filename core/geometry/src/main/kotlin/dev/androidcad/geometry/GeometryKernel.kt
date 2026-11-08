@@ -1,9 +1,12 @@
 package dev.androidcad.geometry
 
 import dev.androidcad.lang.Node
+import dev.androidcad.text.Msg
 
 /** Fehler des Geometriekerns (ungültige Geometrie, nicht kombinierbare 2D/3D-Objekte, …). */
-class GeometryException(message: String, cause: Throwable? = null) : RuntimeException(message, cause)
+class GeometryException(val msg: Msg, cause: Throwable? = null) : RuntimeException(msg.toString(), cause) {
+    constructor(message: String, cause: Throwable? = null) : this(Msg(GeometryText.GEOMETRY_ERROR_DETAIL, message), cause)
+}
 
 internal object NativeKernel {
     init {
@@ -22,7 +25,7 @@ object GeometryKernel {
         val out = try {
             NativeKernel.nativeBuild(program)
         } catch (e: IllegalStateException) {
-            throw GeometryException(e.message ?: "Geometriefehler", e)
+            throw GeometryException(if (e.message.isNullOrBlank()) Msg(GeometryText.GEOMETRY_ERROR) else Msg(GeometryText.GEOMETRY_ERROR_DETAIL, e.message!!), e)
         }
         return Mesh(out[0] as FloatArray, out[1] as IntArray)
     }

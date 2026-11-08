@@ -59,6 +59,20 @@
         <item quantity="one">%1$d instance removed – now %2$d.</item>
         <item quantity="other">%1$d instances removed – now %2$d.</item>
     </plurals>
+    <string name="core_sketch_scale_not_positive">Scale factor must be greater than 0</string>
+    <string name="core_sketch_nothing_to_transform">Nothing to transform</string>
+    <plurals name="core_sketch_constraints_adapted">
+        <item quantity="one">%1$d constraint adapted</item>
+        <item quantity="other">%1$d constraints adapted</item>
+    </plurals>
+    <plurals name="core_sketch_constraints_removed">
+        <item quantity="one">%1$d conflicting constraint removed</item>
+        <item quantity="other">%1$d conflicting constraints removed</item>
+    </plurals>
+    <plurals name="core_sketch_copies_created">
+        <item quantity="one">%1$d copy created</item>
+        <item quantity="other">%1$d copies created</item>
+    </plurals>
     <string name="core_sketch_tap_between_line_ends">Tap between the ends of the line</string>
     <string name="core_sketch_tap_between_arc_ends">Tap between the ends of the arc</string>
     <string name="core_sketch_tap_on_circle">Tap on the circle</string>
@@ -69,6 +83,8 @@
     <!-- Skizzen-Editor: Hinweise, Status (core/sketchedit) -->
     <string name="core_edit_select_to_mirror">First select the elements to mirror.</string>
     <string name="core_edit_select_to_pattern">First select the elements to pattern.</string>
+    <string name="core_edit_select_to_transform">First select the elements to transform.</string>
+    <string name="core_edit_tap_transform_pivot">Tap the reference point (pivot).</string>
     <string name="core_edit_tangent_start_at_end">Tangent: start at the end of a line or arc.</string>
     <string name="core_edit_conflicts_with_constraints">This conflicts with the existing constraints.</string>
     <string name="core_edit_tap_line_circle_arc">Tap a line, circle or arc.</string>
@@ -248,6 +264,7 @@
     <string name="core_action_hole_center">Center on hole</string>
     <string name="core_action_edge_center">Center on edge</string>
     <string name="core_action_pattern_count">Pattern count</string>
+    <string name="core_action_transform">Transform</string>
 
     <!-- Varianten der Zeichenwerkzeuge (RectMode, CircleMode …) -->
     <string name="core_mode_corners">2 corners</string>
@@ -267,4 +284,16 @@
     <string name="core_plane_xy">XY · Top view</string>
     <string name="core_plane_xz">XZ · Front view</string>
     <string name="core_plane_yz">YZ · Side view</string>
+
+    <!-- Geometriekern (B-Rep / OpenCascade) -->
+    <string name="core_brep_not_rigid_transform">Transformation is not a rigid motion (rotation + translation)</string>
+    <string name="core_brep_error">B-rep error</string>
+    <string name="core_brep_error_detail">B-rep error: %1$s</string>
+    <string name="core_brep_extrusion_height_zero">Extrusion height must not be 0</string>
+    <string name="core_brep_revolve_axis_no_direction">Revolve axis needs a direction</string>
+    <string name="core_brep_revolve_angle_range">Revolve angle must be between 0 and 360 degrees</string>
+
+    <!-- Geometriekern (Manifold/CSG) -->
+    <string name="core_geometry_error">Geometry error</string>
+    <string name="core_geometry_error_detail">Geometry error: %1$s</string>
 </resources>

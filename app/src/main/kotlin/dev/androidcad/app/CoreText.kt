@@ -6,6 +6,8 @@ import androidx.annotation.StringRes
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.ui.platform.LocalResources
+import dev.androidcad.brep.BrepText
+import dev.androidcad.geometry.GeometryText
 import dev.androidcad.lang.CadLangException
 import dev.androidcad.lang.LangText
 import dev.androidcad.model.BasePlane
@@ -96,7 +98,7 @@ private fun Resources.args(list: List<Any>): Array<Any> = list.map { a ->
     }
 }.toTypedArray()
 
-private fun res(key: Enum<*>): Int = when (key) {
+internal fun res(key: Enum<*>): Int = when (key) {
     is SketchText -> key.res()
     is EditText -> key.res()
     is ModelText -> key.res()
@@ -109,11 +111,18 @@ private fun res(key: Enum<*>): Int = when (key) {
     is ArcMode -> key.res()
     is CornerMode -> key.res()
     is BasePlane -> key.res()
+    is BrepText -> key.res()
+    is GeometryText -> key.res()
     else -> error("Kein Text für ${key::class.simpleName}.${key.name} – in CoreText.kt zuordnen")
 }
 
 /** Schlüssel, deren Text ein `<plurals>` ist (erstes Argument = Anzahl). */
-private val PLURALS: Set<Enum<*>> = setOf(SketchText.LINEAR_COPIES, SketchText.CIRCULAR_COPIES, SketchText.PATTERN_ALREADY_HAS, SketchText.INSTANCES_ADDED, SketchText.INSTANCES_REMOVED, EditText.STATUS_DOF, ModelText.PROJECTIONS_MISSING)
+private val PLURALS: Set<Enum<*>> = setOf(
+    SketchText.LINEAR_COPIES, SketchText.CIRCULAR_COPIES, SketchText.PATTERN_ALREADY_HAS,
+    SketchText.INSTANCES_ADDED, SketchText.INSTANCES_REMOVED, SketchText.CONSTRAINTS_ADAPTED,
+    SketchText.CONSTRAINTS_REMOVED, SketchText.COPIES_CREATED,
+    EditText.STATUS_DOF, ModelText.PROJECTIONS_MISSING
+)
 
 private fun SketchText.res(): Int = when (this) {
     SketchText.LINE_NO_LENGTH -> R.string.core_sketch_line_no_length
@@ -150,6 +159,11 @@ private fun SketchText.res(): Int = when (this) {
     SketchText.DIRECTION_MISSING -> R.string.core_sketch_direction_missing
     SketchText.ANGLE_RANGE_360 -> R.string.core_sketch_angle_range_360
     SketchText.CENTER_ONLY_ELEMENT -> R.string.core_sketch_center_only_element
+    SketchText.SCALE_NOT_POSITIVE -> R.string.core_sketch_scale_not_positive
+    SketchText.NOTHING_TO_TRANSFORM -> R.string.core_sketch_nothing_to_transform
+    SketchText.CONSTRAINTS_ADAPTED -> R.plurals.core_sketch_constraints_adapted
+    SketchText.CONSTRAINTS_REMOVED -> R.plurals.core_sketch_constraints_removed
+    SketchText.COPIES_CREATED -> R.plurals.core_sketch_copies_created
     SketchText.LINEAR_COPIES -> R.plurals.core_sketch_linear_copies
     SketchText.CIRCULAR_COPIES -> R.plurals.core_sketch_circular_copies
     SketchText.MAX_INSTANCES -> R.string.core_sketch_max_instances
@@ -168,6 +182,8 @@ private fun SketchText.res(): Int = when (this) {
 private fun EditText.res(): Int = when (this) {
     EditText.SELECT_TO_MIRROR -> R.string.core_edit_select_to_mirror
     EditText.SELECT_TO_PATTERN -> R.string.core_edit_select_to_pattern
+    EditText.SELECT_TO_TRANSFORM -> R.string.core_edit_select_to_transform
+    EditText.TAP_TRANSFORM_PIVOT -> R.string.core_edit_tap_transform_pivot
     EditText.TANGENT_START_AT_END -> R.string.core_edit_tangent_start_at_end
     EditText.CONFLICTS_WITH_CONSTRAINTS -> R.string.core_edit_conflicts_with_constraints
     EditText.TAP_LINE_CIRCLE_ARC -> R.string.core_edit_tap_line_circle_arc
@@ -344,6 +360,7 @@ private fun ActionKind.res(): Int = when (this) {
     ActionKind.HOLE_CENTER -> R.string.core_action_hole_center
     ActionKind.EDGE_CENTER -> R.string.core_action_edge_center
     ActionKind.PATTERN_COUNT -> R.string.core_action_pattern_count
+    ActionKind.TRANSFORM -> R.string.core_action_transform
 }
 
 private fun RectMode.res(): Int = when (this) {
@@ -385,4 +402,18 @@ private fun BasePlane.res(): Int = when (this) {
     BasePlane.XY -> R.string.core_plane_xy
     BasePlane.XZ -> R.string.core_plane_xz
     BasePlane.YZ -> R.string.core_plane_yz
+}
+
+private fun BrepText.res(): Int = when (this) {
+    BrepText.NOT_RIGID_TRANSFORM -> R.string.core_brep_not_rigid_transform
+    BrepText.BREP_ERROR -> R.string.core_brep_error
+    BrepText.BREP_ERROR_DETAIL -> R.string.core_brep_error_detail
+    BrepText.EXTRUSION_HEIGHT_ZERO -> R.string.core_brep_extrusion_height_zero
+    BrepText.REVOLVE_AXIS_NO_DIRECTION -> R.string.core_brep_revolve_axis_no_direction
+    BrepText.REVOLVE_ANGLE_RANGE -> R.string.core_brep_revolve_angle_range
+}
+
+private fun GeometryText.res(): Int = when (this) {
+    GeometryText.GEOMETRY_ERROR -> R.string.core_geometry_error
+    GeometryText.GEOMETRY_ERROR_DETAIL -> R.string.core_geometry_error_detail
 }

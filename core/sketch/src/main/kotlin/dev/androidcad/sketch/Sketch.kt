@@ -188,6 +188,15 @@ public class Sketch {
         texts[id.value] = text(id).copy(text = text, height = height, angle = angle)
     }
 
+    /** Setzt den Basispunkt eines Textes neu. */
+    public fun setTextLocation(id: TextId, location: PointId) {
+        require(exists(id)) { "Unbekannter Text $id" }
+        require(exists(location)) { "Punkt existiert nicht" }
+        val oldLoc = text(id).location
+        texts[id.value] = text(id).copy(location = location)
+        removeOrphanPoints()
+    }
+
     /** Alle Linien, Kreise, Bögen und Texte, die [point] als Endpunkt, Mittelpunkt, Start, Ende oder Basispunkt verwenden. */
     public fun elementsUsing(point: PointId): List<Any> =
         lines.filterValues { it.p1 == point || it.p2 == point }.keys.map(::LineId) +

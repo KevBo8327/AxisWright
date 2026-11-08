@@ -689,8 +689,9 @@ fun ParameterDialog(state: WorkspaceState, onDismiss: () -> Unit) {
         ) {
             Column(Modifier.padding(horizontal = 20.dp, vertical = 16.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
+                    val closeCd = stringResource(R.string.common_close)
                     Text(stringResource(R.string.common_parameters), Modifier.weight(1f), style = MaterialTheme.typography.titleLarge)
-                    TextButton(onClick = onDismiss) { Text("✕") }
+                    TextButton(onClick = onDismiss, modifier = Modifier.semantics { contentDescription = closeCd }) { Text("✕") }
                 }
                 // Kopfzeile statt Beschriftung in jedem Feld: spart Höhe, die Spalten bleiben ausgerichtet
                 Row(Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -759,7 +760,8 @@ private fun ParameterRow(state: WorkspaceState, p: dev.androidcad.model.Paramete
                     style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            TextButton(onClick = onDelete, modifier = Modifier.width(PARAM_DELETE_WIDTH).padding(top = 4.dp), contentPadding = PaddingValues(0.dp)) { Text("✕") }
+            val deleteCd = stringResource(R.string.common_delete)
+            TextButton(onClick = onDelete, modifier = Modifier.width(PARAM_DELETE_WIDTH).padding(top = 4.dp).semantics { contentDescription = deleteCd }, contentPadding = PaddingValues(0.dp)) { Text("✕") }
         }
         val problem = nameProblem ?: if (value == null) stringResource(R.string.feat_param_expr_invalid) else null
         if (problem != null) Text(problem, Modifier.padding(start = 4.dp, top = 2.dp), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)

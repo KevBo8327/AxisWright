@@ -8,6 +8,8 @@ package dev.androidcad.sketchedit
 public enum class EditText {
     SELECT_TO_MIRROR,
     SELECT_TO_PATTERN,
+    SELECT_TO_TRANSFORM,
+    TAP_TRANSFORM_PIVOT,
     TANGENT_START_AT_END,
     CONFLICTS_WITH_CONSTRAINTS,
     TAP_LINE_CIRCLE_ARC,

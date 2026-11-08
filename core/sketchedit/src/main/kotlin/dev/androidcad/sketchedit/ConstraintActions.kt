@@ -69,6 +69,7 @@ public enum class ActionKind(public val symbol: String, public val group: Action
     HOLE_CENTER("◎", ActionGroup.OTHER),
     EDGE_CENTER("⊥", ActionGroup.OTHER),
     PATTERN_COUNT("#", ActionGroup.OTHER, true),
+    TRANSFORM("⛶", ActionGroup.OTHER),
 }
 
 /** Verfügbare Aktion für die aktuelle Auswahl; [defaultValue] ist bei Maßen der Wert der Zeichnung. */
@@ -102,6 +103,7 @@ internal object ConstraintActions {
     fun options(sketch: Sketch, i: SelInfo): List<ActionOption> =
         ActionKind.entries.filter { kind -> i.lines.none { SketchOps.axisOf(sketch, it) != null } || kind !in NOT_FOR_AXES }.mapNotNull { kind ->
             if (kind == ActionKind.CONSTRUCTION) return@mapNotNull if (i.lines.isNotEmpty() || i.rounds.isNotEmpty() || i.texts.isNotEmpty()) ActionOption(kind) else null
+            if (kind == ActionKind.TRANSFORM) return@mapNotNull if (i.points.isNotEmpty() || i.lines.isNotEmpty() || i.rounds.isNotEmpty() || i.texts.isNotEmpty()) ActionOption(kind) else null
             val built = build(sketch, kind, i, value = null) ?: return@mapNotNull null
             val default = when {
                 kind == ActionKind.PATTERN_COUNT -> SketchOps.patternOf(sketch, i.points, i.lines, i.rounds)?.count?.toDouble()
@@ -176,6 +178,7 @@ internal object ConstraintActions {
             ActionKind.EDGE_CENTER -> referenceTarget(sketch, i)?.let { (l, r) -> if (l != null && r == null) emptyList() else null }
             // ganzes Muster: Kopien ergänzen oder entfernen (im Editor über SketchOps)
             ActionKind.PATTERN_COUNT -> if (SketchOps.patternOf(sketch, i.points, i.lines, i.rounds) != null) emptyList() else null
+            ActionKind.TRANSFORM -> if (i.points.isNotEmpty() || i.lines.isNotEmpty() || i.rounds.isNotEmpty() || i.texts.isNotEmpty()) emptyList() else null
             ActionKind.ORIGIN_CORNER, ActionKind.ORIGIN_CENTER, ActionKind.FACE_CENTER -> {
                 val shape = i.lines.filter { SketchOps.axisOf(sketch, it) == null }
                 if (shape.isNotEmpty() || i.rounds.isNotEmpty()) emptyList() else null

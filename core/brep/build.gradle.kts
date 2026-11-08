@@ -36,6 +36,7 @@ android {
 }
 
 dependencies {
+    api(project(":core:text"))
     androidTestImplementation(libs.androidx.test.runner)
     androidTestImplementation(libs.androidx.test.ext.junit)
     androidTestImplementation(libs.kotlin.test)
