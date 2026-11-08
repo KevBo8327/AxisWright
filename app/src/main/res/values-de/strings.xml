@@ -14,4 +14,5 @@
     <string name="common_reset">Zurücksetzen</string>
     <string name="common_name">Name</string>
     <string name="common_parameters">Parameter</string>
+    <string name="common_more_options">Weitere Optionen</string>
 </resources>

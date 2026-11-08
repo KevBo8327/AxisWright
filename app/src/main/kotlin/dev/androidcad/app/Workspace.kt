@@ -1352,7 +1352,7 @@ class WorkspaceState(
         measureMode = try {
             measure(picks)
         } catch (e: dev.androidcad.brep.BrepException) {
-            MeasureMode(picks, listOf(UiText.Res(R.string.ws_measure_failed, e.message.orEmpty())))
+            MeasureMode(picks, listOf(UiText.Res(R.string.ws_measure_failed, UiText.Core(e.msg))))
         }
         refreshHighlight()
     }
@@ -1635,7 +1635,7 @@ class WorkspaceState(
                 try {
                     compute(snapshot)
                 } catch (e: dev.androidcad.brep.BrepException) {
-                    ModelOutput(null, null, 0.0, 0, listOf(UiText.Res(R.string.ws_error_body_failed, e.message.orEmpty())), 0)
+                    ModelOutput(null, null, 0.0, 0, listOf(UiText.Res(R.string.ws_error_body_failed, UiText.Core(e.msg))), 0)
                 } catch (_: StackOverflowError) {
                     ModelOutput(null, null, 0.0, 0, listOf(UiText.Res(R.string.ws_error_too_deep)), 0)
                 }

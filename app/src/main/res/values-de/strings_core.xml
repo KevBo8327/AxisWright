@@ -267,4 +267,12 @@
     <string name="core_plane_xy">XY · Draufsicht</string>
     <string name="core_plane_xz">XZ · Vorderansicht</string>
     <string name="core_plane_yz">YZ · Seitenansicht</string>
+
+    <!-- Geometriekern (B-Rep / OpenCascade) -->
+    <string name="core_brep_not_rigid_transform">Transformation ist keine starre Bewegung (Drehung + Verschiebung)</string>
+    <string name="core_brep_error">B-Rep-Fehler</string>
+    <string name="core_brep_error_detail">B-Rep-Fehler: %1$s</string>
+    <string name="core_brep_extrusion_height_zero">Extrusionshöhe darf nicht 0 sein</string>
+    <string name="core_brep_revolve_axis_no_direction">Drehachse braucht eine Richtung</string>
+    <string name="core_brep_revolve_angle_range">Drehwinkel muss zwischen 0 und 360 Grad liegen</string>
 </resources>

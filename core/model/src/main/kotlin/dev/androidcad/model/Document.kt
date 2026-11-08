@@ -518,8 +518,11 @@ class Document {
         }
     }
 
-    /** Grund eines gescheiterten Schritts: eigene Meldung ([ModelException]) oder der technische Text des Geometriekerns. */
-    private fun reason(e: RuntimeException): Any = (e as? ModelException)?.msg ?: e.message.orEmpty()
+    /** Grund eines gescheiterten Schritts: eigene Meldung ([ModelException]), [BrepException] mit [Msg] oder der technische Text des Geometriekerns. */
+    private fun reason(e: RuntimeException): Any =
+        (e as? ModelException)?.msg
+            ?: (e as? BrepException)?.msg
+            ?: e.message.orEmpty()
 
     /**
      * Überträgt die beim Aufbau gefundene Lage der projizierten Kanten ([BuildResult.projected]) in die Skizzen dieses Dokuments

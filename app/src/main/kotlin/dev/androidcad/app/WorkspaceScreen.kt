@@ -234,8 +234,9 @@ private fun SketchTopBar(state: WorkspaceState, compact: Boolean, onPlaneDialog:
             ActionButton(CadIcon.GRID, stringResource(R.string.ws_top_grid_snap), selected = e.gridSnap) { e.gridSnap = !e.gridSnap }
             ActionButton(CadIcon.FIT, stringResource(R.string.ws_top_fit_all)) { fit() }
         } else {
+            val moreOptions = stringResource(R.string.common_more_options)
             Box {
-                TextButton(onClick = { menu = true }) { Text("⋮") }
+                TextButton(onClick = { menu = true }, modifier = Modifier.semantics { contentDescription = moreOptions }) { Text("⋮") }
                 DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
                     DropdownMenuItem(text = { Text(stringResource(R.string.ws_top_plane_current, planeLabel(state.sketch))) }, onClick = { menu = false }, enabled = false)
                     if (!state.sketch.planeIsDerived) DropdownMenuItem(text = { Text(stringResource(R.string.ws_top_change_plane)) }, onClick = { menu = false; onPlaneDialog() })

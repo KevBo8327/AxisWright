@@ -60,6 +60,8 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.TextButton
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
@@ -264,8 +266,9 @@ internal fun ScriptTopBar(hub: ProjectHub) {
         ActionButton(CadIcon.UNDO, stringResource(R.string.script_undo), enabled = state.canUndo) { state.undo() }
         ActionButton(CadIcon.REDO, stringResource(R.string.script_redo), enabled = state.canRedo) { state.redo() }
         TextButton(onClick = { stlExporter.launch("${state.project.name.ifBlank { res.getString(R.string.script_file_default_model) }}.stl") }, enabled = state.mesh?.isEmpty == false) { Text(stringResource(R.string.script_export_stl)) }
+        val moreOptions = stringResource(R.string.common_more_options)
         Box {
-            TextButton(onClick = { menu = true }) { Text("⋮") }
+            TextButton(onClick = { menu = true }, modifier = Modifier.semantics { contentDescription = moreOptions }) { Text("⋮") }
             DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
                 DropdownMenuItem(text = { Text(stringResource(R.string.script_export_3mf)) }, trailingIcon = { ProMark() }, onClick = { menu = false; if (Pro.allows()) threeMfExporter.launch("${state.project.name.ifBlank { res.getString(R.string.script_file_default_model) }}.3mf") }, enabled = state.mesh?.isEmpty == false)
                 DropdownMenuItem(text = { Text(stringResource(R.string.script_export_source)) }, onClick = { menu = false; scadExporter.launch("${state.project.name.ifBlank { res.getString(R.string.script_file_default_project) }}.scad") })

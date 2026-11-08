@@ -3,7 +3,7 @@
     <!-- Impressum & Datenschutz -->
     <string name="legal_imprint_title">Legal notice &amp; privacy</string>
     <string name="legal_imprint_heading">Legal notice</string>
-    <string name="legal_imprint_info">Information pursuant to § 5 DDG</string>
+    <string name="legal_imprint_info">Information pursuant to § 5 DDG (German version is legally authoritative)</string>
     <string name="legal_imprint_contact">%1$s\n%2$s\nPhone: %3$s\nEmail: %4$s</string>
     <string name="legal_liability_heading">Liability</string>
     <string name="legal_liability_text">ParamWorker is a design tool. Check the dimensions, tolerances and strength of your parts yourself before manufacturing; the app is not intended for safety-critical components. Statutory liability for intent, gross negligence and injury to life, body or health remains unaffected.</string>
