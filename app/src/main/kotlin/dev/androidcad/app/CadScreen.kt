@@ -165,7 +165,7 @@ private fun Viewport(state: CadState, modifier: Modifier) {
             }
         }
         state.meshError?.let {
-            Text(stringResource(R.string.script_geometry_error, it), Modifier.align(Alignment.BottomStart).padding(8.dp), style = MaterialTheme.typography.labelMedium, color = colors.error)
+            Text(stringResource(R.string.script_geometry_error, it.text()), Modifier.align(Alignment.BottomStart).padding(8.dp), style = MaterialTheme.typography.labelMedium, color = colors.error)
         }
     }
 }

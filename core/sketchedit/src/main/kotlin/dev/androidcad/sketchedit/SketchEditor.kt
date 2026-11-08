@@ -26,6 +26,7 @@ import dev.androidcad.sketch.rotate
 import dev.androidcad.sketch.scale
 import dev.androidcad.sketch.copy
 import dev.androidcad.sketch.PointId
+import dev.androidcad.sketch.TextId
 import dev.androidcad.sketch.PointOnLine
 import dev.androidcad.sketch.PointOnRound
 import dev.androidcad.sketch.RadiusDim
@@ -57,6 +58,9 @@ public enum class Tool {
 
     /** Einzelpunkt durch Tippen (mit Fangen), z. B. als Bezug für Bohrungsmitten. */
     POINT,
+
+    /** Text als Skizzenelement (Text, Höhe, Lage, Drehung) mit geschlossenen Umrissen. */
+    TEXT,
 
     /** Element an der angetippten Stelle bis zu den nächsten Schnittpunkten kürzen. */
     TRIM,
@@ -201,6 +205,15 @@ public data class PendingAction(val kind: ActionKind, val title: Msg, val initia
 /** Der Wert eines vorhandenen Maßes soll geändert werden. */
 public data class ValueEdit(val constraint: ConstraintId, val title: Msg, val initial: Double)
 
+/** Ein Dialog zur Eingabe oder Bearbeitung eines Text-Skizzenelements. */
+public data class TextDialogState(
+    val id: TextId? = null,
+    val position: Vec2,
+    val initialText: String = "",
+    val initialHeight: Double = 10.0,
+    val initialAngle: Double = 0.0,
+)
+
 public enum class TransformMode { TRANSLATE, ROTATE, SCALE }
 
 /** Eine Transformations-Aktion wartet auf Werte im Dialog, nachdem der Bezugspunkt angetippt wurde. */
@@ -241,6 +254,9 @@ public class SketchEditor(public val sketch: Sketch) {
         private set
     public var valueEdit: ValueEdit? = null
         private set
+    public var textEdit: TextDialogState? = null
+        private set
+    public var lastTextHeight: Double = 10.0
     public var gridSnap: Boolean = true
         set(v) { field = v; changed() }
 
@@ -462,13 +478,14 @@ public class SketchEditor(public val sketch: Sketch) {
         }
     }
     private fun Set<Sel>.pointsOf(): List<PointId> = filterIsInstance<Sel.P>().map { it.id }.filter { sketch.exists(it) }
+    private fun Set<Sel>.textsOf(): List<TextId> = filterIsInstance<Sel.T>().map { it.id }.filter { sketch.exists(it) }
 
     /**
      * Transformieren: Die gewählten Elemente verschieben, drehen, skalieren oder kopieren.
      * Danach wartet der Editor auf den Bezugspunkt ([transformPivot] oder Antippen im Zeichenfeld).
      */
     public fun startTransform() {
-        val source = selection.filter { it is Sel.P || it is Sel.L || it is Sel.C || it is Sel.A }.toSet()
+        val source = selection.filter { it is Sel.P || it is Sel.L || it is Sel.C || it is Sel.A || it is Sel.T }.toSet()
         if (source.isEmpty()) { message = Msg(EditText.SELECT_TO_TRANSFORM); changed(); return }
         cancelOperation()
         transformSource = source
@@ -523,29 +540,30 @@ public class SketchEditor(public val sketch: Sketch) {
         val lines = source.linesOf()
         val rounds = source.roundsOf()
         val points = source.pointsOf()
+        val texts = source.textsOf()
 
         val ok = if (asCopy) {
             when (mode) {
                 TransformMode.TRANSLATE -> runOp("Kopieren") {
-                    SketchOps.copy(sketch, lines, rounds, points, dx = dx, dy = dy)
+                    SketchOps.copy(sketch, lines, rounds, points, texts, dx = dx, dy = dy)
                 }
                 TransformMode.ROTATE -> runOp("Kopieren") {
-                    SketchOps.copy(sketch, lines, rounds, points, pivot = p.pivot, angleDegrees = angleDegrees)
+                    SketchOps.copy(sketch, lines, rounds, points, texts, pivot = p.pivot, angleDegrees = angleDegrees)
                 }
                 TransformMode.SCALE -> runOp("Kopieren") {
-                    SketchOps.copy(sketch, lines, rounds, points, pivot = p.pivot, scale = scale)
+                    SketchOps.copy(sketch, lines, rounds, points, texts, pivot = p.pivot, scale = scale)
                 }
             }
         } else {
             when (mode) {
                 TransformMode.TRANSLATE -> runOp("Verschieben") {
-                    SketchOps.translate(sketch, lines, rounds, points, dx = dx, dy = dy)
+                    SketchOps.translate(sketch, lines, rounds, points, texts, dx = dx, dy = dy)
                 }
                 TransformMode.ROTATE -> runOp("Drehen") {
-                    SketchOps.rotate(sketch, lines, rounds, points, pivot = p.pivot, angleDegrees = angleDegrees)
+                    SketchOps.rotate(sketch, lines, rounds, points, texts, pivot = p.pivot, angleDegrees = angleDegrees)
                 }
                 TransformMode.SCALE -> runOp("Skalieren") {
-                    SketchOps.scale(sketch, lines, rounds, points, pivot = p.pivot, factor = scale)
+                    SketchOps.scale(sketch, lines, rounds, points, texts, pivot = p.pivot, factor = scale)
                 }
             }
         }
@@ -764,6 +782,7 @@ public class SketchEditor(public val sketch: Sketch) {
                 selection = if (d.additive) selection + inside else inside.toSet()
             }
             d.hit is Sel.K -> requestValueEdit(d.hit.id)
+            !d.moved && d.hit is Sel.T -> requestTextEdit(d.hit.id)
             // Tipp ins Leere: auf einer Achse wählt er die Achse (als Bezug für Bedingungen), sonst hebt er die Auswahl auf
             d.hit == null -> {
                 val axis = axisAt(d.world, view.worldLength(hitTolerancePx(d.kind)))
@@ -799,6 +818,7 @@ public class SketchEditor(public val sketch: Sketch) {
         is Sel.L -> sketch.line(s.id).let { listOf(it.p1, it.p2) }
         is Sel.C -> listOf(sketch.circle(s.id).center)
         is Sel.A -> sketch.arc(s.id).let { listOf(it.center, it.start, it.end) }
+        is Sel.T -> listOf(sketch.text(s.id).location)
         is Sel.K -> emptyList()
     }
 
@@ -868,7 +888,7 @@ public class SketchEditor(public val sketch: Sketch) {
                     else -> null
                 }
             }
-            Tool.SELECT, Tool.POINT, Tool.TRIM, Tool.SPLIT, Tool.EXTEND, Tool.OFFSET, Tool.FILLET, Tool.MIRROR, Tool.PATTERN_LINEAR, Tool.PATTERN_CIRCULAR, Tool.DIMENSION, Tool.TRANSFORM -> null
+            Tool.SELECT, Tool.POINT, Tool.TEXT, Tool.TRIM, Tool.SPLIT, Tool.EXTEND, Tool.OFFSET, Tool.FILLET, Tool.MIRROR, Tool.PATTERN_LINEAR, Tool.PATTERN_CIRCULAR, Tool.DIMENSION, Tool.TRANSFORM -> null
         }
     }
 
@@ -905,6 +925,7 @@ public class SketchEditor(public val sketch: Sketch) {
             }
             Tool.SLOT -> threeTaps(first, up, dragged) { a, b, c -> finishSlot(a, b, c) }
             Tool.POINT -> finishPoint(up)
+            Tool.TEXT -> requestTextDialog(up.position)
             Tool.POLYGON -> when {
                 dragged && pending == null -> { finishPolygon(first, up); pending = null }
                 pending == null -> pending = first
@@ -1585,6 +1606,7 @@ public class SketchEditor(public val sketch: Sketch) {
             is Sel.L -> if (sketch.exists(s.id)) sketch.remove(s.id)
             is Sel.C -> if (sketch.exists(s.id)) sketch.remove(s.id)
             is Sel.A -> if (sketch.exists(s.id)) sketch.remove(s.id)
+            is Sel.T -> if (sketch.exists(s.id)) sketch.remove(s.id)
             is Sel.K -> sketch.remove(s.id)
         }
         sketch.removeOrphanPoints()
@@ -1599,6 +1621,7 @@ public class SketchEditor(public val sketch: Sketch) {
             is Sel.L -> sketch.remove(hit.id)
             is Sel.C -> sketch.remove(hit.id)
             is Sel.A -> sketch.remove(hit.id)
+            is Sel.T -> sketch.remove(hit.id)
             is Sel.K -> Unit
         }
         sketch.removeOrphanPoints()
@@ -1681,6 +1704,7 @@ public class SketchEditor(public val sketch: Sketch) {
                     is ArcId -> sketch.setConstruction(it, !sketch.arc(it).construction)
                 }
             }
+            info.texts.forEach { sketch.setConstruction(it, !sketch.text(it).construction) }
             commit("Konstruktion", analyze = false)
             return true
         }
@@ -1740,6 +1764,43 @@ public class SketchEditor(public val sketch: Sketch) {
 
     public fun cancelValueEdit() {
         valueEdit = null
+        changed()
+    }
+
+    public fun requestTextDialog(pos: Vec2) {
+        textEdit = TextDialogState(id = null, position = pos, initialText = "", initialHeight = lastTextHeight, initialAngle = 0.0)
+        changed()
+    }
+
+    public fun requestTextEdit(id: TextId) {
+        val t = sketch.text(id)
+        textEdit = TextDialogState(id = id, position = sketch.point(t.location), initialText = t.text, initialHeight = t.height, initialAngle = t.angle)
+        changed()
+    }
+
+    public fun confirmText(text: String, height: Double, angle: Double): Boolean {
+        val state = textEdit ?: return false
+        textEdit = null
+        if (text.isBlank() || height <= 0 || !height.isFinite() || !angle.isFinite()) {
+            changed()
+            return false
+        }
+        lastTextHeight = height
+        if (state.id == null) {
+            sketch.addText(state.position.x, state.position.y, text, height, angle)
+            commit("Text", analyze = true)
+            tool = Tool.SELECT
+        } else {
+            sketch.setText(state.id, text, height, angle)
+            commit("Text bearbeiten", analyze = true)
+        }
+        changed()
+        return true
+    }
+
+    public fun cancelText() {
+        textEdit = null
+        if (tool == Tool.TEXT) tool = Tool.SELECT
         changed()
     }
 
@@ -1810,6 +1871,7 @@ public class SketchEditor(public val sketch: Sketch) {
         is Sel.L -> sketch.exists(s.id)
         is Sel.C -> sketch.exists(s.id)
         is Sel.A -> sketch.exists(s.id)
+        is Sel.T -> sketch.exists(s.id)
         is Sel.K -> runCatching { sketch.constraint(s.id) }.isSuccess
     }
 

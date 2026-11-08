@@ -398,6 +398,7 @@ class WorkspaceState(
     private val saveDispatcher = Dispatchers.IO.limitedParallelism(1)
 
     init {
+        AndroidTextOutlines.init()
         val restored = session.restoreLast()
         adopt(restored?.document ?: doc)
         notice = restored?.notice?.let(UiText::Core)

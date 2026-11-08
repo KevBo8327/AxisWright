@@ -15,12 +15,13 @@ import kotlin.math.sin
 
 private const val EPS = 1e-9
 
-/** Alle beteiligten Punkte einer Auswahl (inkl. End-, Mittel- und Bogenpunkte). */
+/** Alle beteiligten Punkte einer Auswahl (inkl. End-, Mittel- und Bogenpunkte sowie Basispunkte von Texten). */
 private fun collectPoints(
     s: Sketch,
     points: Collection<PointId>,
     lines: Collection<LineId>,
     rounds: Collection<RoundId>,
+    texts: Collection<TextId> = emptyList(),
 ): LinkedHashSet<PointId> {
     val set = LinkedHashSet<PointId>()
     for (p in points) if (s.exists(p)) set.add(p)
@@ -34,6 +35,9 @@ private fun collectPoints(
             val a = s.arc(r)
             set.add(a.center); set.add(a.start); set.add(a.end)
         }
+    }
+    for (t in texts) if (s.exists(t)) {
+        set.add(s.text(t).location)
     }
     return set
 }
@@ -50,12 +54,14 @@ public fun SketchOps.translate(
     lines: Collection<LineId> = emptyList(),
     rounds: Collection<RoundId> = emptyList(),
     points: Collection<PointId> = emptyList(),
+    texts: Collection<TextId> = emptyList(),
     dx: Double,
     dy: Double,
 ): OpResult {
     if (!dx.isFinite() || !dy.isFinite()) return OpResult.fail(SketchText.NOT_POSSIBLE)
-    val pts = collectPoints(s, points, lines, rounds)
-    if (pts.isEmpty()) return OpResult.fail(SketchText.NOTHING_TO_TRANSFORM)
+    val pts = collectPoints(s, points, lines, rounds, texts)
+    val selTexts = texts.filter { s.exists(it) }
+    if (pts.isEmpty() && selTexts.isEmpty()) return OpResult.fail(SketchText.NOTHING_TO_TRANSFORM)
     if (abs(dx) < EPS && abs(dy) < EPS) return OpResult.ok()
 
     val selPts = pts.toSet()
@@ -88,6 +94,13 @@ public fun SketchOps.translate(
         s.movePoint(p, pt.x + dx, pt.y + dy)
     }
 
+    for (t in selTexts) {
+        if (s.text(t).location == s.origin) {
+            val pt = s.point(s.origin)
+            s.setTextLocation(t, s.addPoint(pt.x + dx, pt.y + dy))
+        }
+    }
+
     return makeTransformResult(adapted, removed)
 }
 
@@ -97,12 +110,14 @@ public fun SketchOps.rotate(
     lines: Collection<LineId> = emptyList(),
     rounds: Collection<RoundId> = emptyList(),
     points: Collection<PointId> = emptyList(),
+    texts: Collection<TextId> = emptyList(),
     pivot: Vec2,
     angleDegrees: Double,
 ): OpResult {
     if (!angleDegrees.isFinite()) return OpResult.fail(SketchText.NOT_POSSIBLE)
-    val pts = collectPoints(s, points, lines, rounds)
-    if (pts.isEmpty()) return OpResult.fail(SketchText.NOTHING_TO_TRANSFORM)
+    val pts = collectPoints(s, points, lines, rounds, texts)
+    val selTexts = texts.filter { s.exists(it) }
+    if (pts.isEmpty() && selTexts.isEmpty()) return OpResult.fail(SketchText.NOTHING_TO_TRANSFORM)
     val step90 = angleStep90(angleDegrees)
     if (step90 == 0) return OpResult.ok()
 
@@ -194,6 +209,17 @@ public fun SketchOps.rotate(
         s.movePoint(p, pivot.x + rx * cosA - ry * sinA, pivot.y + rx * sinA + ry * cosA)
     }
 
+    for (t in selTexts) {
+        if (s.text(t).location == s.origin) {
+            val pt = s.point(s.origin)
+            val rx = pt.x - pivot.x
+            val ry = pt.y - pivot.y
+            s.setTextLocation(t, s.addPoint(pivot.x + rx * cosA - ry * sinA, pivot.y + rx * sinA + ry * cosA))
+        }
+        val d = s.text(t)
+        s.setText(t, d.text, d.height, d.angle + angleDegrees)
+    }
+
     return makeTransformResult(adapted, removed)
 }
 
@@ -203,12 +229,14 @@ public fun SketchOps.scale(
     lines: Collection<LineId> = emptyList(),
     rounds: Collection<RoundId> = emptyList(),
     points: Collection<PointId> = emptyList(),
+    texts: Collection<TextId> = emptyList(),
     pivot: Vec2,
     factor: Double,
 ): OpResult {
     if (!factor.isFinite() || factor <= 0.0) return OpResult.fail(SketchText.SCALE_NOT_POSITIVE)
-    val pts = collectPoints(s, points, lines, rounds)
-    if (pts.isEmpty()) return OpResult.fail(SketchText.NOTHING_TO_TRANSFORM)
+    val pts = collectPoints(s, points, lines, rounds, texts)
+    val selTexts = texts.filter { s.exists(it) }
+    if (pts.isEmpty() && selTexts.isEmpty()) return OpResult.fail(SketchText.NOTHING_TO_TRANSFORM)
     if (abs(factor - 1.0) < EPS) return OpResult.ok()
 
     val selPts = pts.toSet()
@@ -269,6 +297,15 @@ public fun SketchOps.scale(
         s.setRadius(r, circ.radius * factor)
     }
 
+    for (t in selTexts) {
+        if (s.text(t).location == s.origin) {
+            val pt = s.point(s.origin)
+            s.setTextLocation(t, s.addPoint(pivot.x + (pt.x - pivot.x) * factor, pivot.y + (pt.y - pivot.y) * factor))
+        }
+        val d = s.text(t)
+        s.setText(t, d.text, d.height * factor, d.angle)
+    }
+
     return makeTransformResult(adapted, removed)
 }
 
@@ -281,6 +318,7 @@ public fun SketchOps.copy(
     lines: Collection<LineId> = emptyList(),
     rounds: Collection<RoundId> = emptyList(),
     points: Collection<PointId> = emptyList(),
+    texts: Collection<TextId> = emptyList(),
     dx: Double = 0.0,
     dy: Double = 0.0,
     pivot: Vec2 = Vec2(0.0, 0.0),
@@ -289,8 +327,9 @@ public fun SketchOps.copy(
 ): OpResult {
     if (!scale.isFinite() || scale <= 0.0) return OpResult.fail(SketchText.SCALE_NOT_POSITIVE)
     if (!dx.isFinite() || !dy.isFinite() || !angleDegrees.isFinite()) return OpResult.fail(SketchText.NOT_POSSIBLE)
-    val pts = collectPoints(s, points, lines, rounds)
-    if (pts.isEmpty()) return OpResult.fail(SketchText.NOTHING_TO_TRANSFORM)
+    val pts = collectPoints(s, points, lines, rounds, texts)
+    val selTexts = texts.filter { s.exists(it) }
+    if (pts.isEmpty() && selTexts.isEmpty()) return OpResult.fail(SketchText.NOTHING_TO_TRANSFORM)
 
     val selPts = pts.toSet()
     val selLines = lines.filter { s.exists(it) }.toSet()
@@ -411,6 +450,18 @@ public fun SketchOps.copy(
             is Fixed -> Unit // Fixed wird nicht auf die Kopie übertragen
             is Translated, is Rotated -> Unit
         }
+    }
+
+    // Texte kopieren
+    for (t in selTexts) {
+        val d = s.text(t)
+        val copyLoc = pointMap[d.location] ?: run {
+            val q = transformPos(s.point(d.location))
+            val newP = s.addPoint(q.x, q.y)
+            pointMap[d.location] = newP
+            newP
+        }
+        s.addText(copyLoc, d.text, d.height * scale, d.angle + angleDegrees, d.construction)
     }
 
     return OpResult.ok(SketchText.COPIES_CREATED, 1)

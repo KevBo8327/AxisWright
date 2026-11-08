@@ -76,7 +76,7 @@ class CadState(
     /** Manifold-Netz zum letzten erfolgreichen Ergebnis; `null`, wenn die Geometrie fehlschlug ([meshError]). */
     var mesh by mutableStateOf<Mesh?>(null)
         private set
-    var meshError by mutableStateOf<String?>(null)
+    var meshError by mutableStateOf<dev.androidcad.text.Msg?>(null)
         private set
 
     private var renderJob: Job? = null
@@ -281,7 +281,13 @@ class CadState(
                 result = r
                 error = null
                 mesh = m.getOrNull()
-                meshError = m.exceptionOrNull()?.message
+                val ex = m.exceptionOrNull()
+                meshError = when (ex) {
+                    is dev.androidcad.geometry.GeometryException -> ex.msg
+                    null -> null
+                    else -> ex.message?.let { dev.androidcad.text.Msg(dev.androidcad.geometry.GeometryText.GEOMETRY_ERROR_DETAIL, it) }
+                        ?: dev.androidcad.text.Msg(dev.androidcad.geometry.GeometryText.GEOMETRY_ERROR)
+                }
                 lastRenderMillis = (System.nanoTime() - started) / 1_000_000
             } catch (e: CadLangException) {
                 if (self?.isActive == true) error = e.toMsg()

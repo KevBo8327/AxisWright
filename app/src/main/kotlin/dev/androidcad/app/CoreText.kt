@@ -7,6 +7,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.ui.platform.LocalResources
 import dev.androidcad.brep.BrepText
+import dev.androidcad.geometry.GeometryText
 import dev.androidcad.lang.CadLangException
 import dev.androidcad.lang.LangText
 import dev.androidcad.model.BasePlane
@@ -111,6 +112,7 @@ internal fun res(key: Enum<*>): Int = when (key) {
     is CornerMode -> key.res()
     is BasePlane -> key.res()
     is BrepText -> key.res()
+    is GeometryText -> key.res()
     else -> error("Kein Text für ${key::class.simpleName}.${key.name} – in CoreText.kt zuordnen")
 }
 
@@ -409,4 +411,9 @@ private fun BrepText.res(): Int = when (this) {
     BrepText.EXTRUSION_HEIGHT_ZERO -> R.string.core_brep_extrusion_height_zero
     BrepText.REVOLVE_AXIS_NO_DIRECTION -> R.string.core_brep_revolve_axis_no_direction
     BrepText.REVOLVE_ANGLE_RANGE -> R.string.core_brep_revolve_angle_range
+}
+
+private fun GeometryText.res(): Int = when (this) {
+    GeometryText.GEOMETRY_ERROR -> R.string.core_geometry_error
+    GeometryText.GEOMETRY_ERROR_DETAIL -> R.string.core_geometry_error_detail
 }

@@ -175,4 +175,55 @@ class TransformToolTest {
         assertNull(e.pendingTransform)
         assertEquals(Tool.SELECT, e.tool)
     }
+
+    @Test
+    fun transformSelectionWithTextInEditor() {
+        val s = Sketch()
+        val textId = s.addText(10.0, 10.0, "Note", 8.0, 0.0)
+        val e = editor(s)
+
+        // Text auswählen
+        e.selectAll()
+        assertTrue(e.actionOptions().any { it.kind == ActionKind.TRANSFORM })
+
+        // Verschieben
+        e.startTransform()
+        assertEquals(Tool.TRANSFORM, e.tool)
+        e.click(10.0, 10.0)
+        assertTrue(e.confirmTransform(TransformMode.TRANSLATE, dx = 5.0, dy = 10.0))
+        near(15.0, s.point(s.text(textId).location).x)
+        near(20.0, s.point(s.text(textId).location).y)
+
+        // Drehen
+        e.selectAll()
+        e.startTransform()
+        e.click(15.0, 20.0)
+        assertTrue(e.confirmTransform(TransformMode.ROTATE, angleDegrees = 90.0))
+        near(90.0, s.text(textId).angle)
+
+        // Skalieren
+        e.selectAll()
+        e.startTransform()
+        e.click(15.0, 20.0)
+        assertTrue(e.confirmTransform(TransformMode.SCALE, scale = 1.5))
+        near(12.0, s.text(textId).height)
+
+        // Kopieren
+        e.selectAll()
+        e.startTransform()
+        e.click(15.0, 20.0)
+        assertTrue(e.confirmTransform(TransformMode.TRANSLATE, dx = 10.0, dy = 0.0, asCopy = true))
+        assertEquals(2, s.textIds.size)
+        val copied = s.textIds.first { it != textId }
+        assertEquals("Note", s.text(copied).text)
+        near(12.0, s.text(copied).height)
+        near(90.0, s.text(copied).angle)
+        near(25.0, s.point(s.text(copied).location).x)
+        near(20.0, s.point(s.text(copied).location).y)
+
+        // Undo
+        assertTrue(e.canUndo)
+        e.undo()
+        assertEquals(1, s.textIds.size)
+    }
 }

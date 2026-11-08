@@ -33,6 +33,7 @@ enum class CadIcon(private vararg val parts: Part) {
     SLOT(Part("M8 8 H16 A4 4 0 0 1 16 16 H8 A4 4 0 0 1 8 8 Z"), Part("M8 12 H16", dashed = true)),
     POLYGON(Part("M12 3.5 L19.4 7.75 L19.4 16.25 L12 20.5 L4.6 16.25 L4.6 7.75 Z")),
     POINT(Part("M9 12 a3 3 0 1 0 6 0 a3 3 0 1 0 -6 0", filled = true), Part("M12 3 V7"), Part("M12 17 V21"), Part("M3 12 H7"), Part("M17 12 H21")),
+    TEXT(Part("M5 6 H19 M12 6 V19 M9 19 H15")),
     TRIM(Part("M9 4 V20"), Part("M9 12 H20"), Part("M3 12 H8", dashed = true)),
     // Teilen: Linie, an einem Punkt in zwei Teile getrennt, mit Schnittmarke
     SPLIT(Part("M3 12 H9.5 M14.5 12 H21"), Part("M10 12 a2 2 0 1 0 4 0 a2 2 0 1 0 -4 0", filled = true), Part("M12 4 V8 M12 16 V20", dashed = true)),

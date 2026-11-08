@@ -1,6 +1,7 @@
 package dev.androidcad.app
 
 import dev.androidcad.brep.BrepText
+import dev.androidcad.geometry.GeometryText
 import dev.androidcad.lang.LangText
 import dev.androidcad.model.BasePlane
 import dev.androidcad.model.ModelText
@@ -34,6 +35,7 @@ class TranslationTest {
             ModelText.entries +
             LangText.entries +
             BrepText.entries +
+            GeometryText.entries +
             ActionKind.entries +
             RectMode.entries +
             CircleMode.entries +

@@ -32,6 +32,10 @@ public object SketchCodec {
             val a = sketch.arc(id)
             linkedMapOf("id" to id.value, "center" to a.center.value, "start" to a.start.value, "end" to a.end.value, "construction" to a.construction)
         }
+        if (sketch.textIds.isNotEmpty()) out["texts"] = sketch.textIds.map { id ->
+            val t = sketch.text(id)
+            linkedMapOf("id" to id.value, "location" to t.location.value, "text" to t.text, "height" to t.height, "angle" to t.angle, "construction" to t.construction)
+        }
         out["constraints"] = sketch.constraintEntries.map { encode(it.id, it.constraint) }
         if (sketch.standalonePointIds.isNotEmpty()) out["standalonePoints"] = sketch.standalonePointIds.map { it.value }
         return out
@@ -61,6 +65,11 @@ public object SketchCodec {
                 val o = a.asObject("Bogen")
                 put(arcs, o.int("id"), ArcData(PointId(o.int("center")), PointId(o.int("start")), PointId(o.int("end")), o.bool("construction", false)))
             }
+            val texts = LinkedHashMap<Int, TextData>()
+            for (t in json["texts"]?.asList("Texte") ?: emptyList()) {
+                val o = t.asObject("Text")
+                put(texts, o.int("id"), TextData(PointId(o.int("location")), o.string("text"), o.double("height"), o.doubleOrNull("angle") ?: 0.0, o.bool("construction", false)))
+            }
             val constraints = LinkedHashMap<Int, Constraint>()
             for (c in json.list("constraints")) {
                 val o = c.asObject("Constraint")
@@ -69,7 +78,7 @@ public object SketchCodec {
             // ältere Dateien kennen keine Einzelpunkte
             val standalone = (json["standalonePoints"]?.asList("Einzelpunkte") ?: emptyList()).map { num(it).toInt() }.toSet()
             val sketch = Sketch()
-            sketch.load(json.int("nextId"), points, lines, circles, arcs, constraints, standalone)
+            sketch.load(json.int("nextId"), points, lines, circles, arcs, constraints, standalone, texts)
             return sketch
         } catch (e: IllegalArgumentException) {
             throw JsonException("Skizze ungültig: ${e.message}")

@@ -29,6 +29,7 @@ import dev.androidcad.sketch.RadiusDim
 import dev.androidcad.sketch.RoundId
 import dev.androidcad.sketch.Sketch
 import dev.androidcad.sketch.SketchOps
+import dev.androidcad.sketch.TextId
 import dev.androidcad.sketch.Symmetric
 import dev.androidcad.sketch.TangentLineRound
 import dev.androidcad.sketch.TangentRoundRound
@@ -75,11 +76,12 @@ public enum class ActionKind(public val symbol: String, public val group: Action
 public data class ActionOption(val kind: ActionKind, val defaultValue: Double? = null)
 
 /** Aufgeschlüsselte Auswahl; Reihenfolge = Reihenfolge der Auswahl. */
-internal class SelInfo(val points: List<PointId>, val lines: List<LineId>, val rounds: List<RoundId>, val dims: List<ConstraintId>) {
-    val onlyLines: Boolean get() = lines.isNotEmpty() && points.isEmpty() && rounds.isEmpty()
-    val onlyPoints: Boolean get() = points.isNotEmpty() && lines.isEmpty() && rounds.isEmpty()
-    val onlyRounds: Boolean get() = rounds.isNotEmpty() && points.isEmpty() && lines.isEmpty()
-    val isEmpty: Boolean get() = points.isEmpty() && lines.isEmpty() && rounds.isEmpty()
+internal class SelInfo(val points: List<PointId>, val lines: List<LineId>, val rounds: List<RoundId>, val dims: List<ConstraintId>, val texts: List<TextId> = emptyList()) {
+    val onlyLines: Boolean get() = lines.isNotEmpty() && points.isEmpty() && rounds.isEmpty() && texts.isEmpty()
+    val onlyPoints: Boolean get() = points.isNotEmpty() && lines.isEmpty() && rounds.isEmpty() && texts.isEmpty()
+    val onlyRounds: Boolean get() = rounds.isNotEmpty() && points.isEmpty() && lines.isEmpty() && texts.isEmpty()
+    val onlyTexts: Boolean get() = texts.isNotEmpty() && points.isEmpty() && lines.isEmpty() && rounds.isEmpty()
+    val isEmpty: Boolean get() = points.isEmpty() && lines.isEmpty() && rounds.isEmpty() && texts.isEmpty()
 }
 
 internal fun selInfo(sel: Collection<Sel>): SelInfo = SelInfo(
@@ -87,6 +89,7 @@ internal fun selInfo(sel: Collection<Sel>): SelInfo = SelInfo(
     sel.filterIsInstance<Sel.L>().map { it.id },
     sel.mapNotNull { when (it) { is Sel.C -> it.id as RoundId; is Sel.A -> it.id as RoundId; else -> null } },
     sel.filterIsInstance<Sel.K>().map { it.id },
+    sel.filterIsInstance<Sel.T>().map { it.id },
 )
 
 internal object ConstraintActions {
@@ -99,8 +102,8 @@ internal object ConstraintActions {
     /** Alle für die Auswahl möglichen Aktionen (mit Vorgabewerten). */
     fun options(sketch: Sketch, i: SelInfo): List<ActionOption> =
         ActionKind.entries.filter { kind -> i.lines.none { SketchOps.axisOf(sketch, it) != null } || kind !in NOT_FOR_AXES }.mapNotNull { kind ->
-            if (kind == ActionKind.CONSTRUCTION) return@mapNotNull if (i.lines.isNotEmpty() || i.rounds.isNotEmpty()) ActionOption(kind) else null
-            if (kind == ActionKind.TRANSFORM) return@mapNotNull if (i.points.isNotEmpty() || i.lines.isNotEmpty() || i.rounds.isNotEmpty()) ActionOption(kind) else null
+            if (kind == ActionKind.CONSTRUCTION) return@mapNotNull if (i.lines.isNotEmpty() || i.rounds.isNotEmpty() || i.texts.isNotEmpty()) ActionOption(kind) else null
+            if (kind == ActionKind.TRANSFORM) return@mapNotNull if (i.points.isNotEmpty() || i.lines.isNotEmpty() || i.rounds.isNotEmpty() || i.texts.isNotEmpty()) ActionOption(kind) else null
             val built = build(sketch, kind, i, value = null) ?: return@mapNotNull null
             val default = when {
                 kind == ActionKind.PATTERN_COUNT -> SketchOps.patternOf(sketch, i.points, i.lines, i.rounds)?.count?.toDouble()
@@ -175,7 +178,7 @@ internal object ConstraintActions {
             ActionKind.EDGE_CENTER -> referenceTarget(sketch, i)?.let { (l, r) -> if (l != null && r == null) emptyList() else null }
             // ganzes Muster: Kopien ergänzen oder entfernen (im Editor über SketchOps)
             ActionKind.PATTERN_COUNT -> if (SketchOps.patternOf(sketch, i.points, i.lines, i.rounds) != null) emptyList() else null
-            ActionKind.TRANSFORM -> if (i.points.isNotEmpty() || i.lines.isNotEmpty() || i.rounds.isNotEmpty()) emptyList() else null
+            ActionKind.TRANSFORM -> if (i.points.isNotEmpty() || i.lines.isNotEmpty() || i.rounds.isNotEmpty() || i.texts.isNotEmpty()) emptyList() else null
             ActionKind.ORIGIN_CORNER, ActionKind.ORIGIN_CENTER, ActionKind.FACE_CENTER -> {
                 val shape = i.lines.filter { SketchOps.axisOf(sketch, it) == null }
                 if (shape.isNotEmpty() || i.rounds.isNotEmpty()) emptyList() else null

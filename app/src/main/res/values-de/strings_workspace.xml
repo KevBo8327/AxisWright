@@ -37,6 +37,7 @@
     <string name="ws_tool_slot">Langloch</string>
     <string name="ws_tool_polygon">Vieleck</string>
     <string name="ws_tool_point">Punkt</string>
+    <string name="ws_tool_text">Text</string>
     <string name="ws_tool_trim">Trimmen</string>
     <string name="ws_tool_split">Teilen</string>
     <string name="ws_tool_extend">Verlängern</string>
@@ -94,6 +95,7 @@
     <string name="ws_hint_arc_tangent_start">Bogen: Ende einer Linie oder eines Bogens antippen – der Bogen setzt sie tangential fort.</string>
     <string name="ws_hint_arc_tangent_end">Bogen: Endpunkt antippen; weitere Tipps setzen den Zug tangential fort.</string>
     <string name="ws_hint_point">Punkt: Tippe, wo der Punkt liegen soll – auf einer Linie, einem Kreis oder einer Achse wird er dort gebunden.</string>
+    <string name="ws_hint_text">Text: Position für den Text antippen.</string>
     <string name="ws_hint_trim">Trimmen: Tippe auf den Teil einer Linie, eines Kreises oder Bogens, der bis zu den nächsten Schnittpunkten wegfallen soll.</string>
     <string name="ws_hint_split">Teilen: Tippe auf eine Linie oder einen Bogen an der Stelle, an der sie geteilt werden sollen – einen Kreis teilt der Tipp in zwei Halbkreise.</string>
     <string name="ws_hint_extend">Verlängern: Tippe auf das Ende einer Linie oder eines Bogens – es reicht dann bis zum nächsten Element.</string>
@@ -161,6 +163,13 @@
     <string name="ws_name_plane">Ebene</string>
     <string name="ws_name_shell">Schale</string>
     <string name="ws_name_hole">Bohrung</string>
+
+    <string name="ws_ctx_edit_text">Text bearbeiten</string>
+    <string name="ws_text_dialog_title_new">Text einfügen</string>
+    <string name="ws_text_dialog_title_edit">Text bearbeiten</string>
+    <string name="ws_text_dialog_label_text">Text</string>
+    <string name="ws_text_dialog_label_height">Höhe (mm)</string>
+    <string name="ws_text_dialog_label_rotation">Drehung (°)</string>
 
     <!-- Modellnamen -->
     <string name="ws_import_name">%1$s (Import)</string>

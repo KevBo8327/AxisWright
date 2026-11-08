@@ -55,6 +55,8 @@ import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.androidcad.sketch.SketchOps
+import dev.androidcad.sketch.TextData
+import dev.androidcad.sketch.TextOutlines
 import dev.androidcad.sketch.Vec2
 import dev.androidcad.sketchedit.PointerButton
 import dev.androidcad.sketchedit.PointerKind
@@ -388,6 +390,10 @@ private fun DrawScope.drawGeometry(editor: SketchEditor, c: SketchColors) {
         val a = sk.arc(id)
         drawArcOf(editor, sk.point(a.center), sk.point(a.start), sk.point(a.end), color(st?.constrainedArcs?.contains(id) == true, a.construction), if (a.construction) wc else w, if (a.construction) dash else null)
     }
+    for (id in sk.textIds) {
+        val t = sk.text(id)
+        drawTextContours(editor, t, color(st?.constrainedPoints?.contains(t.location) == true, t.construction), if (t.construction) wc else w, if (t.construction) dash else null)
+    }
     for (id in sk.pointIds) {
         val p = off(editor, sk.point(id))
         if (id in axisPoints) continue
@@ -436,7 +442,40 @@ private fun DrawScope.drawSel(editor: SketchEditor, s: Sel, color: Color, width:
         }
         is Sel.C -> if (sk.exists(s.id)) sk.circle(s.id).let { drawCircle(color.copy(alpha = 0.85f), (it.radius * editor.view.scale).toFloat(), off(editor, sk.point(it.center)), style = Stroke(width)) }
         is Sel.A -> if (sk.exists(s.id)) sk.arc(s.id).let { drawArcOf(editor, sk.point(it.center), sk.point(it.start), sk.point(it.end), color.copy(alpha = 0.85f), width, null) }
+        is Sel.T -> if (sk.exists(s.id)) drawTextContours(editor, sk.text(s.id), color.copy(alpha = 0.85f), width, null)
         is Sel.K -> Unit
+    }
+}
+
+private fun DrawScope.drawTextContours(editor: SketchEditor, text: TextData, color: Color, width: Float, effect: PathEffect?) {
+    val sk = editor.sketch
+    val loops = TextOutlines.default?.outlines(text.text, text.height) ?: return
+    val loc = sk.point(text.location)
+    val rad = Math.toRadians(text.angle)
+    val cosA = kotlin.math.cos(rad)
+    val sinA = kotlin.math.sin(rad)
+    for (loop in loops) {
+        val path = Path()
+        var started = false
+        for (seg in loop.segments) {
+            if (seg is dev.androidcad.sketch.LoopSegment.Line) {
+                val rx1 = seg.x1 * cosA - seg.y1 * sinA + loc.x
+                val ry1 = seg.x1 * sinA + seg.y1 * cosA + loc.y
+                val rx2 = seg.x2 * cosA - seg.y2 * sinA + loc.x
+                val ry2 = seg.x2 * sinA + seg.y2 * cosA + loc.y
+                val p1 = off(editor, Vec2(rx1, ry1))
+                val p2 = off(editor, Vec2(rx2, ry2))
+                if (!started) {
+                    path.moveTo(p1.x, p1.y)
+                    started = true
+                }
+                path.lineTo(p2.x, p2.y)
+            }
+        }
+        if (started) {
+            path.close()
+            drawPath(path, color, style = Stroke(width, pathEffect = effect))
+        }
     }
 }
 

@@ -172,6 +172,81 @@ class SketchOpsTransformTest {
     }
 
     @Test
+    fun transformSelectionContainingTextMovesLocationAdaptsAngleAndHeightAndCopiesText() {
+        val s = Sketch()
+        val rect = s.addRectangle(0.0, 0.0, 20.0, 10.0)
+        val textId = s.addText(10.0, 5.0, "CAD", 6.0, 0.0)
+        val originTextId = s.addText(s.origin, "Origin", 4.0, 10.0)
+
+        // 1. Verschieben: Text-Lage mitbewegen (sowohl freier Punkt als auch Ursprung)
+        val rTrans = SketchOps.translate(s, lines = rect.edges, texts = listOf(textId, originTextId), dx = 15.0, dy = -5.0)
+        assertTrue(rTrans.ok)
+        val pos1 = s.point(s.text(textId).location)
+        near(25.0, pos1.x); near(0.0, pos1.y)
+        assertEquals("CAD", s.text(textId).text)
+        assertEquals(6.0, s.text(textId).height)
+        assertEquals(0.0, s.text(textId).angle)
+
+        val posOrigin = s.point(s.text(originTextId).location)
+        near(15.0, posOrigin.x); near(-5.0, posOrigin.y)
+        assertEquals("Origin", s.text(originTextId).text)
+
+        // 2. Drehen: Text-Lage drehen und Textwinkel anpassen
+        val rRot = SketchOps.rotate(s, texts = listOf(textId), pivot = Vec2(25.0, 0.0), angleDegrees = 90.0)
+        assertTrue(rRot.ok)
+        val posRot = s.point(s.text(textId).location)
+        near(25.0, posRot.x); near(0.0, posRot.y) // liegt genau auf dem Pivot
+        near(90.0, s.text(textId).angle)
+
+        // Text außerhalb des Pivots drehen
+        val rRot2 = SketchOps.rotate(s, texts = listOf(originTextId), pivot = Vec2(10.0, -5.0), angleDegrees = 90.0)
+        assertTrue(rRot2.ok)
+        val posRot2 = s.point(s.text(originTextId).location)
+        // (15, -5) relativ zu (10, -5) ist (5, 0) -> um 90° gedreht -> (0, 5) -> (10, 0)
+        near(10.0, posRot2.x); near(0.0, posRot2.y)
+        near(100.0, s.text(originTextId).angle)
+
+        // 3. Skalieren: Text-Lage skalieren und Texthöhe multiplizieren
+        val rScale = SketchOps.scale(s, texts = listOf(textId), pivot = Vec2(20.0, 0.0), factor = 2.0)
+        assertTrue(rScale.ok)
+        val posScale = s.point(s.text(textId).location)
+        // (25, 0) relativ zu (20, 0) mit Faktor 2 -> (30, 0)
+        near(30.0, posScale.x); near(0.0, posScale.y)
+        near(12.0, s.text(textId).height)
+        near(90.0, s.text(textId).angle)
+
+        // 4. Kopieren: Text mitkopieren inkl. transformierter Lage, Höhe und Drehung
+        val rCopy = SketchOps.copy(
+            s,
+            lines = rect.edges,
+            texts = listOf(textId),
+            dx = 10.0,
+            dy = 20.0,
+            pivot = Vec2(30.0, 0.0),
+            angleDegrees = 45.0,
+            scale = 0.5,
+        )
+        assertTrue(rCopy.ok)
+        assertEquals(3, s.textIds.size)
+
+        // Original bleibt unverändert
+        near(30.0, s.point(s.text(textId).location).x)
+        near(0.0, s.point(s.text(textId).location).y)
+        near(12.0, s.text(textId).height)
+        near(90.0, s.text(textId).angle)
+
+        // Kopie prüfen
+        val copyTextId = s.textIds.first { it != textId && it != originTextId }
+        val copyText = s.text(copyTextId)
+        assertEquals("CAD", copyText.text)
+        near(6.0, copyText.height) // 12.0 * 0.5
+        near(135.0, copyText.angle) // 90.0 + 45.0
+        val posCopy = s.point(copyText.location)
+        // (30, 0) relativ zu (30, 0) ist (0, 0) -> skaliert 0, gedreht 0 -> + (10, 20) -> (40, 20)
+        near(40.0, posCopy.x); near(20.0, posCopy.y)
+    }
+
+    @Test
     fun emptySelectionFails() {
         val s = Sketch()
         assertFalse(SketchOps.translate(s, dx = 10.0, dy = 0.0).ok)

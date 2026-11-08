@@ -8,6 +8,8 @@ import dev.androidcad.sketch.PointId
 import dev.androidcad.sketch.RoundId
 import dev.androidcad.sketch.Sketch
 import dev.androidcad.sketch.SketchOps
+import dev.androidcad.sketch.TextData
+import dev.androidcad.sketch.TextId
 import dev.androidcad.sketch.Vec2
 import kotlin.math.PI
 import kotlin.math.atan2
@@ -22,6 +24,7 @@ public sealed interface Sel {
     public data class L(val id: LineId) : Sel
     public data class C(val id: CircleId) : Sel
     public data class A(val id: ArcId) : Sel
+    public data class T(val id: TextId) : Sel
     public data class K(val id: ConstraintId) : Sel
 }
 
@@ -192,6 +195,12 @@ public object HitTest {
             val d = nearestOnArc(world, sketch.point(a.center), sketch.point(a.start), sketch.point(a.end)).distance
             if (d <= best) { best = d; result = Sel.A(id) }
         }
+        for (id in sketch.textIds) {
+            val t = sketch.text(id)
+            if (hitText(sketch, t, world, tolerance)) {
+                return Sel.T(id)
+            }
+        }
         return result
     }
 
@@ -209,8 +218,31 @@ public object HitTest {
         for (id in sketch.arcIds) sketch.arc(id).let {
             if (inside(sketch.point(it.center)) && inside(sketch.point(it.start)) && inside(sketch.point(it.end))) out += Sel.A(id)
         }
+        for (id in sketch.textIds) sketch.text(id).let { t ->
+            val p0 = sketch.point(t.location)
+            val rad = Math.toRadians(t.angle)
+            val w = maxOf(t.height * 0.5, t.text.length * t.height * 0.6)
+            val h = t.height
+            val cosA = cos(rad); val sinA = sin(rad)
+            fun corner(lx: Double, ly: Double) = Vec2(p0.x + lx * cosA - ly * sinA, p0.y + lx * sinA + ly * cosA)
+            if (inside(corner(0.0, -h * 0.25)) && inside(corner(w, -h * 0.25)) && inside(corner(w, h)) && inside(corner(0.0, h))) {
+                out += Sel.T(id)
+            }
+        }
         return out
     }
+}
+
+internal fun hitText(sketch: Sketch, text: TextData, world: Vec2, tolerance: Double): Boolean {
+    val p0 = sketch.point(text.location)
+    val rad = Math.toRadians(text.angle)
+    val dx = world.x - p0.x
+    val dy = world.y - p0.y
+    val localX = dx * cos(rad) + dy * sin(rad)
+    val localY = -dx * sin(rad) + dy * cos(rad)
+    val w = maxOf(text.height * 0.5, text.text.length * text.height * 0.6)
+    val h = text.height
+    return localX in (-tolerance)..(w + tolerance) && localY in (-h * 0.25 - tolerance)..(h + tolerance)
 }
 
 /** Punkt auf dem Kreis um [c] mit Radius [r] im Winkel [angle] (Bogenmaß). */
