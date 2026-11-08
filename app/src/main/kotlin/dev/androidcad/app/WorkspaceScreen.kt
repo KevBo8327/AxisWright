@@ -60,6 +60,8 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.BoxScope
 import dev.androidcad.sketchedit.ActionKind
+import dev.androidcad.sketchedit.PendingTransform
+import dev.androidcad.sketchedit.TransformMode
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
@@ -182,6 +184,7 @@ private fun SketchPanel(state: WorkspaceState, modifier: Modifier) {
     }
     handle.version // Beobachtung: bei jeder Änderung des Editors neu zusammensetzen
     ValueDialogs(state, handle.editor, handle.editor.pendingAction, handle.editor.valueEdit)
+    TransformDialog(handle.editor, handle.editor.pendingTransform)
     if (planeDialog || state.askPlane) {
         PlaneDialog(
             title = stringResource(if (state.askPlane) R.string.ws_plane_title_start else R.string.ws_plane_title_change),
@@ -285,6 +288,9 @@ private fun sketchToolGroups(e: SketchEditor, res: android.content.res.Resources
             tool(R.string.ws_tool_offset, CadIcon.OFFSET, Tool.OFFSET), tool(R.string.ws_tool_corner, CadIcon.FILLET, Tool.FILLET),
             ToolDef(res.getString(R.string.ws_tool_mirror), CadIcon.MIRROR, e.tool == Tool.MIRROR, e.selection.isNotEmpty() || e.mirrorPending) {
                 if (e.mirrorPending) e.cancelOperation() else e.startMirror()
+            },
+            ToolDef(res.getString(R.string.ws_tool_transform), CadIcon.TRANSFORM, e.tool == Tool.TRANSFORM, e.selection.isNotEmpty() || e.transformPending) {
+                if (e.transformPending) e.cancelOperation() else e.startTransform()
             },
         )),
         ToolGroup(res.getString(R.string.ws_group_pattern), CadIcon.PATTERN_LINEAR, listOf(
@@ -434,6 +440,10 @@ private fun BoxScope.ContextBar(handle: EditorHandle, prefs: UiPrefs, bottomGap:
                         Tool.MIRROR -> {
                             OutlinedButton(onClick = { e.mirrorAcrossAxis(horizontal = true) }) { Text(stringResource(R.string.ws_ctx_mirror_x)) }
                             OutlinedButton(onClick = { e.mirrorAcrossAxis(horizontal = false) }) { Text(stringResource(R.string.ws_ctx_mirror_y)) }
+                            OutlinedButton(onClick = { e.cancelOperation() }) { Text(stringResource(R.string.common_cancel)) }
+                        }
+                        Tool.TRANSFORM -> {
+                            OutlinedButton(onClick = { e.transformPivot(e.sketch.point(e.sketch.origin)) }) { Text(stringResource(R.string.ws_ctx_transform_origin)) }
                             OutlinedButton(onClick = { e.cancelOperation() }) { Text(stringResource(R.string.common_cancel)) }
                         }
                         Tool.PATTERN_LINEAR -> {
@@ -602,6 +612,7 @@ private fun hintFor(e: SketchEditor): String = when (e.tool) {
     Tool.MIRROR -> stringResource(R.string.ws_hint_mirror)
     Tool.PATTERN_LINEAR -> stringResource(R.string.ws_hint_pattern_linear)
     Tool.PATTERN_CIRCULAR -> stringResource(R.string.ws_hint_pattern_circular)
+    Tool.TRANSFORM -> stringResource(R.string.ws_hint_transform)
 }
 
 /** Auswahl der Variante bei Linie, Rechteck, Kreis, Bogen und Ecke; die Wahl bleibt über einen Neustart erhalten ([applyDrawModes]). */
@@ -710,6 +721,119 @@ private fun ValueDialog(state: WorkspaceState, title: String, initial: Double, e
         },
         confirmButton = { TextButton(onClick = { value?.let { onConfirm(it, if (number == null) text else null) } }, enabled = value != null) { Text(stringResource(R.string.common_ok)) } },
         dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.common_cancel)) } },
+    )
+}
+
+@Composable
+private fun TransformDialog(e: SketchEditor, pending: PendingTransform?) {
+    if (pending == null) return
+    var mode by remember { mutableStateOf(TransformMode.TRANSLATE) }
+    var dxText by remember { mutableStateOf("0") }
+    var dyText by remember { mutableStateOf("0") }
+    var angleText by remember { mutableStateOf("90") }
+    var scaleText by remember { mutableStateOf("2") }
+    var asCopy by remember { mutableStateOf(false) }
+
+    val dx = dxText.replace(',', '.').toDoubleOrNull()
+    val dy = dyText.replace(',', '.').toDoubleOrNull()
+    val angle = angleText.replace(',', '.').toDoubleOrNull()
+    val scale = scaleText.replace(',', '.').toDoubleOrNull()
+
+    val valid = when (mode) {
+        TransformMode.TRANSLATE -> dx != null && dy != null
+        TransformMode.ROTATE -> angle != null
+        TransformMode.SCALE -> scale != null && scale > 0.0
+    }
+
+    AlertDialog(
+        onDismissRequest = { e.cancelPendingTransform() },
+        title = { Text(stringResource(R.string.ws_transform_title)) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FilterChip(
+                        selected = mode == TransformMode.TRANSLATE,
+                        onClick = { mode = TransformMode.TRANSLATE },
+                        label = { Text(stringResource(R.string.ws_transform_mode_translate)) },
+                    )
+                    FilterChip(
+                        selected = mode == TransformMode.ROTATE,
+                        onClick = { mode = TransformMode.ROTATE },
+                        label = { Text(stringResource(R.string.ws_transform_mode_rotate)) },
+                    )
+                    FilterChip(
+                        selected = mode == TransformMode.SCALE,
+                        onClick = { mode = TransformMode.SCALE },
+                        label = { Text(stringResource(R.string.ws_transform_mode_scale)) },
+                    )
+                }
+
+                when (mode) {
+                    TransformMode.TRANSLATE -> {
+                        OutlinedTextField(
+                            value = dxText,
+                            onValueChange = { dxText = it },
+                            label = { Text(stringResource(R.string.ws_transform_dx)) },
+                            singleLine = true,
+                            isError = dx == null,
+                        )
+                        OutlinedTextField(
+                            value = dyText,
+                            onValueChange = { dyText = it },
+                            label = { Text(stringResource(R.string.ws_transform_dy)) },
+                            singleLine = true,
+                            isError = dy == null,
+                        )
+                    }
+                    TransformMode.ROTATE -> {
+                        OutlinedTextField(
+                            value = angleText,
+                            onValueChange = { angleText = it },
+                            label = { Text(stringResource(R.string.ws_transform_angle)) },
+                            singleLine = true,
+                            isError = angle == null,
+                        )
+                    }
+                    TransformMode.SCALE -> {
+                        OutlinedTextField(
+                            value = scaleText,
+                            onValueChange = { scaleText = it },
+                            label = { Text(stringResource(R.string.ws_transform_scale)) },
+                            singleLine = true,
+                            isError = scale == null || scale <= 0.0,
+                        )
+                    }
+                }
+
+                FilterChip(
+                    selected = asCopy,
+                    onClick = { asCopy = !asCopy },
+                    label = { Text(stringResource(R.string.ws_transform_copy)) },
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    e.confirmTransform(
+                        mode = mode,
+                        dx = dx ?: 0.0,
+                        dy = dy ?: 0.0,
+                        angleDegrees = angle ?: 0.0,
+                        scale = scale ?: 1.0,
+                        asCopy = asCopy,
+                    )
+                },
+                enabled = valid,
+            ) {
+                Text(stringResource(R.string.common_ok))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = { e.cancelPendingTransform() }) {
+                Text(stringResource(R.string.common_cancel))
+            }
+        },
     )
 }
 

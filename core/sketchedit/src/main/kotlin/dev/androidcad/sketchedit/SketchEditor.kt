@@ -21,6 +21,10 @@ import dev.androidcad.sketch.TangentLineRound
 import dev.androidcad.sketch.SketchOps
 import dev.androidcad.sketch.chamfer
 import dev.androidcad.sketch.split
+import dev.androidcad.sketch.translate
+import dev.androidcad.sketch.rotate
+import dev.androidcad.sketch.scale
+import dev.androidcad.sketch.copy
 import dev.androidcad.sketch.PointId
 import dev.androidcad.sketch.PointOnLine
 import dev.androidcad.sketch.PointOnRound
@@ -78,6 +82,9 @@ public enum class Tool {
     /** Kreismuster: wartet auf den Mittelpunkt (Punkt antippen oder Ursprung). */
     PATTERN_CIRCULAR,
 
+    /** Auswahl verschieben, drehen, skalieren oder kopieren: wartet auf den Bezugspunkt (siehe [SketchEditor.startTransform]). */
+    TRANSFORM,
+
     /**
      * Bemaßen: Kreis → Durchmesser, Bogen → Radius, Linie → Länge (je ein Tipp). Ein Punkt – oder eine Linie mit „Mehrfach“ –
      * und ein zweites Element → Abstand bzw. Winkel. Der Wert wird gleich abgefragt ([SketchEditor.pendingAction]).
@@ -86,7 +93,7 @@ public enum class Tool {
     ;
 
     /** Werkzeuge, die vorhandene Geometrie bearbeiten (Tippen statt Zeichnen). */
-    public val isModify: Boolean get() = this == TRIM || this == SPLIT || this == EXTEND || this == OFFSET || this == FILLET || this == MIRROR || this == DIMENSION || isPattern
+    public val isModify: Boolean get() = this == TRIM || this == SPLIT || this == EXTEND || this == OFFSET || this == FILLET || this == MIRROR || this == TRANSFORM || this == DIMENSION || isPattern
 
     /** Die beiden Musterwerkzeuge. */
     public val isPattern: Boolean get() = this == PATTERN_LINEAR || this == PATTERN_CIRCULAR
@@ -193,6 +200,11 @@ public data class PendingAction(val kind: ActionKind, val title: Msg, val initia
 
 /** Der Wert eines vorhandenen Maßes soll geändert werden. */
 public data class ValueEdit(val constraint: ConstraintId, val title: Msg, val initial: Double)
+
+public enum class TransformMode { TRANSLATE, ROTATE, SCALE }
+
+/** Eine Transformations-Aktion wartet auf Werte im Dialog, nachdem der Bezugspunkt angetippt wurde. */
+public data class PendingTransform(val source: Set<Sel>, val pivot: Vec2)
 
 /**
  * Zustandsautomat der Skizzieroberfläche, unabhängig von Compose und Android: Zeigereingaben (Maus, Stift, Touch)
@@ -302,6 +314,17 @@ public class SketchEditor(public val sketch: Sketch) {
 
     /** `true`, solange das Spiegeln auf die Achse wartet. */
     public val mirrorPending: Boolean get() = tool == Tool.MIRROR
+
+    /** Die Elemente, die transformiert werden sollen (während auf den Bezugspunkt gewartet wird). */
+    public var transformSource: Set<Sel> = emptySet()
+        private set
+
+    /** Eine Transformations-Aktion wartet auf Werte im Dialog, nachdem der Bezugspunkt angetippt wurde. */
+    public var pendingTransform: PendingTransform? = null
+        private set
+
+    /** `true`, solange das Transformieren auf den Bezugspunkt wartet. */
+    public val transformPending: Boolean get() = tool == Tool.TRANSFORM
 
     /** Wird nach jeder Zustandsänderung aufgerufen (für die Neuzeichnung). */
     public var onChange: (() -> Unit)? = null
@@ -438,6 +461,97 @@ public class SketchEditor(public val sketch: Sketch) {
             else -> null
         }
     }
+    private fun Set<Sel>.pointsOf(): List<PointId> = filterIsInstance<Sel.P>().map { it.id }.filter { sketch.exists(it) }
+
+    /**
+     * Transformieren: Die gewählten Elemente verschieben, drehen, skalieren oder kopieren.
+     * Danach wartet der Editor auf den Bezugspunkt ([transformPivot] oder Antippen im Zeichenfeld).
+     */
+    public fun startTransform() {
+        val source = selection.filter { it is Sel.P || it is Sel.L || it is Sel.C || it is Sel.A }.toSet()
+        if (source.isEmpty()) { message = Msg(EditText.SELECT_TO_TRANSFORM); changed(); return }
+        cancelOperation()
+        transformSource = source
+        tool = Tool.TRANSFORM
+        selection = source
+        message = Msg(EditText.TAP_TRANSFORM_PIVOT)
+        messageIsInfo = true
+        changed()
+    }
+
+    /** Legt den Bezugspunkt für die Transformation fest und öffnet den Werte-Dialog ([pendingTransform]). */
+    public fun transformPivot(pivot: Vec2) {
+        val source = transformSource
+        if (source.isEmpty()) {
+            tool = Tool.SELECT
+            return
+        }
+        pendingTransform = PendingTransform(source, pivot)
+        message = null
+        changed()
+    }
+
+    /** Bricht den Transformations-Dialog ab. */
+    public fun cancelPendingTransform() {
+        pendingTransform = null
+        transformSource = emptySet()
+        tool = Tool.SELECT
+        changed()
+    }
+
+    /** Bestätigt die Transformation mit den Werten aus dem Dialog. */
+    public fun confirmTransform(
+        mode: TransformMode,
+        dx: Double = 0.0,
+        dy: Double = 0.0,
+        angleDegrees: Double = 0.0,
+        scale: Double = 1.0,
+        asCopy: Boolean = false,
+    ): Boolean {
+        val p = pendingTransform ?: return false
+        pendingTransform = null
+        val source = p.source
+        transformSource = emptySet()
+        tool = Tool.SELECT
+
+        if (mode == TransformMode.SCALE && (!scale.isFinite() || scale <= 0.0)) {
+            message = Msg(SketchText.SCALE_NOT_POSITIVE)
+            changed()
+            return false
+        }
+
+        val lines = source.linesOf()
+        val rounds = source.roundsOf()
+        val points = source.pointsOf()
+
+        val ok = if (asCopy) {
+            when (mode) {
+                TransformMode.TRANSLATE -> runOp("Kopieren") {
+                    SketchOps.copy(sketch, lines, rounds, points, dx = dx, dy = dy)
+                }
+                TransformMode.ROTATE -> runOp("Kopieren") {
+                    SketchOps.copy(sketch, lines, rounds, points, pivot = p.pivot, angleDegrees = angleDegrees)
+                }
+                TransformMode.SCALE -> runOp("Kopieren") {
+                    SketchOps.copy(sketch, lines, rounds, points, pivot = p.pivot, scale = scale)
+                }
+            }
+        } else {
+            when (mode) {
+                TransformMode.TRANSLATE -> runOp("Verschieben") {
+                    SketchOps.translate(sketch, lines, rounds, points, dx = dx, dy = dy)
+                }
+                TransformMode.ROTATE -> runOp("Drehen") {
+                    SketchOps.rotate(sketch, lines, rounds, points, pivot = p.pivot, angleDegrees = angleDegrees)
+                }
+                TransformMode.SCALE -> runOp("Skalieren") {
+                    SketchOps.scale(sketch, lines, rounds, points, pivot = p.pivot, factor = scale)
+                }
+            }
+        }
+        changed()
+        return ok
+    }
 
     public fun setView(v: ViewTransform) {
         view = v
@@ -537,8 +651,13 @@ public class SketchEditor(public val sketch: Sketch) {
                 else if (d.hit == null) preview = Preview.Box(d.world, world)
             }
         } else if (tool.isModify) {
-            hover = null
-            hoverHit = HitTest.hit(sketch, world, view.worldLength(HIT_TOLERANCE_PX * uiScale))
+            if (tool == Tool.TRANSFORM) {
+                hover = snapAt(world)
+                hoverHit = null
+            } else {
+                hover = null
+                hoverHit = HitTest.hit(sketch, world, view.worldLength(HIT_TOLERANCE_PX * uiScale))
+            }
         } else {
             hover = snapAt(world)
             updateDrawPreview(hover!!, d)
@@ -569,9 +688,14 @@ public class SketchEditor(public val sketch: Sketch) {
     public fun hover(screen: Vec2) {
         val world = view.toWorld(screen)
         if (tool == Tool.SELECT || tool.isModify) {
-            hover = null
-            hoverHit = if (tool.isModify) HitTest.hit(sketch, world, view.worldLength(HIT_TOLERANCE_PX * uiScale))
-            else labelAt(screen)?.let { Sel.K(it.id) } ?: HitTest.hit(sketch, world, view.worldLength(HIT_TOLERANCE_PX * uiScale))
+            if (tool == Tool.TRANSFORM) {
+                hover = snapAt(world)
+                hoverHit = null
+            } else {
+                hover = null
+                hoverHit = if (tool.isModify) HitTest.hit(sketch, world, view.worldLength(HIT_TOLERANCE_PX * uiScale))
+                else labelAt(screen)?.let { Sel.K(it.id) } ?: HitTest.hit(sketch, world, view.worldLength(HIT_TOLERANCE_PX * uiScale))
+            }
         } else {
             hoverHit = null
             hover = snapAt(world)
@@ -599,9 +723,11 @@ public class SketchEditor(public val sketch: Sketch) {
         second = null
         if (tangentPicks.isNotEmpty()) { tangentPicks = emptyList(); selection = emptySet() }
         preview = null
+        if (pendingTransform != null) { pendingTransform = null; transformSource = emptySet() }
         if (offsetSource != null) { offsetSource = null; selection = emptySet() }
         if (tool == Tool.MIRROR) { mirrorSource = emptySet(); tool = Tool.SELECT; message = null }
         if (tool.isPattern) { patternSource = emptySet(); tool = Tool.SELECT; message = null }
+        if (tool == Tool.TRANSFORM) { transformSource = emptySet(); tool = Tool.SELECT; message = null }
         changed()
     }
 
@@ -742,7 +868,7 @@ public class SketchEditor(public val sketch: Sketch) {
                     else -> null
                 }
             }
-            Tool.SELECT, Tool.POINT, Tool.TRIM, Tool.SPLIT, Tool.EXTEND, Tool.OFFSET, Tool.FILLET, Tool.MIRROR, Tool.PATTERN_LINEAR, Tool.PATTERN_CIRCULAR, Tool.DIMENSION -> null
+            Tool.SELECT, Tool.POINT, Tool.TRIM, Tool.SPLIT, Tool.EXTEND, Tool.OFFSET, Tool.FILLET, Tool.MIRROR, Tool.PATTERN_LINEAR, Tool.PATTERN_CIRCULAR, Tool.DIMENSION, Tool.TRANSFORM -> null
         }
     }
 
@@ -807,7 +933,7 @@ public class SketchEditor(public val sketch: Sketch) {
                     }
                 }
             }
-            Tool.SELECT, Tool.TRIM, Tool.SPLIT, Tool.EXTEND, Tool.OFFSET, Tool.FILLET, Tool.MIRROR, Tool.PATTERN_LINEAR, Tool.PATTERN_CIRCULAR, Tool.DIMENSION -> Unit
+            Tool.SELECT, Tool.TRIM, Tool.SPLIT, Tool.EXTEND, Tool.OFFSET, Tool.FILLET, Tool.MIRROR, Tool.PATTERN_LINEAR, Tool.PATTERN_CIRCULAR, Tool.DIMENSION, Tool.TRANSFORM -> Unit
         }
         // Form fertig (bei Linien: Zug geschlossen bzw. mit dem Stift gezogen) → zurück zum Auswählen; Meldungen bleiben stehen
         if (commits > committedBefore && pending == null && second == null && tangentPicks.isEmpty()) {
@@ -890,6 +1016,7 @@ public class SketchEditor(public val sketch: Sketch) {
                 is Sel.A -> finishPattern { src -> SketchOps.circularPattern(sketch, src.linesOf(), src.roundsOf(), sketch.arc(hit.id).center, patternCount, patternAngle) }
                 else -> { message = Msg(EditText.TAP_PATTERN_CENTER) }
             }
+            Tool.TRANSFORM -> transformPivot(snapAt(world).position)
             else -> Unit
         }
         changed()
@@ -1527,6 +1654,7 @@ public class SketchEditor(public val sketch: Sketch) {
 
     private fun applyAction(kind: ActionKind, value: Double?): Boolean {
         val info = selInfo(selection)
+        if (kind == ActionKind.TRANSFORM) { startTransform(); return true }
         if (kind == ActionKind.ORIGIN_CORNER) return runOp("Ecke auf Ursprung") { SketchOps.cornerToOrigin(sketch, info.lines, info.rounds) }
         if (kind == ActionKind.ORIGIN_CENTER) return runOp("Mittig auf Ursprung") { SketchOps.centerOnOrigin(sketch, info.lines, info.rounds) }
         if (kind == ActionKind.HOLE_CENTER || kind == ActionKind.EDGE_CENTER) {
