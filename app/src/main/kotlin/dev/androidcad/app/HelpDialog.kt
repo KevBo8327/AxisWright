@@ -51,7 +51,7 @@ fun HelpDialog(hub: ProjectHub, firstStart: Boolean, onDismiss: () -> Unit) {
                 // Version für Rückmeldungen (welcher Stand wurde getestet)
                 val context = LocalContext.current
                 val version = remember { runCatching { context.packageManager.getPackageInfo(context.packageName, 0).versionName }.getOrNull() }
-                if (version != null) Text("ParamWorker $version", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                if (version != null) Text(stringResource(R.string.help_version, version), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         },
         confirmButton = {

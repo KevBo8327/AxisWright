@@ -6,6 +6,7 @@ import androidx.annotation.StringRes
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.ui.platform.LocalResources
+import dev.androidcad.brep.BrepText
 import dev.androidcad.lang.CadLangException
 import dev.androidcad.lang.LangText
 import dev.androidcad.model.BasePlane
@@ -96,7 +97,7 @@ private fun Resources.args(list: List<Any>): Array<Any> = list.map { a ->
     }
 }.toTypedArray()
 
-private fun res(key: Enum<*>): Int = when (key) {
+internal fun res(key: Enum<*>): Int = when (key) {
     is SketchText -> key.res()
     is EditText -> key.res()
     is ModelText -> key.res()
@@ -109,6 +110,7 @@ private fun res(key: Enum<*>): Int = when (key) {
     is ArcMode -> key.res()
     is CornerMode -> key.res()
     is BasePlane -> key.res()
+    is BrepText -> key.res()
     else -> error("Kein Text für ${key::class.simpleName}.${key.name} – in CoreText.kt zuordnen")
 }
 
@@ -385,4 +387,13 @@ private fun BasePlane.res(): Int = when (this) {
     BasePlane.XY -> R.string.core_plane_xy
     BasePlane.XZ -> R.string.core_plane_xz
     BasePlane.YZ -> R.string.core_plane_yz
+}
+
+private fun BrepText.res(): Int = when (this) {
+    BrepText.NOT_RIGID_TRANSFORM -> R.string.core_brep_not_rigid_transform
+    BrepText.BREP_ERROR -> R.string.core_brep_error
+    BrepText.BREP_ERROR_DETAIL -> R.string.core_brep_error_detail
+    BrepText.EXTRUSION_HEIGHT_ZERO -> R.string.core_brep_extrusion_height_zero
+    BrepText.REVOLVE_AXIS_NO_DIRECTION -> R.string.core_brep_revolve_axis_no_direction
+    BrepText.REVOLVE_ANGLE_RANGE -> R.string.core_brep_revolve_angle_range
 }

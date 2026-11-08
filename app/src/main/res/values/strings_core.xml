@@ -267,4 +267,12 @@
     <string name="core_plane_xy">XY · Top view</string>
     <string name="core_plane_xz">XZ · Front view</string>
     <string name="core_plane_yz">YZ · Side view</string>
+
+    <!-- Geometriekern (B-Rep / OpenCascade) -->
+    <string name="core_brep_not_rigid_transform">Transformation is not a rigid motion (rotation + translation)</string>
+    <string name="core_brep_error">B-rep error</string>
+    <string name="core_brep_error_detail">B-rep error: %1$s</string>
+    <string name="core_brep_extrusion_height_zero">Extrusion height must not be 0</string>
+    <string name="core_brep_revolve_axis_no_direction">Revolve axis needs a direction</string>
+    <string name="core_brep_revolve_angle_range">Revolve angle must be between 0 and 360 degrees</string>
 </resources>

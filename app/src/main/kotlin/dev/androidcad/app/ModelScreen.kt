@@ -219,8 +219,9 @@ private fun ModelTopBar(hub: ProjectHub, compact: Boolean) {
         TextButton(onClick = { if (Pro.allows()) state.parametersOpen = true }) { Text(stringResource(R.string.common_parameters)); ProMark() }
         if (state.parametersOpen) ParameterDialog(state) { state.parametersOpen = false }
         if (!compact) TextButton(onClick = { exporter.launch("${state.projectName}.stl") }, enabled = out?.mesh != null) { Text(stringResource(R.string.model_export_stl)) }
+        val moreOptions = stringResource(R.string.common_more_options)
         Box {
-            TextButton(onClick = { menu = true }, Modifier.width(44.dp), contentPadding = PaddingValues(0.dp)) { Text("⋮") }
+            TextButton(onClick = { menu = true }, Modifier.width(44.dp).semantics { contentDescription = moreOptions }, contentPadding = PaddingValues(0.dp)) { Text("⋮") }
             DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
                 if (compact) {
                     out?.takeIf { it.mesh != null }?.let { o ->
@@ -412,7 +413,8 @@ private fun FloatingCard(
             if (onToggle != null) Box(Modifier.size(40.dp).semantics { contentDescription = toggleCd }, contentAlignment = Alignment.Center) {
                 Text(if (collapsed) "▸" else "▾", color = colors.primary, style = MaterialTheme.typography.titleLarge)
             }
-            if (onConfirm == null) TextButton(onClick = onClose) { Text("✕") }
+            val closeCd = stringResource(R.string.common_close)
+            if (onConfirm == null) TextButton(onClick = onClose, modifier = Modifier.semantics { contentDescription = closeCd }) { Text("✕") }
         }
         if (!collapsed) {
             HorizontalDivider()

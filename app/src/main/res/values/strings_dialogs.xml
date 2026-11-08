@@ -33,6 +33,7 @@
     <string name="pro_err_other">Purchase not possible (Google Play reports code %1$d).</string>
 
     <!-- Hilfe -->
+    <string name="help_version">ParamWorker %1$s</string>
     <string name="help_title_welcome">Welcome to ParamWorker</string>
     <string name="help_title">Help</string>
     <string name="help_open_example">Open example</string>
