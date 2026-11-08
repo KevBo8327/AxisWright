@@ -43,6 +43,7 @@
     <string name="ws_tool_offset">Versatz</string>
     <string name="ws_tool_corner">Ecke</string>
     <string name="ws_tool_mirror">Spiegeln</string>
+    <string name="ws_tool_transform">Transformieren</string>
     <string name="ws_tool_pattern_linear">Reihe</string>
     <string name="ws_tool_pattern_circular">Kreis</string>
 
@@ -59,6 +60,7 @@
     <string name="ws_ctx_pattern_along_x">→ entlang X</string>
     <string name="ws_ctx_pattern_along_y">↑ entlang Y</string>
     <string name="ws_ctx_pattern_around_origin">◎ um den Ursprung</string>
+    <string name="ws_ctx_transform_origin">◎ Ursprung als Bezugspunkt</string>
     <string name="ws_ctx_finish_chain">✓ Zug beenden</string>
     <string name="ws_ctx_no_constraints">Keine Bedingungen für diese Auswahl – z. B. zwei Linien oder einen Kreis wählen.</string>
     <string name="ws_ctx_align">⊕ Ausrichten ▾</string>
@@ -103,6 +105,18 @@
     <string name="ws_hint_mirror">Spiegeln: Tippe eine Linie als Achse an oder wähle die X- bzw. Y-Achse.</string>
     <string name="ws_hint_pattern_linear">Reihe: Tippe eine Linie als Richtung an – auf der Seite, in die die Reihe wachsen soll – oder wähle X bzw. Y.</string>
     <string name="ws_hint_pattern_circular">Kreismuster: Tippe einen Punkt oder Kreis als Mittelpunkt an oder nimm den Ursprung. 360° = voller Kreis.</string>
+    <string name="ws_hint_transform">Transformieren: Bezugspunkt für Verschieben, Drehen oder Skalieren antippen.</string>
+
+    <!-- Transform-Dialog -->
+    <string name="ws_transform_title">Auswahl transformieren</string>
+    <string name="ws_transform_mode_translate">Verschieben</string>
+    <string name="ws_transform_mode_rotate">Drehen</string>
+    <string name="ws_transform_mode_scale">Skalieren</string>
+    <string name="ws_transform_dx">ΔX (mm)</string>
+    <string name="ws_transform_dy">ΔY (mm)</string>
+    <string name="ws_transform_angle">Winkel (°)</string>
+    <string name="ws_transform_scale">Skalierungsfaktor</string>
+    <string name="ws_transform_copy">Kopie erstellen</string>
 
     <!-- Wert- oder Ausdruckseingabe -->
     <string name="ws_value_label">Wert oder Ausdruck</string>

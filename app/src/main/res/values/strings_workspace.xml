@@ -43,6 +43,7 @@
     <string name="ws_tool_offset">Offset</string>
     <string name="ws_tool_corner">Corner</string>
     <string name="ws_tool_mirror">Mirror</string>
+    <string name="ws_tool_transform">Transform</string>
     <string name="ws_tool_pattern_linear">Linear</string>
     <string name="ws_tool_pattern_circular">Circular</string>
 
@@ -59,6 +60,7 @@
     <string name="ws_ctx_pattern_along_x">→ Along X</string>
     <string name="ws_ctx_pattern_along_y">↑ Along Y</string>
     <string name="ws_ctx_pattern_around_origin">◎ Around origin</string>
+    <string name="ws_ctx_transform_origin">◎ Origin as pivot</string>
     <string name="ws_ctx_finish_chain">✓ Finish chain</string>
     <string name="ws_ctx_no_constraints">No constraints for this selection – e.g. select two lines or a circle.</string>
     <string name="ws_ctx_align">⊕ Align ▾</string>
@@ -103,6 +105,18 @@
     <string name="ws_hint_mirror">Mirror: tap a line as the axis or select the X or Y axis.</string>
     <string name="ws_hint_pattern_linear">Linear pattern: tap a line as the direction – on the side the pattern should grow – or select X or Y.</string>
     <string name="ws_hint_pattern_circular">Circular pattern: tap a point or circle as the center, or use the origin. 360° = full circle.</string>
+    <string name="ws_hint_transform">Transform: tap the reference point for translation, rotation or scaling.</string>
+
+    <!-- Transform-Dialog -->
+    <string name="ws_transform_title">Transform selection</string>
+    <string name="ws_transform_mode_translate">Move</string>
+    <string name="ws_transform_mode_rotate">Rotate</string>
+    <string name="ws_transform_mode_scale">Scale</string>
+    <string name="ws_transform_dx">ΔX (mm)</string>
+    <string name="ws_transform_dy">ΔY (mm)</string>
+    <string name="ws_transform_angle">Angle (°)</string>
+    <string name="ws_transform_scale">Scale factor</string>
+    <string name="ws_transform_copy">Create copy</string>
 
     <!-- Wert- oder Ausdruckseingabe -->
     <string name="ws_value_label">Value or expression</string>

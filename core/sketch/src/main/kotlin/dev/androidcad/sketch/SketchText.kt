@@ -33,6 +33,18 @@ public enum class SketchText {
     INSTANCES_REMOVED,
     TAP_BETWEEN_LINE_ENDS, TAP_BETWEEN_ARC_ENDS, TAP_ON_CIRCLE,
 
+    SCALE_NOT_POSITIVE,
+    NOTHING_TO_TRANSFORM,
+
+    /** Plural (Anzahl angepasster Bedingungen). */
+    CONSTRAINTS_ADAPTED,
+
+    /** Plural (Anzahl entfernter Bedingungen). */
+    CONSTRAINTS_REMOVED,
+
+    /** Plural (Anzahl Kopien). */
+    COPIES_CREATED,
+
     /** (x, y) */
     OPEN_END,
 
