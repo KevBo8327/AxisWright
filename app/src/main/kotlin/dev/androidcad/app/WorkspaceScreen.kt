@@ -182,6 +182,7 @@ private fun SketchPanel(state: WorkspaceState, modifier: Modifier) {
     }
     handle.version // Beobachtung: bei jeder Änderung des Editors neu zusammensetzen
     ValueDialogs(state, handle.editor, handle.editor.pendingAction, handle.editor.valueEdit)
+    TextEditDialog(handle.editor, handle.editor.textEdit)
     if (planeDialog || state.askPlane) {
         PlaneDialog(
             title = stringResource(if (state.askPlane) R.string.ws_plane_title_start else R.string.ws_plane_title_change),
@@ -269,6 +270,7 @@ private fun sketchToolGroups(e: SketchEditor, res: android.content.res.Resources
         Tool.SLOT -> CadIcon.SLOT
         Tool.POLYGON -> CadIcon.POLYGON
         Tool.POINT -> CadIcon.POINT
+        Tool.TEXT -> CadIcon.TEXT
         else -> CadIcon.LINE
     }
     return listOf(
@@ -277,7 +279,7 @@ private fun sketchToolGroups(e: SketchEditor, res: android.content.res.Resources
             tool(R.string.ws_tool_line, CadIcon.LINE, Tool.LINE), tool(R.string.ws_tool_rectangle, CadIcon.RECTANGLE, Tool.RECTANGLE),
             tool(R.string.ws_tool_circle, CadIcon.CIRCLE, Tool.CIRCLE), tool(R.string.ws_tool_arc, CadIcon.ARC, Tool.ARC),
             tool(R.string.ws_tool_slot, CadIcon.SLOT, Tool.SLOT), tool(R.string.ws_tool_polygon, CadIcon.POLYGON, Tool.POLYGON),
-            tool(R.string.ws_tool_point, CadIcon.POINT, Tool.POINT),
+            tool(R.string.ws_tool_point, CadIcon.POINT, Tool.POINT), tool(R.string.ws_tool_text, CadIcon.TEXT, Tool.TEXT),
         )),
         ToolGroup(res.getString(R.string.ws_group_edit), CadIcon.TRIM, listOf(
             tool(R.string.ws_tool_trim, CadIcon.TRIM, Tool.TRIM), tool(R.string.ws_tool_split, CadIcon.SPLIT, Tool.SPLIT), tool(R.string.ws_tool_extend, CadIcon.EXTEND, Tool.EXTEND),
@@ -457,6 +459,19 @@ private fun BoxScope.ContextBar(handle: EditorHandle, prefs: UiPrefs, bottomGap:
                             if (e.drawingChain) e.setTool(Tool.SELECT) // Zug beendet = Linie fertig
                         }) { Text(stringResource(if (e.drawingChain) R.string.ws_ctx_finish_chain else R.string.common_cancel)) }
                     }
+                    e.selection.singleOrNull() is Sel.T -> {
+                        val textId = (e.selection.single() as Sel.T).id
+                        AssistChip(
+                            onClick = { e.requestTextEdit(textId) },
+                            label = { Text(stringResource(R.string.ws_ctx_edit_text)) },
+                        )
+                        options.filter { it.kind.group == ActionGroup.OTHER }.forEach { opt ->
+                            AssistChip(
+                                onClick = { e.requestAction(opt.kind) },
+                                label = { Text("${opt.kind.symbol} ${coreLabel(opt.kind)}") },
+                            )
+                        }
+                    }
                     options.isEmpty() -> Text(
                         stringResource(R.string.ws_ctx_no_constraints),
                         style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant,
@@ -522,12 +537,24 @@ private fun selectionBox(e: SketchEditor): Rect? {
             val m = sk.point(a.center); val r = sk.radiusOf(sel.id)
             pts += dev.androidcad.sketch.Vec2(m.x - r, m.y - r); pts += dev.androidcad.sketch.Vec2(m.x + r, m.y + r)
         }
+        is Sel.T -> if (sk.exists(sel.id)) sk.text(sel.id).let { t ->
+            val m = sk.point(t.location)
+            val rad = Math.toRadians(t.angle)
+            val w = maxOf(t.height * 0.5, t.text.length * t.height * 0.6)
+            val h = t.height
+            val cosA = kotlin.math.cos(rad); val sinA = kotlin.math.sin(rad)
+            fun corner(lx: Double, ly: Double) = dev.androidcad.sketch.Vec2(m.x + lx * cosA - ly * sinA, m.y + lx * sinA + ly * cosA)
+            pts += corner(0.0, -h * 0.25)
+            pts += corner(w, -h * 0.25)
+            pts += corner(w, h)
+            pts += corner(0.0, h)
+        }
         is Sel.K -> Unit
     }
     val screen = pts.mapTo(ArrayList()) { e.view.toScreen(it) }
     // Maße und Symbole an genau den Stellen, an denen die Zeichenfläche sie zeichnet; dazu gehört, was ein gewähltes Element
     // referenziert oder selbst gewählt ist
-    val ids = e.selection.mapNotNullTo(HashSet<Any>()) { when (it) { is Sel.P -> it.id; is Sel.L -> it.id; is Sel.C -> it.id; is Sel.A -> it.id; is Sel.K -> null } }
+    val ids = e.selection.mapNotNullTo(HashSet<Any>()) { when (it) { is Sel.P -> it.id; is Sel.L -> it.id; is Sel.C -> it.id; is Sel.A -> it.id; is Sel.T -> it.id; is Sel.K -> null } }
     fun belongs(c: dev.androidcad.sketch.ConstraintId) = Sel.K(c) in e.selection || sk.constraint(c).refs.any { it in ids }
     for (l in e.dimensionLabels()) if (belongs(l.id)) {
         l.lines.forEach { (a, b) -> screen += a; screen += b }
@@ -592,6 +619,7 @@ private fun hintFor(e: SketchEditor): String = when (e.tool) {
         ArcMode.TANGENT -> stringResource(if (e.drawStep == 0) R.string.ws_hint_arc_tangent_start else R.string.ws_hint_arc_tangent_end)
     }
     Tool.POINT -> stringResource(R.string.ws_hint_point)
+    Tool.TEXT -> stringResource(R.string.ws_hint_text)
     Tool.TRIM -> stringResource(R.string.ws_hint_trim)
     Tool.SPLIT -> stringResource(R.string.ws_hint_split)
     Tool.EXTEND -> stringResource(R.string.ws_hint_extend)
@@ -677,6 +705,68 @@ private fun ValueDialogs(state: WorkspaceState, e: SketchEditor, pending: Pendin
             if (e.confirmValueEdit(value)) state.setBinding(ref, expr)
         }, onDismiss = { e.cancelValueEdit() })
     }
+}
+
+@Composable
+private fun TextEditDialog(e: SketchEditor, state: dev.androidcad.sketchedit.TextDialogState?) {
+    if (state == null) return
+    var text by remember(state) { mutableStateOf(state.initialText) }
+    var heightStr by remember(state) { mutableStateOf(if (state.initialHeight > 0) formatValue(state.initialHeight) else "10") }
+    var angleStr by remember(state) { mutableStateOf(formatValue(state.initialAngle)) }
+
+    val heightVal = heightStr.replace(',', '.').toDoubleOrNull()
+    val angleVal = angleStr.replace(',', '.').toDoubleOrNull()
+    val valid = text.isNotBlank() && heightVal != null && heightVal > 0 && angleVal != null
+
+    val isNew = state.id == null
+    val title = stringResource(if (isNew) R.string.ws_text_dialog_title_new else R.string.ws_text_dialog_title_edit)
+
+    AlertDialog(
+        onDismissRequest = { e.cancelText() },
+        title = { Text(title) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(
+                    value = text,
+                    onValueChange = { text = it },
+                    singleLine = true,
+                    label = { Text(stringResource(R.string.ws_text_dialog_label_text)) },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                OutlinedTextField(
+                    value = heightStr,
+                    onValueChange = { heightStr = it },
+                    singleLine = true,
+                    isError = heightVal == null || heightVal <= 0,
+                    label = { Text(stringResource(R.string.ws_text_dialog_label_height)) },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                OutlinedTextField(
+                    value = angleStr,
+                    onValueChange = { angleStr = it },
+                    singleLine = true,
+                    isError = angleVal == null,
+                    label = { Text(stringResource(R.string.ws_text_dialog_label_rotation)) },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    if (valid) e.confirmText(text.trim(), heightVal!!, angleVal!!)
+                },
+                enabled = valid,
+            ) {
+                Text(stringResource(R.string.common_ok))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = { e.cancelText() }) {
+                Text(stringResource(R.string.common_cancel))
+            }
+        },
+    )
 }
 
 /**

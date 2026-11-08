@@ -37,6 +37,7 @@
     <string name="ws_tool_slot">Slot</string>
     <string name="ws_tool_polygon">Polygon</string>
     <string name="ws_tool_point">Point</string>
+    <string name="ws_tool_text">Text</string>
     <string name="ws_tool_trim">Trim</string>
     <string name="ws_tool_split">Split</string>
     <string name="ws_tool_extend">Extend</string>
@@ -92,6 +93,7 @@
     <string name="ws_hint_arc_tangent_start">Arc: tap the end of a line or arc – the arc continues it tangentially.</string>
     <string name="ws_hint_arc_tangent_end">Arc: tap the end point; further taps continue the chain tangentially.</string>
     <string name="ws_hint_point">Point: tap where the point should go – on a line, circle or axis it snaps to that element.</string>
+    <string name="ws_hint_text">Text: tap position to place text.</string>
     <string name="ws_hint_trim">Trim: tap the part of a line, circle or arc to remove, up to the nearest intersections.</string>
     <string name="ws_hint_split">Split: tap a line or arc where it should be split – tapping a circle splits it into two semicircles.</string>
     <string name="ws_hint_extend">Extend: tap the end of a line or arc – it then extends to the next element.</string>
@@ -147,6 +149,13 @@
     <string name="ws_name_plane">Plane</string>
     <string name="ws_name_shell">Shell</string>
     <string name="ws_name_hole">Hole</string>
+
+    <string name="ws_ctx_edit_text">Edit Text</string>
+    <string name="ws_text_dialog_title_new">Insert Text</string>
+    <string name="ws_text_dialog_title_edit">Edit Text</string>
+    <string name="ws_text_dialog_label_text">Text</string>
+    <string name="ws_text_dialog_label_height">Height (mm)</string>
+    <string name="ws_text_dialog_label_rotation">Rotation (°)</string>
 
     <!-- Modellnamen -->
     <string name="ws_import_name">%1$s (import)</string>

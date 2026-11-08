@@ -32,6 +32,7 @@ class MainActivity : ComponentActivity() {
         // Startbildschirm (Icon auf Indigo) – einheitlich ab Android 8 über die SplashScreen-Bibliothek, vor super.onCreate
         installSplashScreen()
         super.onCreate(savedInstanceState)
+        AndroidTextOutlines.init()
         Pro.start(this, workspace.prefs)
         setContent {
             val mode = workspace.prefs.themeMode

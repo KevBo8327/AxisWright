@@ -10,6 +10,9 @@ public data class CircleData(val center: PointId, val radius: Double, val constr
 /** Kreisbogen um [center] von [start] nach [end], **gegen den Uhrzeigersinn**. Der Radius ergibt sich aus [start]. */
 public data class ArcData(val center: PointId, val start: PointId, val end: PointId, val construction: Boolean = false)
 
+/** Text mit Basispunkt [location], Texthöhe [height] (mm) und Drehung [angle] in Grad. */
+public data class TextData(val location: PointId, val text: String, val height: Double, val angle: Double = 0.0, val construction: Boolean = false)
+
 public data class ConstraintEntry(val id: ConstraintId, val constraint: Constraint)
 
 /**
@@ -25,6 +28,7 @@ public class Sketch {
     private val lines = LinkedHashMap<Int, LineData>()
     private val circles = LinkedHashMap<Int, CircleData>()
     private val arcs = LinkedHashMap<Int, ArcData>()
+    private val texts = LinkedHashMap<Int, TextData>()
     private val constraints = LinkedHashMap<Int, Constraint>()
     private val standalone = LinkedHashSet<Int>()   // gewollte Einzelpunkte (Werkzeug „Punkt“)
 
@@ -41,6 +45,7 @@ public class Sketch {
     public val lineIds: List<LineId> get() = lines.keys.map(::LineId)
     public val circleIds: List<CircleId> get() = circles.keys.map(::CircleId)
     public val arcIds: List<ArcId> get() = arcs.keys.map(::ArcId)
+    public val textIds: List<TextId> get() = texts.keys.map(::TextId)
     /** Gewollte Einzelpunkte (Werkzeug „Punkt“); sie bleiben auch ohne Element erhalten ([removeOrphanPoints]). */
     public val standalonePointIds: List<PointId> get() = standalone.map(::PointId)
     public val constraintEntries: List<ConstraintEntry> get() = constraints.map { ConstraintEntry(ConstraintId(it.key), it.value) }
@@ -49,10 +54,12 @@ public class Sketch {
     public fun line(id: LineId): LineData = lines[id.value] ?: error("Unbekannte Linie $id")
     public fun circle(id: CircleId): CircleData = circles[id.value] ?: error("Unbekannter Kreis $id")
     public fun arc(id: ArcId): ArcData = arcs[id.value] ?: error("Unbekannter Bogen $id")
+    public fun text(id: TextId): TextData = texts[id.value] ?: error("Unbekannter Text $id")
     public fun constraint(id: ConstraintId): Constraint = constraints[id.value] ?: error("Unbekanntes Constraint $id")
 
     public fun exists(id: PointId): Boolean = id.value in points
     public fun exists(id: LineId): Boolean = id.value in lines
+    public fun exists(id: TextId): Boolean = id.value in texts
     public fun isStandalone(id: PointId): Boolean = id.value in standalone
     public fun exists(id: RoundId): Boolean = when (id) {
         is CircleId -> id.value in circles
@@ -118,6 +125,19 @@ public class Sketch {
     public fun addArc(cx: Double, cy: Double, sx: Double, sy: Double, ex: Double, ey: Double, construction: Boolean = false): ArcId =
         addArc(addPoint(cx, cy), addPoint(sx, sy), addPoint(ex, ey), construction)
 
+    public fun addText(location: PointId, text: String, height: Double, angle: Double = 0.0, construction: Boolean = false): TextId {
+        require(exists(location)) { "Punkt existiert nicht" }
+        require(text.isNotEmpty()) { "Text darf nicht leer sein" }
+        require(height > 0 && height.isFinite()) { "Texthöhe muss positiv sein" }
+        require(angle.isFinite()) { "Winkel ungültig" }
+        val id = nextId++
+        texts[id] = TextData(location, text, height, angle, construction)
+        return TextId(id)
+    }
+
+    public fun addText(x: Double, y: Double, text: String, height: Double, angle: Double = 0.0, construction: Boolean = false): TextId =
+        addText(addPoint(x, y), text, height, angle, construction)
+
     /** Vier Linien mit gemeinsamen Eckpunkten, horizontal/vertikal ausgerichtet. Ecken: links unten, rechts unten, rechts oben, links oben. */
     public fun addRectangle(x1: Double, y1: Double, x2: Double, y2: Double): Rectangle {
         val bl = addPoint(x1, y1); val br = addPoint(x2, y1); val tr = addPoint(x2, y2); val tl = addPoint(x1, y2)
@@ -159,11 +179,21 @@ public class Sketch {
         arcs[id.value] = a.copy(start = start, end = end)
     }
 
-    /** Alle Linien, Kreise und Bögen, die [point] als Endpunkt, Mittelpunkt, Start oder Ende verwenden. */
+    /** Setzt den Textinhalt, die Höhe und Drehung neu. */
+    public fun setText(id: TextId, text: String, height: Double, angle: Double) {
+        require(exists(id)) { "Unbekannter Text $id" }
+        require(text.isNotEmpty()) { "Text darf nicht leer sein" }
+        require(height > 0 && height.isFinite()) { "Texthöhe muss positiv sein" }
+        require(angle.isFinite()) { "Winkel ungültig" }
+        texts[id.value] = text(id).copy(text = text, height = height, angle = angle)
+    }
+
+    /** Alle Linien, Kreise, Bögen und Texte, die [point] als Endpunkt, Mittelpunkt, Start, Ende oder Basispunkt verwenden. */
     public fun elementsUsing(point: PointId): List<Any> =
         lines.filterValues { it.p1 == point || it.p2 == point }.keys.map(::LineId) +
             circles.filterValues { it.center == point }.keys.map(::CircleId) +
-            arcs.filterValues { it.center == point || it.start == point || it.end == point }.keys.map(::ArcId)
+            arcs.filterValues { it.center == point || it.start == point || it.end == point }.keys.map(::ArcId) +
+            texts.filterValues { it.location == point }.keys.map(::TextId)
 
     /** Hängt alle Constraints, die [old] verwenden, an [new] um (z. B. wenn ein Kreis durch einen Bogen ersetzt wird). */
     public fun remapRound(old: RoundId, new: RoundId) {
@@ -176,6 +206,10 @@ public class Sketch {
     public fun setConstruction(id: LineId, construction: Boolean) { lines[id.value] = line(id).copy(construction = construction) }
     public fun setConstruction(id: CircleId, construction: Boolean) { circles[id.value] = circle(id).copy(construction = construction) }
     public fun setConstruction(id: ArcId, construction: Boolean) { arcs[id.value] = arc(id).copy(construction = construction) }
+    public fun setConstruction(id: TextId, construction: Boolean) {
+        require(exists(id)) { "Unbekannter Text $id" }
+        texts[id.value] = text(id).copy(construction = construction)
+    }
 
     /** Entfernt den Punkt samt aller Elemente und Constraints, die ihn verwenden. Der Ursprung bleibt. */
     public fun remove(id: PointId) {
@@ -183,6 +217,7 @@ public class Sketch {
         lines.filterValues { it.p1 == id || it.p2 == id }.keys.toList().forEach { remove(LineId(it)) }
         circles.filterValues { it.center == id }.keys.toList().forEach { remove(CircleId(it)) }
         arcs.filterValues { it.center == id || it.start == id || it.end == id }.keys.toList().forEach { remove(ArcId(it)) }
+        texts.filterValues { it.location == id }.keys.toList().forEach { remove(TextId(it)) }
         removeConstraintsReferencing(id)
         points.remove(id.value)
         standalone.remove(id.value)
@@ -200,6 +235,10 @@ public class Sketch {
         if (removed != null) removeConstraintsReferencing(id)
     }
 
+    public fun remove(id: TextId) {
+        texts.remove(id.value)
+    }
+
     public fun remove(id: ConstraintId) {
         constraints.remove(id.value)
     }
@@ -210,6 +249,7 @@ public class Sketch {
         lines.values.forEach { used += it.p1; used += it.p2 }
         circles.values.forEach { used += it.center }
         arcs.values.forEach { used += it.center; used += it.start; used += it.end }
+        texts.values.forEach { used += it.location }
         constraints.values.forEach { used.addAll(it.refs) }
         standalone.forEach { used += PointId(it) }
         pointIds.filter { it != origin && it !in used }.forEach { points.remove(it.value) }
@@ -347,9 +387,10 @@ public class Sketch {
         arcs: Map<Int, ArcData>,
         constraints: Map<Int, Constraint>,
         standalone: Set<Int> = emptySet(),
+        texts: Map<Int, TextData> = emptyMap(),
     ) {
-        val all = points.keys + lines.keys + circles.keys + arcs.keys + constraints.keys
-        require(all.size == points.size + lines.size + circles.size + arcs.size + constraints.size) { "IDs sind nicht eindeutig" }
+        val all = points.keys + lines.keys + circles.keys + arcs.keys + constraints.keys + texts.keys
+        require(all.size == points.size + lines.size + circles.size + arcs.size + constraints.size + texts.size) { "IDs sind nicht eindeutig" }
         require(all.all { it >= 1 && it < nextId }) { "ID außerhalb des gültigen Bereichs" }
         require(origin.value in points) { "Ursprungspunkt fehlt" }
         fun pt(id: PointId) = require(id.value in points) { "Unbekannter Punkt $id" }
@@ -359,6 +400,12 @@ public class Sketch {
         lines.values.forEach { pt(it.p1); pt(it.p2) }
         circles.values.forEach { pt(it.center); require(it.radius.isFinite()) { "Radius ungültig" } }
         arcs.values.forEach { pt(it.center); pt(it.start); pt(it.end) }
+        texts.values.forEach {
+            pt(it.location)
+            require(it.text.isNotEmpty()) { "Text darf nicht leer sein" }
+            require(it.height > 0 && it.height.isFinite()) { "Texthöhe ungültig" }
+            require(it.angle.isFinite()) { "Winkel ungültig" }
+        }
         standalone.forEach { pt(PointId(it)) }
         points.values.forEach { require(it.x.isFinite() && it.y.isFinite()) { "Koordinate ungültig" } }
         for (c in constraints.values) for (r in c.refs) when (r) {
@@ -367,8 +414,8 @@ public class Sketch {
             is RoundId -> round(r)
             else -> throw IllegalArgumentException("Unbekannte Referenz $r")
         }
-        this.points.clear(); this.lines.clear(); this.circles.clear(); this.arcs.clear(); this.constraints.clear()
-        this.points.putAll(points); this.lines.putAll(lines); this.circles.putAll(circles); this.arcs.putAll(arcs)
+        this.points.clear(); this.lines.clear(); this.circles.clear(); this.arcs.clear(); this.texts.clear(); this.constraints.clear()
+        this.points.putAll(points); this.lines.putAll(lines); this.circles.putAll(circles); this.arcs.putAll(arcs); this.texts.putAll(texts)
         this.constraints.putAll(constraints)
         this.standalone.clear(); this.standalone.addAll(standalone)
         this.nextId = nextId
@@ -379,8 +426,8 @@ public class Sketch {
      * damit Referenzen darauf (z. B. aus einem Feature) gültig bleiben.
      */
     public fun restore(from: Sketch) {
-        points.clear(); lines.clear(); circles.clear(); arcs.clear(); constraints.clear()
-        points.putAll(from.points); lines.putAll(from.lines); circles.putAll(from.circles); arcs.putAll(from.arcs)
+        points.clear(); lines.clear(); circles.clear(); arcs.clear(); texts.clear(); constraints.clear()
+        points.putAll(from.points); lines.putAll(from.lines); circles.putAll(from.circles); arcs.putAll(from.arcs); texts.putAll(from.texts)
         constraints.putAll(from.constraints)
         standalone.clear(); standalone.addAll(from.standalone)
         nextId = from.nextId
@@ -389,8 +436,9 @@ public class Sketch {
     /** Kopie der Skizze (für Rückgängig/Wiederholen und Probe-Lösen). IDs bleiben erhalten. */
     public fun copy(): Sketch {
         val s = Sketch()
-        s.points.clear(); s.lines.clear(); s.circles.clear(); s.arcs.clear(); s.constraints.clear()
-        s.points.putAll(points); s.lines.putAll(lines); s.circles.putAll(circles); s.arcs.putAll(arcs); s.constraints.putAll(constraints)
+        s.points.clear(); s.lines.clear(); s.circles.clear(); s.arcs.clear(); s.texts.clear(); s.constraints.clear()
+        s.points.putAll(points); s.lines.putAll(lines); s.circles.putAll(circles); s.arcs.putAll(arcs); s.texts.putAll(texts)
+        s.constraints.putAll(constraints)
         s.standalone.clear(); s.standalone.addAll(standalone)
         s.nextId = nextId
         return s

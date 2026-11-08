@@ -9,6 +9,7 @@ public sealed interface RoundId
 @JvmInline public value class LineId(public val value: Int)
 @JvmInline public value class CircleId(public val value: Int) : RoundId
 @JvmInline public value class ArcId(public val value: Int) : RoundId
+@JvmInline public value class TextId(public val value: Int)
 @JvmInline public value class ConstraintId(public val value: Int)
 
 /**

@@ -69,7 +69,7 @@ private sealed interface Edge {
  * und Verzweigungen ohne geschlossene Teilfläche werden in [RegionResult.problems] gemeldet. Konstruktionselemente zählen nicht.
  * Punkte, die über [Coincident] verbunden sind oder näher als [tolerance] beieinander liegen, gelten als ein Knoten.
  */
-public fun Sketch.regions(tolerance: Double = 1e-6): RegionResult {
+public fun Sketch.regions(tolerance: Double = 1e-6, textOutlines: TextOutlines? = TextOutlines.default): RegionResult {
     val ids = pointIds
     val index = ids.withIndex().associate { it.value to it.index }
     val uf = UnionFind(ids.size)
@@ -235,6 +235,49 @@ public fun Sketch.regions(tolerance: Double = 1e-6): RegionResult {
         samples += sample(listOf(LoopSegment.Circle(ctr.x, ctr.y, c.radius)))
     }
 
+    // --- Text-Umrisse ---
+    for (id in textIds) {
+        val t = text(id)
+        if (t.construction) continue
+        val provider = textOutlines ?: TextOutlines.default
+        val rawLoops = provider?.outlines(t.text, t.height) ?: emptyList()
+        if (rawLoops.isEmpty()) continue
+        val loc = point(t.location)
+        val rad = Math.toRadians(t.angle)
+        val cosA = cos(rad)
+        val sinA = sin(rad)
+        for (rawLoop in rawLoops) {
+            val segs = rawLoop.segments.map { seg ->
+                when (seg) {
+                    is LoopSegment.Line -> {
+                        val rx1 = seg.x1 * cosA - seg.y1 * sinA + loc.x
+                        val ry1 = seg.x1 * sinA + seg.y1 * cosA + loc.y
+                        val rx2 = seg.x2 * cosA - seg.y2 * sinA + loc.x
+                        val ry2 = seg.x2 * sinA + seg.y2 * cosA + loc.y
+                        LoopSegment.Line(rx1, ry1, rx2, ry2, source = id.value)
+                    }
+                    is LoopSegment.Arc -> {
+                        val rx1 = seg.x1 * cosA - seg.y1 * sinA + loc.x
+                        val ry1 = seg.x1 * sinA + seg.y1 * cosA + loc.y
+                        val rx2 = seg.x2 * cosA - seg.y2 * sinA + loc.x
+                        val ry2 = seg.x2 * sinA + seg.y2 * cosA + loc.y
+                        val rcx = seg.cx * cosA - seg.cy * sinA + loc.x
+                        val rcy = seg.cx * sinA + seg.cy * cosA + loc.y
+                        LoopSegment.Arc(rx1, ry1, rx2, ry2, rcx, rcy, ccw = seg.ccw, source = id.value)
+                    }
+                    is LoopSegment.Circle -> {
+                        val rcx = seg.cx * cosA - seg.cy * sinA + loc.x
+                        val rcy = seg.cx * sinA + seg.cy * cosA + loc.y
+                        LoopSegment.Circle(rcx, rcy, seg.r, source = id.value)
+                    }
+                }
+            }
+            val area = if (rawLoop.area > 0) rawLoop.area else abs(signedArea(segs))
+            loops += Loop(segs, area)
+            samples += sample(segs)
+        }
+    }
+
     // --- Verschachtelung: kleinste umschließende Kontur ist der Elternteil ---
     val parent = IntArray(loops.size) { -1 }
     for (i in loops.indices) {
@@ -266,8 +309,8 @@ public fun Region.contains(x: Double, y: Double): Boolean =
  * Die innerste Region, die (x, y) enthält. Ein Auswahlpunkt bleibt stabil, wenn Maße die Skizze verändern –
  * anders als ein Listenindex der Regionen.
  */
-public fun Sketch.regionAt(x: Double, y: Double): Region? =
-    regions().regions.filter { it.contains(x, y) }.minByOrNull { it.outer.area }
+public fun Sketch.regionAt(x: Double, y: Double, textOutlines: TextOutlines? = TextOutlines.default): Region? =
+    regions(textOutlines = textOutlines).regions.filter { it.contains(x, y) }.minByOrNull { it.outer.area }
 
 private fun sample(segs: List<LoopSegment>): List<Vec2> {
     val out = ArrayList<Vec2>()
