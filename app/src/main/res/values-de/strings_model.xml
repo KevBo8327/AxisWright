@@ -59,4 +59,14 @@
     <string name="model_view_right">Rechts</string>
     <string name="model_fit_all">Alles einpassen</string>
     <string name="model_grid">Gitter</string>
+    <string name="model_section_view">Schnittansicht</string>
+    <string name="model_section_plane">Schnittebene</string>
+    <string name="model_section_plane_xy">XY</string>
+    <string name="model_section_plane_xz">XZ</string>
+    <string name="model_section_plane_yz">YZ</string>
+    <string name="model_section_plane_face">Fläche</string>
+    <string name="model_section_pick_face">Ebene Fläche wählen …</string>
+    <string name="model_section_picking_face">Ebene Fläche am Körper antippen</string>
+    <string name="model_section_offset">Versatz</string>
+    <string name="model_section_flip">Seite umkehren</string>
 </resources>

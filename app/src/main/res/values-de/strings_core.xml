@@ -169,6 +169,11 @@
     <string name="core_model_size_not_positive">Größe muss größer als 0 sein</string>
     <string name="core_model_diameter_not_positive">Durchmesser muss größer als 0 sein</string>
     <string name="core_model_depth_not_positive">Tiefe muss größer als 0 sein</string>
+    <string name="core_model_hole_sink_diameter_not_positive">Senkdurchmesser muss größer als 0 sein</string>
+    <string name="core_model_hole_sink_depth_not_positive">Senktiefe muss größer als 0 sein</string>
+    <string name="core_model_hole_sink_diameter_too_small">Senkdurchmesser muss größer als der Bohrungsdurchmesser sein</string>
+    <string name="core_model_hole_sink_depth_too_large">Senktiefe muss kleiner als die Bohrtiefe sein</string>
+    <string name="core_model_hole_sink_angle_range">Senkwinkel muss zwischen 0° und 180° liegen</string>
     <string name="core_model_parameter_name_invalid">„%1$s“: nur Buchstaben, Ziffern und _, nicht mit einer Ziffer beginnend</string>
     <string name="core_model_parameter_names_not_unique">Parameternamen müssen eindeutig sein</string>
     <string name="core_model_parameter_error">Parameter %1$s: %2$s</string>

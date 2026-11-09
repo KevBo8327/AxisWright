@@ -169,6 +169,11 @@
     <string name="core_model_size_not_positive">Size must be greater than 0</string>
     <string name="core_model_diameter_not_positive">Diameter must be greater than 0</string>
     <string name="core_model_depth_not_positive">Depth must be greater than 0</string>
+    <string name="core_model_hole_sink_diameter_not_positive">Counterbore/countersink diameter must be greater than 0</string>
+    <string name="core_model_hole_sink_depth_not_positive">Counterbore depth must be greater than 0</string>
+    <string name="core_model_hole_sink_diameter_too_small">Counterbore/countersink diameter must be larger than hole diameter</string>
+    <string name="core_model_hole_sink_depth_too_large">Counterbore/countersink depth must be less than hole depth</string>
+    <string name="core_model_hole_sink_angle_range">Countersink angle must be between 0° and 180°</string>
     <string name="core_model_parameter_name_invalid">“%1$s”: letters, digits and _ only, not starting with a digit</string>
     <string name="core_model_parameter_names_not_unique">Parameter names must be unique</string>
     <string name="core_model_parameter_error">Parameter %1$s: %2$s</string>

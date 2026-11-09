@@ -40,6 +40,14 @@
     <string name="feat_hole_diameter">Diameter</string>
     <string name="feat_hole_through">Through all</string>
     <string name="feat_hole_depth_value">Depth %1$s mm</string>
+    <string name="feat_hole_kind_simple">Simple</string>
+    <string name="feat_hole_kind_counterbore">Counterbore</string>
+    <string name="feat_hole_kind_countersink">Countersink</string>
+    <string name="feat_hole_counterbore_diameter">Counterbore Ø</string>
+    <string name="feat_hole_counterbore_depth">Counterbore depth</string>
+    <string name="feat_hole_countersink_diameter">Countersink Ø</string>
+    <string name="feat_hole_countersink_angle">Countersink angle (°)</string>
+    <string name="feat_hole_standard">Standard size</string>
     <string name="feat_value_mm">%1$s mm</string>
     <string name="feat_anchor_edge">Edge %1$d (mm)</string>
 

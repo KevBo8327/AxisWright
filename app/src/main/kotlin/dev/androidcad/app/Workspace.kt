@@ -38,6 +38,7 @@ import dev.androidcad.model.FacePlane
 import dev.androidcad.model.Workplane
 import dev.androidcad.model.HolePlacement
 import dev.androidcad.model.HoleFeature
+import dev.androidcad.model.HoleKind
 import dev.androidcad.model.Vec3
 import dev.androidcad.sketch.SketchOps
 import dev.androidcad.brep.PlanarFace
@@ -248,6 +249,11 @@ class WorkspaceState(
     var holeDiameter by mutableStateOf(6.0)
     var holeDepth by mutableStateOf(10.0)
     var holeThrough by mutableStateOf(true)
+    var holeKind by mutableStateOf(HoleKind.SIMPLE)
+    var holeCounterboreDiameter by mutableStateOf(11.0)
+    var holeCounterboreDepth by mutableStateOf(6.4)
+    var holeCountersinkDiameter by mutableStateOf(13.7)
+    var holeCountersinkAngle by mutableStateOf(90.0)
     /** Die gewählte Arbeitsebene (`null`, wenn ein anderes Feature gewählt ist). */
     var datum by mutableStateOf<PlaneFeature?>(null)
         private set
@@ -263,6 +269,31 @@ class WorkspaceState(
     /** Fläche antippen, bis zu der eine Extrusion reichen soll (Auswahlmodus an/aus). */
     var extrudeFacePick by mutableStateOf(false)
         private set
+    /** Zustand der Schnittansicht in der 3D-Ansicht (reine Darstellung). */
+    val sectionView = SectionViewState()
+
+    fun toggleSectionView() {
+        sectionView.enabled = !sectionView.enabled
+        if (!sectionView.enabled) {
+            sectionView.pickingFace = false
+        }
+    }
+
+    fun startSectionPickFace() {
+        if (output?.mesh == null) return
+        edgeMode = null
+        holeMode = null
+        faceSketchPick = false
+        shellMode = null
+        measureMode = null
+        planePick = false
+        extrudeFacePick = false
+        sectionView.pickingFace = true
+    }
+
+    fun cancelSectionPickFace() {
+        sectionView.pickingFace = false
+    }
     /**
      * Mitte der Fläche, auf der die aktive Skizze liegt, für „Mittig auf Fläche“: projiziert bei Bedarf ihre Kanten (fester, mitwandernder
      * Umriss) und nimmt die Diagonale zwischen der Ecke links unten und rechts oben; bei einer runden Fläche den Mittelpunkt des größten
@@ -528,7 +559,7 @@ class WorkspaceState(
         val sel = selectedId
         doc = DocumentCodec.decode(text) // stammt aus encode(): bleibt lesbar
         handle.replace(SketchEditor(doc.features.filterIsInstance<SketchFeature>().first().sketch)) // alter Editor zeigt auf die alte Skizze
-        edgeMode = null; holeMode = null; shellMode = null; measureMode = null; planePick = false; faceSketchPick = false; extrudeFacePick = false
+        edgeMode = null; holeMode = null; shellMode = null; measureMode = null; planePick = false; faceSketchPick = false; extrudeFacePick = false; sectionView.pickingFace = false
         select(sel?.takeIf { id -> doc.features.any { it.id == id } } ?: doc.features.last().id)
         canUndo = history.canUndo; canRedo = history.canRedo
         markDirty(record = false)
@@ -1474,11 +1505,24 @@ class WorkspaceState(
         scheduleBuild()
     }
 
-    /** Verarbeitet einen Tipp im 3D-Bild in den Flächenmodi (Bohrung, Skizze/Ebene auf Fläche, Schale). */
+    /** Verarbeitet einen Tipp im 3D-Bild in den Flächenmodi (Bohrung, Skizze/Ebene auf Fläche, Schale, Schnittebene). */
     fun pickFace(hit: FaceHit?) {
         if (measureMode != null) { hit?.let { addMeasure(BrepShape.Part.Face(it.faceId)) }; return }
-        if ((holeMode == null && !faceSketchPick && !planePick && shellMode == null && !extrudeFacePick) || hit == null) return
+        if ((holeMode == null && !faceSketchPick && !planePick && shellMode == null && !extrudeFacePick && !sectionView.pickingFace) || hit == null) return
         val out = output ?: return
+        if (sectionView.pickingFace) {
+            val plane = out.facePlanes.getOrNull(hit.faceId - 1)
+            if (plane == null) {
+                notice = UiText.Res(R.string.ws_notice_planar_only)
+                return
+            }
+            sectionView.customPlaneNormal = plane.normal
+            sectionView.customPlaneOrigin = plane.origin
+            sectionView.planeType = SectionPlaneType.FACE
+            sectionView.offset = 0.0
+            sectionView.pickingFace = false
+            return
+        }
         val ref = out.faceRefs.getOrNull(hit.faceId - 1)
         shellMode?.let { mode ->
             // Öffnungen dürfen auch gekrümmt sein; erneut tippen hebt die Wahl auf
@@ -1548,15 +1592,39 @@ class WorkspaceState(
         val mode = holeMode ?: return
         val face = mode.face ?: return
         val p = mode.point ?: return
-        val f = doc.addHole(nextName(R.string.ws_name_hole), face, p[0], p[1], p[2], holeDiameter, if (holeThrough) null else holeDepth, mode.anchors)
+        val f = doc.addHole(
+            nextName(R.string.ws_name_hole), face, p[0], p[1], p[2], holeDiameter,
+            if (holeThrough) null else holeDepth, mode.anchors,
+            holeKind,
+            if (holeKind == HoleKind.COUNTERBORE) holeCounterboreDiameter else null,
+            if (holeKind == HoleKind.COUNTERBORE) holeCounterboreDepth else null,
+            if (holeKind == HoleKind.COUNTERSINK) holeCountersinkDiameter else null,
+            holeCountersinkAngle,
+        )
         select(f.id) // beendet den Bohrungsmodus
         markDirty()
         scheduleBuild(0)
     }
 
-    fun updateHole(diameter: Double, depth: Double?) {
+    fun updateHole(
+        diameter: Double = hole?.diameter ?: holeDiameter,
+        depth: Double? = hole?.depth,
+        kind: HoleKind = hole?.kind ?: holeKind,
+        counterboreDiameter: Double? = hole?.counterboreDiameter ?: holeCounterboreDiameter,
+        counterboreDepth: Double? = hole?.counterboreDepth ?: holeCounterboreDepth,
+        countersinkDiameter: Double? = hole?.countersinkDiameter ?: holeCountersinkDiameter,
+        countersinkAngle: Double = hole?.countersinkAngle ?: holeCountersinkAngle,
+    ) {
         val f = hole ?: return
-        doc.update(f.copy(diameter = diameter, depth = depth))
+        doc.update(f.copy(
+            diameter = diameter,
+            depth = depth,
+            kind = kind,
+            counterboreDiameter = if (kind == HoleKind.COUNTERBORE) counterboreDiameter else null,
+            counterboreDepth = if (kind == HoleKind.COUNTERBORE) counterboreDepth else null,
+            countersinkDiameter = if (kind == HoleKind.COUNTERSINK) countersinkDiameter else null,
+            countersinkAngle = if (kind == HoleKind.COUNTERSINK) countersinkAngle else 90.0,
+        ))
         refresh()
         markDirty()
         scheduleBuild()

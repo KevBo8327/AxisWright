@@ -138,4 +138,39 @@ class HoleFeatureTest {
         )
         for ((name, m) in cases) assertFailsWith<JsonException>("sollte scheitern: $name") { DocumentCodec.decode(mutated(m)) }
     }
+
+    @Test
+    fun counterboreAndCountersinkRoundTripThroughDocumentCodec() {
+        val s = Setup()
+        val cb = s.doc.addHole(
+            "Senkbohrung", s.top, 10.0, 10.0, 10.0, 6.6, depth = 15.0,
+            kind = HoleKind.COUNTERBORE, counterboreDiameter = 11.0, counterboreDepth = 6.4,
+        )
+        val cs = s.doc.addHole(
+            "Kegelsenkung", s.top, 25.0, 10.0, 10.0, 6.6,
+            kind = HoleKind.COUNTERSINK, countersinkDiameter = 13.7, countersinkAngle = 90.0,
+        )
+        val decoded = DocumentCodec.decode(DocumentCodec.encode(s.doc))
+        val holes = decoded.features.filterIsInstance<HoleFeature>()
+        assertEquals(2, holes.size)
+        assertEquals(cb, holes[0])
+        assertEquals(cs, holes[1])
+        assertEquals(HoleKind.COUNTERBORE, holes[0].kind)
+        assertEquals(11.0, holes[0].counterboreDiameter)
+        assertEquals(6.4, holes[0].counterboreDepth)
+        assertEquals(HoleKind.COUNTERSINK, holes[1].kind)
+        assertEquals(13.7, holes[1].countersinkDiameter)
+        assertEquals(90.0, holes[1].countersinkAngle)
+    }
+
+    @Test
+    fun parameterBindingControlsHoleDiameter() {
+        val s = Setup()
+        val h = s.doc.addHole("Bohrung", s.top, 10.0, 10.0, 10.0, 6.0)
+        s.doc.setParameters(listOf(Parameter("d", "8.5")))
+        s.doc.bind(ValueRef.FeatureValue(h.id), "d")
+        s.doc.applyParameters()
+        val updated = s.doc.feature(h.id) as HoleFeature
+        assertEquals(8.5, updated.diameter)
+    }
 }

@@ -24,7 +24,7 @@ sealed interface ValueRef {
 
     /**
      * Der Hauptwert des Features [feature]: Länge einer Extrusion, Winkel einer Drehung, Wandstärke einer Schale, Größe einer
-     * Verrundung/Fase. Vorzeichen (Richtung) bleiben erhalten, der Ausdruck gibt den Betrag.
+     * Verrundung/Fase, Durchmesser einer Bohrung. Vorzeichen (Richtung) bleiben erhalten, der Ausdruck gibt den Betrag.
      * [index] unterscheidet Werte eines Features (0 = Hauptwert, 1 = zweite Länge einer Extrusion).
      */
     data class FeatureValue(val feature: FeatureId, val index: Int = 0) : ValueRef
@@ -72,6 +72,7 @@ internal fun Document.applyValue(ref: ValueRef, v: Double): Msg? {
             is RevolveFeature -> if (v > 0 && v <= 360) update(f.copy(angle = signed(f.angle))) else return Msg(ModelText.REVOLVE_ANGLE_RANGE)
             is ShellFeature -> if (v > 0) update(f.copy(thickness = v)) else return Msg(ModelText.THICKNESS_NOT_POSITIVE)
             is FilletFeature -> if (v > 0) update(f.copy(size = v)) else return Msg(ModelText.SIZE_NOT_POSITIVE)
+            is HoleFeature -> if (v > 0) update(f.copy(diameter = v)) else return Msg(ModelText.DIAMETER_NOT_POSITIVE)
             else -> return null
         }
     }

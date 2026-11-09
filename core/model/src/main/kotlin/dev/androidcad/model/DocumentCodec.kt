@@ -12,6 +12,7 @@ import dev.androidcad.json.int
 import dev.androidcad.json.list
 import dev.androidcad.json.obj
 import dev.androidcad.json.string
+import dev.androidcad.json.stringOrNull
 import dev.androidcad.sketch.CircleId
 import dev.androidcad.sketch.LineId
 import dev.androidcad.sketch.SketchCodec
@@ -140,7 +141,13 @@ object DocumentCodec {
         "kind" to "hole", "id" to f.id.value, "name" to f.name, "face" to encodeFace(f.face),
         "point" to listOf(f.x, f.y, f.z), "diameter" to f.diameter, "depth" to f.depth,
         "anchors" to f.anchors?.toList()?.map { linkedMapOf("a" to encodeFace(it.edge.a), "b" to encodeFace(it.edge.b), "distance" to it.distance) },
-    )
+    ).also {
+        if (f.kind != HoleKind.SIMPLE) it["holeKind"] = f.kind.name
+        if (f.counterboreDiameter != null) it["counterboreDiameter"] = f.counterboreDiameter
+        if (f.counterboreDepth != null) it["counterboreDepth"] = f.counterboreDepth
+        if (f.countersinkDiameter != null) it["countersinkDiameter"] = f.countersinkDiameter
+        if (f.countersinkAngle != 90.0) it["countersinkAngle"] = f.countersinkAngle
+    }
 
     private fun encodePattern(k: PatternKind): Map<String, Any?> = when (k) {
         is PatternKind.Linear -> linkedMapOf<String, Any?>("type" to "linear", "direction" to vec(k.direction), "count" to k.count, "spacing" to k.spacing).also {
@@ -250,9 +257,21 @@ object DocumentCodec {
                 if (list.size != 2) throw JsonException("Bohrung: genau zwei Referenzkanten erwartet")
                 list[0] to list[1]
             }
+            val holeKind = o.stringOrNull("holeKind")?.let { raw ->
+                HoleKind.entries.firstOrNull { it.name == raw } ?: throw JsonException("Bohrung: unbekannte Art '$raw'")
+            } ?: HoleKind.SIMPLE
+            val counterboreDiameter = o.doubleOrNull("counterboreDiameter")
+            if (counterboreDiameter != null && !counterboreDiameter.isFinite()) throw JsonException("Bohrung: Senkdurchmesser ungültig")
+            val counterboreDepth = o.doubleOrNull("counterboreDepth")
+            if (counterboreDepth != null && !counterboreDepth.isFinite()) throw JsonException("Bohrung: Senktiefe ungültig")
+            val countersinkDiameter = o.doubleOrNull("countersinkDiameter")
+            if (countersinkDiameter != null && !countersinkDiameter.isFinite()) throw JsonException("Bohrung: Kegelsenkdurchmesser ungültig")
+            val countersinkAngle = o.doubleOrNull("countersinkAngle") ?: 90.0
+            if (!countersinkAngle.isFinite()) throw JsonException("Bohrung: Senkwinkel ungültig")
             HoleFeature(
                 FeatureId(o.int("id")), o.string("name"), decodeFace(o["face"]),
                 (pt[0] as Number).toDouble(), (pt[1] as Number).toDouble(), (pt[2] as Number).toDouble(), diameter, depth, anchors,
+                holeKind, counterboreDiameter, counterboreDepth, countersinkDiameter, countersinkAngle,
             )
         }
         "datum" -> {

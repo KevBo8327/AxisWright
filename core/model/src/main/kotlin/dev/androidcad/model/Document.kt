@@ -396,11 +396,19 @@ class Document {
     fun addHole(
         name: String, face: FaceRef, x: Double, y: Double, z: Double, diameter: Double, depth: Double? = null,
         anchors: Pair<EdgeDistance, EdgeDistance>? = null,
+        kind: HoleKind = HoleKind.SIMPLE,
+        counterboreDiameter: Double? = null,
+        counterboreDepth: Double? = null,
+        countersinkDiameter: Double? = null,
+        countersinkAngle: Double = 90.0,
     ): HoleFeature {
         val known = items.map { it.id }.toSet()
         require(face.feature in known) { "Fläche verweist auf ein unbekanntes Feature" }
         require(anchors == null || anchors.toList().all { it.edge.a.feature in known && it.edge.b.feature in known }) { "Referenzkante verweist auf ein unbekanntes Feature" }
-        return HoleFeature(FeatureId(nextId++), name, face, x, y, z, diameter, depth, anchors).also { items += it }
+        return HoleFeature(
+            FeatureId(nextId++), name, face, x, y, z, diameter, depth, anchors,
+            kind, counterboreDiameter, counterboreDepth, countersinkDiameter, countersinkAngle,
+        ).also { items += it }
     }
 
     /** Was beim Entfernen von [id] mit entfernt würde, in Aufbau-Reihenfolge (ohne [id] selbst) – für die Warnung vor dem Löschen. */
@@ -823,14 +831,40 @@ class Document {
     }
 
     /**
-     * Zylinder als Werkzeug für die Bohrung: Die Fläche wird über ihren Namen gefunden (bei mehreren Teilstücken die ebene,
-     * die dem Punkt am nächsten liegt), der Punkt auf ihre Ebene projiziert; der Zylinder beginnt knapp außerhalb und läuft
+     * Werkzeugkörper für die Bohrung: Die Fläche wird über ihren Namen gefunden (bei mehreren Teilstücken die ebene,
+     * die dem Punkt am nächsten liegt), der Punkt auf ihre Ebene projiziert; das Werkzeug beginnt knapp außerhalb und läuft
      * entgegen der Außennormalen in den Körper.
+     *
+     * Einfache Bohrungen werden als Zylinder extrudiert, Senkungen und Kegelsenkungen als Drehprofil (BrepShape.revolve) erzeugt.
      */
     private fun holeTool(body: BrepShape?, f: HoleFeature): BrepShape {
         if (body == null) throw ModelException(Msg(ModelText.NO_BODY))
         if (!(f.diameter > 0.0 && f.diameter.isFinite())) throw ModelException(Msg(ModelText.DIAMETER_NOT_POSITIVE))
         if (!(f.depth == null || (f.depth > 0.0 && f.depth.isFinite()))) throw ModelException(Msg(ModelText.DEPTH_NOT_POSITIVE))
+
+        when (f.kind) {
+            HoleKind.SIMPLE -> {}
+            HoleKind.COUNTERBORE -> {
+                val cbDia = f.counterboreDiameter ?: throw ModelException(Msg(ModelText.HOLE_SINK_DIAMETER_NOT_POSITIVE))
+                if (!(cbDia > 0.0 && cbDia.isFinite())) throw ModelException(Msg(ModelText.HOLE_SINK_DIAMETER_NOT_POSITIVE))
+                if (cbDia <= f.diameter) throw ModelException(Msg(ModelText.HOLE_SINK_DIAMETER_TOO_SMALL))
+                val cbDepth = f.counterboreDepth ?: throw ModelException(Msg(ModelText.HOLE_SINK_DEPTH_NOT_POSITIVE))
+                if (!(cbDepth > 0.0 && cbDepth.isFinite())) throw ModelException(Msg(ModelText.HOLE_SINK_DEPTH_NOT_POSITIVE))
+                if (f.depth != null && cbDepth >= f.depth) throw ModelException(Msg(ModelText.HOLE_SINK_DEPTH_TOO_LARGE))
+            }
+            HoleKind.COUNTERSINK -> {
+                val csDia = f.countersinkDiameter ?: throw ModelException(Msg(ModelText.HOLE_SINK_DIAMETER_NOT_POSITIVE))
+                if (!(csDia > 0.0 && csDia.isFinite())) throw ModelException(Msg(ModelText.HOLE_SINK_DIAMETER_NOT_POSITIVE))
+                if (csDia <= f.diameter) throw ModelException(Msg(ModelText.HOLE_SINK_DIAMETER_TOO_SMALL))
+                if (!(f.countersinkAngle > 0.0 && f.countersinkAngle < 180.0 && f.countersinkAngle.isFinite())) {
+                    throw ModelException(Msg(ModelText.HOLE_SINK_ANGLE_RANGE))
+                }
+                val halfAngle = Math.toRadians(f.countersinkAngle / 2.0)
+                val hCs = (csDia - f.diameter) / (2.0 * kotlin.math.tan(halfAngle))
+                if (f.depth != null && hCs >= f.depth) throw ModelException(Msg(ModelText.HOLE_SINK_DEPTH_TOO_LARGE))
+            }
+        }
+
         val ids = body.facesWithTag(f.face.tag)
         if (ids.isEmpty()) throw ModelException(Msg(ModelText.FACE_GONE))
         val planes = body.planarFaces()
@@ -841,14 +875,62 @@ class Document {
             val d = plane.distanceTo(f.x, f.y, f.z)
             Vec3(f.x, f.y, f.z) + n * -d // fester Punkt, auf die Ebene projiziert
         }
-        val lead = 1.0 // Zylinder beginnt 1 mm außerhalb, damit er die Fläche sicher durchstößt
+        val lead = 1.0 // Werkzeug beginnt 1 mm außerhalb, damit es die Fläche sicher durchstößt
         val origin = onFace + n * lead
         val helper = if (kotlin.math.abs(n.z) < 0.9) Vec3(0.0, 0.0, 1.0) else Vec3(1.0, 0.0, 0.0)
-        val wp = Workplane(origin, n cross helper, n * -1.0)
-        val profile = dev.androidcad.brep.Profile(listOf(dev.androidcad.brep.ProfileSegment.Circle(0.0, 0.0, f.diameter / 2, faceTag(f.id, FaceRole.SIDE, 1))))
-        val length = (f.depth ?: THROUGH_ALL) + lead
-        return BrepShape.extrude(profile, length, bottomTag = faceTag(f.id, FaceRole.BOTTOM), topTag = faceTag(f.id, FaceRole.TOP))
-            .use { it.transform(wp.matrix3x4()) }
+
+        if (f.kind == HoleKind.SIMPLE) {
+            val wp = Workplane(origin, n cross helper, n * -1.0)
+            val profile = dev.androidcad.brep.Profile(listOf(dev.androidcad.brep.ProfileSegment.Circle(0.0, 0.0, f.diameter / 2, faceTag(f.id, FaceRole.SIDE, 1))))
+            val length = (f.depth ?: THROUGH_ALL) + lead
+            return BrepShape.extrude(profile, length, bottomTag = faceTag(f.id, FaceRole.BOTTOM), topTag = faceTag(f.id, FaceRole.TOP))
+                .use { it.transform(wp.matrix3x4()) }
+        }
+
+        val r1 = f.diameter / 2.0
+        val totalDepth = (f.depth ?: THROUGH_ALL) + lead
+
+        val profileSegments = when (f.kind) {
+            HoleKind.COUNTERBORE -> {
+                val r2 = f.counterboreDiameter!! / 2.0
+                val tCb = f.counterboreDepth!!
+                listOf(
+                    dev.androidcad.brep.ProfileSegment.Line(0.0, 0.0, r2, 0.0, faceTag(f.id, FaceRole.BOTTOM)),
+                    dev.androidcad.brep.ProfileSegment.Line(r2, 0.0, r2, lead + tCb, faceTag(f.id, FaceRole.COUNTERBORE, 1)),
+                    dev.androidcad.brep.ProfileSegment.Line(r2, lead + tCb, r1, lead + tCb, faceTag(f.id, FaceRole.COUNTERBORE_BOTTOM, 1)),
+                    dev.androidcad.brep.ProfileSegment.Line(r1, lead + tCb, r1, totalDepth, faceTag(f.id, FaceRole.SIDE, 1)),
+                    dev.androidcad.brep.ProfileSegment.Line(r1, totalDepth, 0.0, totalDepth, faceTag(f.id, FaceRole.TOP)),
+                    dev.androidcad.brep.ProfileSegment.Line(0.0, totalDepth, 0.0, 0.0, 0L),
+                )
+            }
+            HoleKind.COUNTERSINK -> {
+                val r2 = f.countersinkDiameter!! / 2.0
+                val halfAngle = Math.toRadians(f.countersinkAngle / 2.0)
+                val tanHalf = kotlin.math.tan(halfAngle)
+                val hCs = (r2 - r1) / tanHalf
+                val x0 = r2 + lead * tanHalf
+                listOf(
+                    dev.androidcad.brep.ProfileSegment.Line(0.0, 0.0, x0, 0.0, faceTag(f.id, FaceRole.BOTTOM)),
+                    dev.androidcad.brep.ProfileSegment.Line(x0, 0.0, r1, lead + hCs, faceTag(f.id, FaceRole.COUNTERSINK, 1)),
+                    dev.androidcad.brep.ProfileSegment.Line(r1, lead + hCs, r1, totalDepth, faceTag(f.id, FaceRole.SIDE, 1)),
+                    dev.androidcad.brep.ProfileSegment.Line(r1, totalDepth, 0.0, totalDepth, faceTag(f.id, FaceRole.TOP)),
+                    dev.androidcad.brep.ProfileSegment.Line(0.0, totalDepth, 0.0, 0.0, 0L),
+                )
+            }
+            HoleKind.SIMPLE -> error("Unreachable")
+        }
+
+        val u = (n cross helper).normalized()
+        val depthDir = n * -1.0
+        val zDir = n cross u
+        val matrix = doubleArrayOf(
+            u.x, depthDir.x, zDir.x, origin.x,
+            u.y, depthDir.y, zDir.y, origin.y,
+            u.z, depthDir.z, zDir.z, origin.z,
+        )
+
+        return BrepShape.revolve(dev.androidcad.brep.Profile(profileSegments), 0.0, 0.0, 0.0, 1.0, 360.0)
+            .use { it.transform(matrix) }
     }
 
     /** Position aus den zwei Kantenabständen: findet die geraden Referenzkanten in der Ebene der Fläche und löst nach dem Punkt auf. */

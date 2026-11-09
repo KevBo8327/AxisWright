@@ -9,9 +9,18 @@ public class FaceHit(public val faceId: Int, public val point: FloatArray, publi
 public object FacePicker {
     /**
      * @param triangleFace Flächen-ID je Dreieck (Länge = `triangles.size / 3`)
+     * @param clipPlane optionale Schnittebene: weggeschnittene Flächenteile werden ignoriert
      * @return die vorderste getroffene Fläche oder `null`, wenn der Tipp ins Leere geht
      */
-    public fun pick(camera: OrthoCamera, tapX: Float, tapY: Float, positions: FloatArray, triangles: IntArray, triangleFace: IntArray): FaceHit? {
+    public fun pick(
+        camera: OrthoCamera,
+        tapX: Float,
+        tapY: Float,
+        positions: FloatArray,
+        triangles: IntArray,
+        triangleFace: IntArray,
+        clipPlane: ClipPlane? = null,
+    ): FaceHit? {
         val ray = camera.ray(tapX, tapY)
         val ox = ray.origin[0]; val oy = ray.origin[1]; val oz = ray.origin[2]
         val dx = ray.direction[0]; val dy = ray.direction[1]; val dz = ray.direction[2]
@@ -32,7 +41,16 @@ public object FacePicker {
             val v = (dx * qx + dy * qy + dz * qz) * inv
             if (v < 0f || u + v > 1f) continue
             val dist = (e2x * qx + e2y * qy + e2z * qz) * inv
-            if (dist >= 0f && dist < bestT) { bestT = dist; bestTri = t / 3 }
+            if (dist >= 0f && dist < bestT) {
+                if (clipPlane != null) {
+                    val hx = ox + dx * dist
+                    val hy = oy + dy * dist
+                    val hz = oz + dz * dist
+                    if (clipPlane.isClipped(hx, hy, hz)) continue
+                }
+                bestT = dist
+                bestTri = t / 3
+            }
         }
         if (bestTri < 0) return null
         return FaceHit(triangleFace[bestTri], floatArrayOf(ox + dx * bestT, oy + dy * bestT, oz + dz * bestT), bestT)
