@@ -1,5 +1,6 @@
 package dev.androidcad.model
 
+import dev.androidcad.text.Msg
 import org.junit.Test
 import kotlin.math.abs
 import kotlin.test.assertEquals
@@ -92,6 +93,39 @@ class UntilFaceExtrudeTest {
 
         doc.build().use { res ->
             assertEquals(ModelText.NO_BODY, res.errors[f.id]?.key)
+        }
+    }
+
+    @Test
+    fun conflictingOptionsAreRejectedInBuild() {
+        val doc = Document()
+        val sk1 = doc.addSketch("Basis")
+        sk1.sketch.addRectangle(0.0, 0.0, 40.0, 30.0)
+        val box = doc.addExtrude("BasisBlock", sk1, 20.0)
+
+        val sk2 = doc.addSketch("ZweiteSkizze", Workplane.XY.offset(50.0))
+        sk2.sketch.addRectangle(0.0, 0.0, 10.0, 10.0)
+        val topFace = FaceRef(box.id, FaceRole.TOP)
+        val f = doc.addExtrude("Extrude", sk2, 1.0, untilFace = topFace)
+        doc.update(f.copy(symmetric = true))
+
+        doc.build().use { res ->
+            val reason = res.errors[f.id]?.args?.getOrNull(1) as? Msg
+            assertEquals(ModelText.EXTRUDE_UNTIL_FACE_CONFLICT, reason?.key)
+        }
+    }
+
+    @Test
+    fun nonPositiveDistance2IsRejectedInBuild() {
+        val doc = Document()
+        val sk = doc.addSketch("Basis")
+        sk.sketch.addRectangle(0.0, 0.0, 40.0, 30.0)
+        val f = doc.addExtrude("BasisBlock", sk, 20.0, distance2 = 5.0)
+        doc.update(f.copy(distance2 = 0.0))
+
+        doc.build().use { res ->
+            val reason = res.errors[f.id]?.args?.getOrNull(1) as? Msg
+            assertEquals(ModelText.LENGTH_NOT_POSITIVE, reason?.key)
         }
     }
 }

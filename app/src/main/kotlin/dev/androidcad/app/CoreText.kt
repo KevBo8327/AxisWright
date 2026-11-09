@@ -245,6 +245,7 @@ private fun ModelText.res(): Int = when (this) {
     ModelText.FACE_GONE -> R.string.core_model_face_gone
     ModelText.FACE_NOT_PLANAR -> R.string.core_model_face_not_planar
     ModelText.FACE_NOT_PARALLEL -> R.string.core_model_face_not_parallel
+    ModelText.EXTRUDE_UNTIL_FACE_CONFLICT -> R.string.core_model_extrude_until_face_conflict
     ModelText.HOLE_REF_EDGE_GONE -> R.string.core_model_hole_ref_edge_gone
     ModelText.HOLE_REF_EDGE_NOT_IN_FACE -> R.string.core_model_hole_ref_edge_not_in_face
     ModelText.HOLE_REF_EDGE_NOT_STRAIGHT -> R.string.core_model_hole_ref_edge_not_straight

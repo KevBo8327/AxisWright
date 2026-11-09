@@ -1505,7 +1505,7 @@ class WorkspaceState(
                 return
             }
             extrudeFacePick = false
-            updateExtrusion(ex.copy(untilFace = ref, throughAll = false))
+            updateExtrusion(ex.copy(untilFace = ref, throughAll = false, symmetric = false, distance2 = null))
             return
         }
         if (faceSketchPick) {

@@ -150,6 +150,7 @@ class Document {
                     require(before.containsAll(f.references)) { "Ebene „${f.name}“ verweist auf ein Feature, das nicht davor liegt" }
                     DatumPlane.validate(f.def)?.let { throw IllegalArgumentException("Ebene „${f.name}“: $it") }
                 }
+                is ExtrudeFeature -> require(before.containsAll(f.references)) { "„${f.name}“ verweist auf ein Feature, das nicht davor liegt" }
                 is FilletFeature -> {
                     require(f.edges.isNotEmpty()) { "„${f.name}“ hat keine Kanten" }
                     require(before.containsAll(f.references)) { "„${f.name}“ verweist auf ein Feature, das nicht davor liegt" }
@@ -216,6 +217,15 @@ class Document {
         untilFace: FaceRef? = null,
     ): ExtrudeFeature {
         require(items.any { it === sketch }) { "Skizze gehört nicht zu diesem Dokument" }
+        if (distance2 != null) {
+            require(distance2 > 0.0 && distance2.isFinite()) { "Länge der zweiten Seite muss größer als 0 sein" }
+        }
+        if (untilFace != null) {
+            require(items.any { f -> f.id == untilFace.feature }) { "Zielfläche verweist auf ein unbekanntes Feature" }
+            require(!symmetric && !throughAll && distance2 == null) {
+                "„Bis Fläche“ kann nicht mit symmetrisch, durch alles oder zwei Seiten kombiniert werden"
+            }
+        }
         return ExtrudeFeature(FeatureId(nextId++), name, sketch.id, distance, op, regionPoints, symmetric, throughAll, distance2, untilFace).also { items += it }
     }
 
@@ -399,7 +409,7 @@ class Document {
         do {
             val before = gone.size
             for (f in items) when (f) {
-                is ExtrudeFeature -> if (f.sketch in gone) gone += f.id
+                is ExtrudeFeature -> if (f.references.any { it in gone }) gone += f.id
                 is RevolveFeature -> if (f.sketch in gone) gone += f.id
                 is FilletFeature -> if (f.references.any { it in gone }) gone += f.id
                 is HoleFeature -> if (f.references.any { it in gone }) gone += f.id
@@ -671,6 +681,12 @@ class Document {
 
     /** Alle ausgewählten Flächen der Skizze, extrudiert und in den Raum gestellt, vereinigt zu einem Werkzeugkörper. */
     private fun extrudeTool(f: ExtrudeFeature, planes: Map<FeatureId, Workplane>, body: BrepShape?): BrepShape {
+        if (f.untilFace != null && (f.symmetric || f.throughAll || f.distance2 != null)) {
+            throw ModelException(Msg(ModelText.EXTRUDE_UNTIL_FACE_CONFLICT))
+        }
+        if (f.distance2 != null && !(f.distance2 > 0.0 && f.distance2.isFinite())) {
+            throw ModelException(Msg(ModelText.LENGTH_NOT_POSITIVE))
+        }
         val plane = planes[f.sketch] ?: sketch(f.sketch).plane
         val distance = when {
             f.throughAll -> throughAllDistance(f, plane, body)

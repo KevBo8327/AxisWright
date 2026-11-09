@@ -88,12 +88,15 @@ object DocumentCodec {
         }
         is ExtrudeFeature -> linkedMapOf(
             "kind" to "extrude", "id" to f.id.value, "name" to f.name, "sketch" to f.sketch.value,
-            "distance" to f.distance, "op" to f.op.name, "symmetric" to f.symmetric,
+            "distance" to f.distance, "op" to f.op.name, "symmetric" to (if (f.untilFace != null) false else f.symmetric),
             "regionPoints" to f.regionPoints.map { listOf(it.x, it.y) },
         ).also {
-            if (f.throughAll) it["throughAll"] = true
-            if (f.distance2 != null) it["distance2"] = f.distance2
-            if (f.untilFace != null) it["untilFace"] = encodeFace(f.untilFace)
+            if (f.untilFace != null) {
+                it["untilFace"] = encodeFace(f.untilFace)
+            } else {
+                if (f.throughAll) it["throughAll"] = true
+                if (f.distance2 != null) it["distance2"] = f.distance2
+            }
         }
         is RevolveFeature -> linkedMapOf(
             "kind" to "revolve", "id" to f.id.value, "name" to f.name, "sketch" to f.sketch.value,
@@ -194,9 +197,14 @@ object DocumentCodec {
             val d2 = o["distance2"]?.let { (it as? Number)?.toDouble() ?: throw JsonException("Extrusion: distance2 ungültig") }
             if (d2 != null && (!d2.isFinite() || d2 <= 0.0)) throw JsonException("Extrusion: distance2 ungültig")
             val untilFace = o["untilFace"]?.let(::decodeFace)
+            val symmetric = o.bool("symmetric", false)
+            val throughAll = o.bool("throughAll", false)
+            if (untilFace != null && (symmetric || throughAll || d2 != null)) {
+                throw JsonException("Extrusion: Bis Fläche kann nicht mit symmetrisch, durch alles oder zwei Seiten kombiniert werden")
+            }
             ExtrudeFeature(
                 FeatureId(o.int("id")), o.string("name"), FeatureId(o.int("sketch")), d, op,
-                regionPoints(o), o.bool("symmetric", false), o.bool("throughAll", false),
+                regionPoints(o), symmetric, throughAll,
                 distance2 = d2, untilFace = untilFace,
             )
         }

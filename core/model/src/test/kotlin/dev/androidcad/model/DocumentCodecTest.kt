@@ -61,7 +61,7 @@ class DocumentCodecTest {
         val sk2 = doc.addSketch("Zweite")
         sk2.sketch.addCircle(10.0, 10.0, 5.0)
         val faceRef = FaceRef(ex1.id, FaceRole.TOP)
-        val ex2 = doc.addExtrude("BisFlaeche", sk2, 10.0, op = BodyOp.INTERSECT, untilFace = faceRef, distance2 = 3.0)
+        val ex2 = doc.addExtrude("BisFlaeche", sk2, 10.0, op = BodyOp.INTERSECT, untilFace = faceRef)
         val rev = doc.addRevolve("DrehSchnitt", sk2, RevolveAxis.SketchY, 180.0, op = BodyOp.INTERSECT)
         doc.setParameters(listOf(Parameter("d2", "7.5")))
         doc.bind(ValueRef.FeatureValue(ex1.id, 1), "d2")
@@ -74,7 +74,7 @@ class DocumentCodecTest {
         val decodedEx2 = back.feature(ex2.id) as ExtrudeFeature
         assertEquals(BodyOp.INTERSECT, decodedEx2.op)
         assertEquals(faceRef, decodedEx2.untilFace)
-        assertEquals(3.0, decodedEx2.distance2)
+        assertEquals(null, decodedEx2.distance2)
         val decodedRev = back.feature(rev.id) as RevolveFeature
         assertEquals(BodyOp.INTERSECT, decodedRev.op)
         assertEquals("d2", back.bindings[ValueRef.FeatureValue(ex1.id, 1)])
@@ -135,6 +135,12 @@ class DocumentCodecTest {
             "unbekannter Feature-Typ" to { m -> m["features"] = features(m).also { f -> f[2]["kind"] = "loft" } },
             "Nullvektor als Normale" to { m -> m["features"] = features(m).also { f -> f[0]["plane"] = mapOf("origin" to listOf(0, 0, 0), "xDir" to listOf(1, 0, 0), "normal" to listOf(0, 0, 0)) } },
             "Auswahlpunkt falsch" to { m -> m["features"] = features(m).also { f -> f[2]["regionPoints"] = listOf(listOf(1)) } },
+            "Extrusion distance2 null" to { m -> m["features"] = features(m).also { f -> f[2]["distance2"] = 0.0 } },
+            "Extrusion distance2 negativ" to { m -> m["features"] = features(m).also { f -> f[2]["distance2"] = -5.0 } },
+            "Extrusion untilFace mit symmetric" to { m -> m["features"] = features(m).also { f -> f[2]["untilFace"] = listOf(2, 1, 0); f[2]["symmetric"] = true } },
+            "Extrusion untilFace mit distance2" to { m -> m["features"] = features(m).also { f -> f[2]["untilFace"] = listOf(2, 1, 0); f[2]["distance2"] = 10.0 } },
+            "Extrusion untilFace mit throughAll" to { m -> m["features"] = features(m).also { f -> f[2]["untilFace"] = listOf(2, 1, 0); f[2]["throughAll"] = true } },
+            "Extrusion untilFace nicht davor" to { m -> m["features"] = features(m).also { f -> f[2]["untilFace"] = listOf(99, 1, 0) } },
         )
         for ((name, mutate) in cases) assertFailsWith<JsonException>("sollte scheitern: $name") { DocumentCodec.decode(mutated(mutate)) }
         assertFailsWith<JsonException> { DocumentCodec.decode("kein json") }

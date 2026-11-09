@@ -458,6 +458,7 @@ fun FeatureControls(state: WorkspaceState) {
                     selected = isToFace,
                     onClick = {
                         if (!isToFace) {
+                            state.updateExtrusion(ex.copy(throughAll = false, untilFace = null, distance2 = null, symmetric = false))
                             state.startExtrudeFacePick()
                         }
                     },
@@ -491,9 +492,7 @@ fun FeatureControls(state: WorkspaceState) {
                     state.updateExtrusion(ex.copy(symmetric = it, distance2 = if (it) null else ex.distance2))
                 }
                 SwitchRow(stringResource(R.string.feat_reversed), reversed) { state.updateExtrusion(ex.copy(distance = if (it) -length else length)) }
-            }
 
-            if (!isThroughAll) {
                 val hasSecondSide = ex.distance2 != null
                 SwitchRow(stringResource(R.string.feat_extrude_second_side), hasSecondSide) {
                     state.updateExtrusion(ex.copy(distance2 = if (it) (ex.distance2 ?: 10.0) else null, symmetric = if (it) false else ex.symmetric))

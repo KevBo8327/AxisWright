@@ -120,7 +120,14 @@ data class ExtrudeFeature(
     val throughAll: Boolean = false,
     val distance2: Double? = null,
     val untilFace: FaceRef? = null,
-) : Feature
+) : Feature {
+    /** Features, die diese Extrusion referenziert (Skizze und optionale Zielfläche). */
+    val references: Set<FeatureId>
+        get() = buildSet {
+            add(sketch)
+            untilFace?.let { add(it.feature) }
+        }
+}
 
 /** Drehachse eines [RevolveFeature], in der Ebene seiner Skizze. */
 sealed interface RevolveAxis {

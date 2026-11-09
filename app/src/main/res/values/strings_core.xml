@@ -151,6 +151,7 @@
     <string name="core_model_face_gone">the selected face no longer exists (changed or removed)</string>
     <string name="core_model_face_not_planar">the selected face is not planar</string>
     <string name="core_model_face_not_parallel">target face must be parallel to the sketch plane</string>
+    <string name="core_model_extrude_until_face_conflict">“Up to face” cannot be combined with symmetric, through all, or two sides</string>
     <string name="core_model_hole_ref_edge_gone">a reference edge of the hole no longer exists (face changed or removed)</string>
     <string name="core_model_hole_ref_edge_not_in_face">a reference edge is not in the selected face</string>
     <string name="core_model_hole_ref_edge_not_straight">reference edges must be straight</string>

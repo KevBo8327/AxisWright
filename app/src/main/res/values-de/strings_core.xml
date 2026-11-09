@@ -151,6 +151,7 @@
     <string name="core_model_face_gone">die gewählte Fläche existiert nicht mehr (verändert oder entfernt)</string>
     <string name="core_model_face_not_planar">die gewählte Fläche ist nicht eben</string>
     <string name="core_model_face_not_parallel">Zielfläche muss parallel zur Skizzenebene sein</string>
+    <string name="core_model_extrude_until_face_conflict">„Bis Fläche“ kann nicht mit symmetrisch, durch alles oder zwei Seiten kombiniert werden</string>
     <string name="core_model_hole_ref_edge_gone">eine Referenzkante der Bohrung existiert nicht mehr (Fläche verändert oder entfernt)</string>
     <string name="core_model_hole_ref_edge_not_in_face">eine Referenzkante liegt nicht in der gewählten Fläche</string>
     <string name="core_model_hole_ref_edge_not_straight">Referenzkanten müssen gerade sein</string>
