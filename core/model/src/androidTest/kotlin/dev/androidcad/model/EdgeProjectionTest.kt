@@ -121,7 +121,7 @@ class EdgeProjectionTest {
         model.document.addExtrude("Zapfen", model.document.sketch(sk.id), 5.0)
         model.build().use { r ->
             val msg = assertNotNull(r.errors[sk.id])
-            assertTrue("projizierte" in msg, msg)
+            assertEquals(ModelText.PROJECTIONS_MISSING, msg.key)
             near(PlateParams().expectedVolume + Math.PI * 36 * 5.0, r.body!!.volume(), 1.0)
         }
     }

@@ -40,6 +40,14 @@
     <string name="feat_hole_diameter">Durchmesser</string>
     <string name="feat_hole_through">Durchgehend</string>
     <string name="feat_hole_depth_value">Tiefe %1$s mm</string>
+    <string name="feat_hole_kind_simple">Einfach</string>
+    <string name="feat_hole_kind_counterbore">Senkung</string>
+    <string name="feat_hole_kind_countersink">Kegelsenkung</string>
+    <string name="feat_hole_counterbore_diameter">Senkdurchmesser</string>
+    <string name="feat_hole_counterbore_depth">Senktiefe</string>
+    <string name="feat_hole_countersink_diameter">Senkdurchmesser</string>
+    <string name="feat_hole_countersink_angle">Senkwinkel (°)</string>
+    <string name="feat_hole_standard">Normgröße</string>
     <string name="feat_value_mm">%1$s mm</string>
     <string name="feat_anchor_edge">Kante %1$d (mm)</string>
 

@@ -260,6 +260,11 @@ private fun ModelText.res(): Int = when (this) {
     ModelText.SIZE_NOT_POSITIVE -> R.string.core_model_size_not_positive
     ModelText.DIAMETER_NOT_POSITIVE -> R.string.core_model_diameter_not_positive
     ModelText.DEPTH_NOT_POSITIVE -> R.string.core_model_depth_not_positive
+    ModelText.HOLE_SINK_DIAMETER_NOT_POSITIVE -> R.string.core_model_hole_sink_diameter_not_positive
+    ModelText.HOLE_SINK_DEPTH_NOT_POSITIVE -> R.string.core_model_hole_sink_depth_not_positive
+    ModelText.HOLE_SINK_DIAMETER_TOO_SMALL -> R.string.core_model_hole_sink_diameter_too_small
+    ModelText.HOLE_SINK_DEPTH_TOO_LARGE -> R.string.core_model_hole_sink_depth_too_large
+    ModelText.HOLE_SINK_ANGLE_RANGE -> R.string.core_model_hole_sink_angle_range
     ModelText.PARAMETER_NAME_INVALID -> R.string.core_model_parameter_name_invalid
     ModelText.PARAMETER_NAMES_NOT_UNIQUE -> R.string.core_model_parameter_names_not_unique
     ModelText.PARAMETER_ERROR -> R.string.core_model_parameter_error

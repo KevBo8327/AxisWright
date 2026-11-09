@@ -38,6 +38,7 @@ import dev.androidcad.model.FacePlane
 import dev.androidcad.model.Workplane
 import dev.androidcad.model.HolePlacement
 import dev.androidcad.model.HoleFeature
+import dev.androidcad.model.HoleKind
 import dev.androidcad.model.Vec3
 import dev.androidcad.sketch.SketchOps
 import dev.androidcad.brep.PlanarFace
@@ -248,6 +249,11 @@ class WorkspaceState(
     var holeDiameter by mutableStateOf(6.0)
     var holeDepth by mutableStateOf(10.0)
     var holeThrough by mutableStateOf(true)
+    var holeKind by mutableStateOf(HoleKind.SIMPLE)
+    var holeCounterboreDiameter by mutableStateOf(11.0)
+    var holeCounterboreDepth by mutableStateOf(6.4)
+    var holeCountersinkDiameter by mutableStateOf(13.7)
+    var holeCountersinkAngle by mutableStateOf(90.0)
     /** Die gewählte Arbeitsebene (`null`, wenn ein anderes Feature gewählt ist). */
     var datum by mutableStateOf<PlaneFeature?>(null)
         private set
@@ -1496,15 +1502,39 @@ class WorkspaceState(
         val mode = holeMode ?: return
         val face = mode.face ?: return
         val p = mode.point ?: return
-        val f = doc.addHole(nextName(R.string.ws_name_hole), face, p[0], p[1], p[2], holeDiameter, if (holeThrough) null else holeDepth, mode.anchors)
+        val f = doc.addHole(
+            nextName(R.string.ws_name_hole), face, p[0], p[1], p[2], holeDiameter,
+            if (holeThrough) null else holeDepth, mode.anchors,
+            holeKind,
+            if (holeKind == HoleKind.COUNTERBORE) holeCounterboreDiameter else null,
+            if (holeKind == HoleKind.COUNTERBORE) holeCounterboreDepth else null,
+            if (holeKind == HoleKind.COUNTERSINK) holeCountersinkDiameter else null,
+            holeCountersinkAngle,
+        )
         select(f.id) // beendet den Bohrungsmodus
         markDirty()
         scheduleBuild(0)
     }
 
-    fun updateHole(diameter: Double, depth: Double?) {
+    fun updateHole(
+        diameter: Double = hole?.diameter ?: holeDiameter,
+        depth: Double? = hole?.depth,
+        kind: HoleKind = hole?.kind ?: holeKind,
+        counterboreDiameter: Double? = hole?.counterboreDiameter ?: holeCounterboreDiameter,
+        counterboreDepth: Double? = hole?.counterboreDepth ?: holeCounterboreDepth,
+        countersinkDiameter: Double? = hole?.countersinkDiameter ?: holeCountersinkDiameter,
+        countersinkAngle: Double = hole?.countersinkAngle ?: holeCountersinkAngle,
+    ) {
         val f = hole ?: return
-        doc.update(f.copy(diameter = diameter, depth = depth))
+        doc.update(f.copy(
+            diameter = diameter,
+            depth = depth,
+            kind = kind,
+            counterboreDiameter = if (kind == HoleKind.COUNTERBORE) counterboreDiameter else null,
+            counterboreDepth = if (kind == HoleKind.COUNTERBORE) counterboreDepth else null,
+            countersinkDiameter = if (kind == HoleKind.COUNTERSINK) countersinkDiameter else null,
+            countersinkAngle = if (kind == HoleKind.COUNTERSINK) countersinkAngle else 90.0,
+        ))
         refresh()
         markDirty()
         scheduleBuild()

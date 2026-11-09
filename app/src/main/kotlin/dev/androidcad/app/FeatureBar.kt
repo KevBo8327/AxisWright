@@ -67,6 +67,10 @@ import dev.androidcad.model.ShellFeature
 import dev.androidcad.model.ValueRef
 import dev.androidcad.model.FilletFeature
 import dev.androidcad.model.HoleFeature
+import dev.androidcad.model.HoleKind
+import dev.androidcad.model.HoleStandardValues
+import dev.androidcad.model.HoleStandards
+import dev.androidcad.model.FeatureId
 import dev.androidcad.model.MirrorBodyFeature
 import dev.androidcad.model.PatternFeature
 import dev.androidcad.model.PatternGeometry
@@ -349,16 +353,79 @@ fun FeatureControls(state: WorkspaceState) {
                 style = MaterialTheme.typography.labelLarge,
             )
             AnchorFields(holeMode.anchors, state::setAnchorDistance)
-            HoleSizeControls(state, state.holeDiameter, state.holeDepth, state.holeThrough, state::changeHoleDiameter, { state.holeDepth = it }, { state.holeThrough = it })
+            HoleControls(
+                state = state,
+                kind = state.holeKind,
+                diameter = state.holeDiameter,
+                depth = state.holeDepth,
+                through = state.holeThrough,
+                counterboreDiameter = state.holeCounterboreDiameter,
+                counterboreDepth = state.holeCounterboreDepth,
+                countersinkDiameter = state.holeCountersinkDiameter,
+                countersinkAngle = state.holeCountersinkAngle,
+                featureId = null,
+                onKind = { state.holeKind = it },
+                onDiameter = state::changeHoleDiameter,
+                onDepth = { state.holeDepth = it },
+                onThrough = { state.holeThrough = it },
+                onCounterboreDiameter = { state.holeCounterboreDiameter = it },
+                onCounterboreDepth = { state.holeCounterboreDepth = it },
+                onCountersinkDiameter = { state.holeCountersinkDiameter = it },
+                onCountersinkAngle = { state.holeCountersinkAngle = it },
+                onApplyNorm = { norm ->
+                    state.changeHoleDiameter(norm.diameter)
+                    state.holeCounterboreDiameter = norm.counterboreDiameter
+                    state.holeCounterboreDepth = norm.counterboreDepth
+                    state.holeCountersinkDiameter = norm.countersinkDiameter
+                    state.holeCountersinkAngle = norm.countersinkAngle
+                },
+            )
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedButton(onClick = state::cancelHoleMode) { Text(stringResource(R.string.common_cancel)) }
                 Button(onClick = state::applyHoleMode, enabled = holeMode.face != null, modifier = Modifier.weight(1f)) { Text(stringResource(R.string.common_apply)) }
             }
         } else if (hole != null && mode == null) {
             AnchorFields(hole.anchors, state::updateHoleAnchor)
-            HoleSizeControls(
-                state, hole.diameter, hole.depth ?: 10.0, hole.depth == null,
-                { state.updateHole(it, hole.depth) }, { state.updateHole(hole.diameter, it) }, { state.updateHole(hole.diameter, if (it) null else (hole.depth ?: 10.0)) },
+            val h = hole
+            val defaultCbDia = h.counterboreDiameter ?: HoleStandards.forSize(dev.androidcad.model.HoleStandardSize.M6).counterboreDiameter
+            val defaultCbDepth = h.counterboreDepth ?: HoleStandards.forSize(dev.androidcad.model.HoleStandardSize.M6).counterboreDepth
+            val defaultCsDia = h.countersinkDiameter ?: HoleStandards.forSize(dev.androidcad.model.HoleStandardSize.M6).countersinkDiameter
+            HoleControls(
+                state = state,
+                kind = h.kind,
+                diameter = h.diameter,
+                depth = h.depth ?: 10.0,
+                through = h.depth == null,
+                counterboreDiameter = defaultCbDia,
+                counterboreDepth = defaultCbDepth,
+                countersinkDiameter = defaultCsDia,
+                countersinkAngle = h.countersinkAngle,
+                featureId = h.id,
+                onKind = { newKind ->
+                    state.updateHole(
+                        kind = newKind,
+                        counterboreDiameter = if (newKind == HoleKind.COUNTERBORE) defaultCbDia else null,
+                        counterboreDepth = if (newKind == HoleKind.COUNTERBORE) defaultCbDepth else null,
+                        countersinkDiameter = if (newKind == HoleKind.COUNTERSINK) defaultCsDia else null,
+                        countersinkAngle = if (newKind == HoleKind.COUNTERSINK) h.countersinkAngle else 90.0,
+                    )
+                },
+                onDiameter = { state.updateHole(diameter = it) },
+                onDepth = { state.updateHole(depth = it) },
+                onThrough = { isThrough -> state.updateHole(depth = if (isThrough) null else (h.depth ?: 10.0)) },
+                onCounterboreDiameter = { state.updateHole(counterboreDiameter = it) },
+                onCounterboreDepth = { state.updateHole(counterboreDepth = it) },
+                onCountersinkDiameter = { state.updateHole(countersinkDiameter = it) },
+                onCountersinkAngle = { state.updateHole(countersinkAngle = it) },
+                onApplyNorm = { norm ->
+                    state.updateHole(
+                        diameter = norm.diameter,
+                        counterboreDiameter = norm.counterboreDiameter,
+                        counterboreDepth = norm.counterboreDepth,
+                        countersinkDiameter = norm.countersinkDiameter,
+                        countersinkAngle = norm.countersinkAngle,
+                    )
+                },
             )
             Text(
                 if (hole.anchors != null) stringResource(R.string.feat_hole_anchored) else stringResource(R.string.feat_hole_fixed),
@@ -789,19 +856,102 @@ private fun AnchorFields(anchors: Pair<dev.androidcad.model.EdgeDistance, dev.an
     }
 }
 
-/** Durchmesser, Tiefe und „Durchgehend“ einer Bohrung (für den Bohrungsmodus und das gewählte Bohrungs-Feature). */
+/** Einstellungen einer Bohrung: Art (Einfach, Senkung, Kegelsenkung), Normgröße (M3–M10) und Felder je Art. */
 @Composable
-private fun HoleSizeControls(
-    state: WorkspaceState, diameter: Double, depth: Double, through: Boolean,
-    onDiameter: (Double) -> Unit, onDepth: (Double) -> Unit, onThrough: (Boolean) -> Unit,
+private fun HoleControls(
+    state: WorkspaceState,
+    kind: HoleKind,
+    diameter: Double,
+    depth: Double,
+    through: Boolean,
+    counterboreDiameter: Double,
+    counterboreDepth: Double,
+    countersinkDiameter: Double,
+    countersinkAngle: Double,
+    featureId: FeatureId?,
+    onKind: (HoleKind) -> Unit,
+    onDiameter: (Double) -> Unit,
+    onDepth: (Double) -> Unit,
+    onThrough: (Boolean) -> Unit,
+    onCounterboreDiameter: (Double) -> Unit,
+    onCounterboreDepth: (Double) -> Unit,
+    onCountersinkDiameter: (Double) -> Unit,
+    onCountersinkAngle: (Double) -> Unit,
+    onApplyNorm: (HoleStandardValues) -> Unit,
 ) {
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
-        Text("Ø ${stringResource(R.string.feat_hole_diameter)}", Modifier.weight(1f))
-        Text(stringResource(R.string.feat_value_mm, formatValue(diameter)), color = MaterialTheme.colorScheme.primary)
+    // 1. Art-Chips
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        FilterChip(
+            selected = kind == HoleKind.SIMPLE,
+            onClick = { onKind(HoleKind.SIMPLE) },
+            label = { Text(stringResource(R.string.feat_hole_kind_simple)) },
+        )
+        FilterChip(
+            selected = kind == HoleKind.COUNTERBORE,
+            onClick = { onKind(HoleKind.COUNTERBORE) },
+            label = { Text(stringResource(R.string.feat_hole_kind_counterbore)) },
+        )
+        FilterChip(
+            selected = kind == HoleKind.COUNTERSINK,
+            onClick = { onKind(HoleKind.COUNTERSINK) },
+            label = { Text(stringResource(R.string.feat_hole_kind_countersink)) },
+        )
     }
-    Slider(value = diameter.toFloat().coerceIn(1f, 40f), onValueChange = { onDiameter(Math.round(it * 2) / 2.0) }, valueRange = 1f..40f)
+
+    // 2. Normgröße-Auswahl (M3–M10)
+    val matchingNorm = HoleStandards.ENTRIES.firstOrNull { norm ->
+        kotlin.math.abs(norm.diameter - diameter) < 1e-3 && when (kind) {
+            HoleKind.SIMPLE -> true
+            HoleKind.COUNTERBORE -> kotlin.math.abs(norm.counterboreDiameter - counterboreDiameter) < 1e-3 && kotlin.math.abs(norm.counterboreDepth - counterboreDepth) < 1e-3
+            HoleKind.COUNTERSINK -> kotlin.math.abs(norm.countersinkDiameter - countersinkDiameter) < 1e-3 && kotlin.math.abs(norm.countersinkAngle - countersinkAngle) < 1e-3
+        }
+    }
+    Row(
+        Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(stringResource(R.string.feat_hole_standard), style = MaterialTheme.typography.labelMedium)
+        HoleStandards.ENTRIES.forEach { norm ->
+            FilterChip(
+                selected = matchingNorm?.size == norm.size,
+                onClick = { onApplyNorm(norm) },
+                label = { Text(norm.size.label) },
+            )
+        }
+    }
+
+    // 3. Bohrungsdurchmesser (Ø)
+    val bound = featureId != null && ExprField(state, stringResource(R.string.feat_hole_diameter), diameter, ValueRef.FeatureValue(featureId)) { v ->
+        if (v > 0) onDiameter(v)
+    }
+    if (!bound) {
+        if (featureId == null) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text("Ø ${stringResource(R.string.feat_hole_diameter)}", Modifier.weight(1f))
+                Text(stringResource(R.string.feat_value_mm, formatValue(diameter)), color = MaterialTheme.colorScheme.primary)
+            }
+        }
+        Slider(value = diameter.toFloat().coerceIn(1f, 40f), onValueChange = { onDiameter(Math.round(it * 2) / 2.0) }, valueRange = 1f..40f)
+    }
+
+    // 4. Spezifische Felder je Art
+    when (kind) {
+        HoleKind.SIMPLE -> {}
+        HoleKind.COUNTERBORE -> {
+            NumberField(stringResource(R.string.feat_hole_counterbore_diameter), counterboreDiameter) { if (it > 0) onCounterboreDiameter(it) }
+            NumberField(stringResource(R.string.feat_hole_counterbore_depth), counterboreDepth) { if (it > 0) onCounterboreDepth(it) }
+        }
+        HoleKind.COUNTERSINK -> {
+            NumberField(stringResource(R.string.feat_hole_countersink_diameter), countersinkDiameter) { if (it > 0) onCountersinkDiameter(it) }
+            NumberField(stringResource(R.string.feat_hole_countersink_angle), countersinkAngle) { if (it > 0 && it < 180) onCountersinkAngle(it) }
+        }
+    }
+
+    // 5. Durchgehend & Tiefe
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
-        Text(stringResource(R.string.feat_hole_through)); Switch(through, onThrough)
+        Text(stringResource(R.string.feat_hole_through))
+        Switch(through, onThrough)
         Box(Modifier.weight(1f))
         if (!through) Text(stringResource(R.string.feat_hole_depth_value, formatValue(depth)), color = MaterialTheme.colorScheme.primary)
     }
