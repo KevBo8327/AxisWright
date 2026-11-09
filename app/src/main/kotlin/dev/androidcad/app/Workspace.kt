@@ -266,6 +266,30 @@ class WorkspaceState(
     /** Fläche antippen, auf die eine neue Skizze gelegt werden soll (Auswahlmodus an/aus). */
     var faceSketchPick by mutableStateOf(false)
         private set
+    /** Zustand der Schnittansicht in der 3D-Ansicht (reine Darstellung). */
+    val sectionView = SectionViewState()
+
+    fun toggleSectionView() {
+        sectionView.enabled = !sectionView.enabled
+        if (!sectionView.enabled) {
+            sectionView.pickingFace = false
+        }
+    }
+
+    fun startSectionPickFace() {
+        if (output?.mesh == null) return
+        edgeMode = null
+        holeMode = null
+        faceSketchPick = false
+        shellMode = null
+        measureMode = null
+        planePick = false
+        sectionView.pickingFace = true
+    }
+
+    fun cancelSectionPickFace() {
+        sectionView.pickingFace = false
+    }
     /**
      * Mitte der Fläche, auf der die aktive Skizze liegt, für „Mittig auf Fläche“: projiziert bei Bedarf ihre Kanten (fester, mitwandernder
      * Umriss) und nimmt die Diagonale zwischen der Ecke links unten und rechts oben; bei einer runden Fläche den Mittelpunkt des größten
@@ -531,7 +555,7 @@ class WorkspaceState(
         val sel = selectedId
         doc = DocumentCodec.decode(text) // stammt aus encode(): bleibt lesbar
         handle.replace(SketchEditor(doc.features.filterIsInstance<SketchFeature>().first().sketch)) // alter Editor zeigt auf die alte Skizze
-        edgeMode = null; holeMode = null; shellMode = null; measureMode = null; planePick = false; faceSketchPick = false
+        edgeMode = null; holeMode = null; shellMode = null; measureMode = null; planePick = false; faceSketchPick = false; sectionView.pickingFace = false
         select(sel?.takeIf { id -> doc.features.any { it.id == id } } ?: doc.features.last().id)
         canUndo = history.canUndo; canRedo = history.canRedo
         markDirty(record = false)
@@ -1440,11 +1464,24 @@ class WorkspaceState(
         scheduleBuild()
     }
 
-    /** Verarbeitet einen Tipp im 3D-Bild in den Flächenmodi (Bohrung, Skizze/Ebene auf Fläche, Schale). */
+    /** Verarbeitet einen Tipp im 3D-Bild in den Flächenmodi (Bohrung, Skizze/Ebene auf Fläche, Schale, Schnittebene). */
     fun pickFace(hit: FaceHit?) {
         if (measureMode != null) { hit?.let { addMeasure(BrepShape.Part.Face(it.faceId)) }; return }
-        if ((holeMode == null && !faceSketchPick && !planePick && shellMode == null) || hit == null) return
+        if ((holeMode == null && !faceSketchPick && !planePick && shellMode == null && !sectionView.pickingFace) || hit == null) return
         val out = output ?: return
+        if (sectionView.pickingFace) {
+            val plane = out.facePlanes.getOrNull(hit.faceId - 1)
+            if (plane == null) {
+                notice = UiText.Res(R.string.ws_notice_planar_only)
+                return
+            }
+            sectionView.customPlaneNormal = plane.normal
+            sectionView.customPlaneOrigin = plane.origin
+            sectionView.planeType = SectionPlaneType.FACE
+            sectionView.offset = 0.0
+            sectionView.pickingFace = false
+            return
+        }
         val ref = out.faceRefs.getOrNull(hit.faceId - 1)
         shellMode?.let { mode ->
             // Öffnungen dürfen auch gekrümmt sein; erneut tippen hebt die Wahl auf

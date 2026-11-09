@@ -111,6 +111,9 @@ internal fun ModelScreen(hub: ProjectHub) {
                                 ErrorBanner(state)
                                 Box(Modifier.weight(1f).fillMaxWidth().padding(8.dp)) {
                                     ViewMenu(state, Modifier.align(Alignment.TopEnd))
+                                    if (state.sectionView.enabled) {
+                                        SectionViewCard(state, Modifier.align(Alignment.TopStart).width(280.dp))
+                                    }
                                     // unten; das Achsenkreuz sitzt darüber
                                     Timeline(state, Modifier.align(Alignment.BottomStart))
                                 }
@@ -139,6 +142,11 @@ internal fun ModelScreen(hub: ProjectHub) {
                             Timeline(state, Modifier.align(Alignment.BottomStart).padding(start = 76.dp, end = cardSpace + 140.dp))
                             // Karte über die ganze Höhe; Zeitleiste und Ansicht-Menü liegen links davon
                             if (state.panelVisible) SettingsCard(state, Modifier.align(Alignment.TopEnd).width(CARD_WIDTH).heightIn(max = areaHeight - 16.dp))
+                            if (state.sectionView.enabled) {
+                                val align = if (state.panelVisible) Alignment.TopStart else Alignment.TopEnd
+                                val padStart = if (state.panelVisible) 76.dp else 0.dp
+                                SectionViewCard(state, Modifier.align(align).padding(start = padStart).width(280.dp))
+                            }
                             DismissLayer(openGroup != null) { openGroup = null }
                             // zuletzt: die aufgeklappte Werkzeugleiste liegt über allen Karten
                             GroupBar(toolGroups(state) { newSketch = true }, vertical = true, openGroup, { openGroup = it }, Modifier.align(Alignment.TopStart))
@@ -395,7 +403,7 @@ private fun SettingsCard(state: WorkspaceState, modifier: Modifier) {
  * Inhalt. Mit [onConfirm] (Bearbeiten) statt ✕ eine Fußzeile „✕ Abbrechen“ ([onClose]) / „✓ Fertig“. Die Höhe begrenzt der Aufrufer über [modifier].
  */
 @Composable
-private fun FloatingCard(
+internal fun FloatingCard(
     modifier: Modifier, title: String, icon: CadIcon?, onClose: () -> Unit,
     collapsed: Boolean = false, onToggle: (() -> Unit)? = null, onConfirm: (() -> Unit)? = null, content: @Composable () -> Unit,
 ) {
@@ -452,13 +460,14 @@ private fun ModelViewport(state: WorkspaceState, modifier: Modifier) {
             MeshViewport(
                 mesh, state.camera, base = cad.model, background = cad.viewportTop, backgroundBottom = cad.viewportBottom,
                 lineColor = cad.modelEdge, highlightColor = cad.selection, sketchColor = cad.sketchInSpace,
+                capColor = cad.sectionCap, clipPlane = state.sectionView.toClipPlane(),
                 // Gitter aus Hintergrund und Hilfslinienfarbe gemischt: sichtbar über den ganzen Verlauf, aber zurückhaltend
                 grid = state.grid, gridColor = androidx.compose.ui.graphics.lerp(cad.viewportBottom, cad.construction, 0.3f),
                 gridMajorColor = androidx.compose.ui.graphics.lerp(cad.viewportBottom, cad.construction, 0.55f),
                 edges = out?.edges, highlight = state.highlight, sketchLines = state.sketchOverlay,
                 pickEdges = if ((state.edgeMode != null || state.measureMode != null) && out != null) EdgePickData(out.polylines, out.edgeCounts) else null,
                 onPickEdge = state::pickEdge,
-                pickFaces = if ((state.holeMode != null || state.shellMode != null || state.measureMode != null || state.faceSketchPick || state.planePick) && out != null) FacePickData(out.triangleFace) else null,
+                pickFaces = if ((state.holeMode != null || state.shellMode != null || state.measureMode != null || state.faceSketchPick || state.planePick || state.sectionView.pickingFace) && out != null) FacePickData(out.triangleFace) else null,
                 onPickFace = state::pickFace,
             )
         }
@@ -514,6 +523,7 @@ private fun ViewMenu(state: WorkspaceState, modifier: Modifier) {
             StdView.entries.forEach { v -> DropdownMenuItem(text = { Text(stringResource(v.label)) }, onClick = { open = false; state.showView(v) }) }
             DropdownMenuItem(text = { Text(stringResource(R.string.model_fit_all)) }, onClick = { open = false; state.fitView() })
             DropdownMenuItem(text = { Text(stringResource(R.string.model_grid) + if (state.gridOn) "  ✓" else "") }, onClick = { open = false; state.gridOn = !state.gridOn })
+            DropdownMenuItem(text = { Text(stringResource(R.string.model_section_view) + if (state.sectionView.enabled) "  ✓" else "") }, onClick = { open = false; state.toggleSectionView() })
         }
     }
 }

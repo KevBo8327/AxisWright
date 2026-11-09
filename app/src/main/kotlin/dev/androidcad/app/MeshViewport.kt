@@ -16,6 +16,7 @@ import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.viewinterop.AndroidView
 import dev.androidcad.geometry.Mesh
+import dev.androidcad.viewport.ClipPlane
 import dev.androidcad.viewport.EdgePicker
 import dev.androidcad.viewport.FaceHit
 import dev.androidcad.viewport.FacePicker
@@ -49,6 +50,10 @@ internal class MeshRenderer : GLSurfaceView.Renderer {
     @Volatile var sketchColor = floatArrayOf(0.1f, 0.4f, 0.95f)
     @Volatile var gridColor = floatArrayOf(0.8f, 0.83f, 0.88f)
     @Volatile var gridMajorColor = floatArrayOf(0.7f, 0.74f, 0.8f)
+    /** Kappenfarbe für freigelegte Innenflächen beim Schnitt. */
+    @Volatile var capColor = floatArrayOf(0.83f, 0.42f, 0.33f)
+    /** Aktive Schnittebene im 3D-Raum; `null` = Schnittansicht inaktiv. */
+    @Volatile var clipPlane: ClipPlane? = null
 
     private class Lines {
         @Volatile var pending: FloatArray? = null
@@ -148,14 +153,24 @@ internal class MeshRenderer : GLSurfaceView.Renderer {
         GLES30.glUniformMatrix4fv(GLES30.glGetUniformLocation(program, "uView"), 1, false, camera.view, 0)
         val c = baseColor
         GLES30.glUniform3f(GLES30.glGetUniformLocation(program, "uColor"), c[0], c[1], c[2])
+        val cap = capColor
+        GLES30.glUniform3f(GLES30.glGetUniformLocation(program, "uCapColor"), cap[0], cap[1], cap[2])
+
+        val clip = clipPlane
+        val clipPlaneLoc = GLES30.glGetUniformLocation(program, "uClipPlane")
+        val clipEnabledLoc = GLES30.glGetUniformLocation(program, "uClipEnabled")
+        if (clip != null) {
+            GLES30.glUniform4f(clipPlaneLoc, clip.nx, clip.ny, clip.nz, clip.d)
+        }
 
         val flat = GLES30.glGetUniformLocation(program, "uFlat")
         val line = GLES30.glGetUniformLocation(program, "uLine")
         val loc = GLES30.glGetAttribLocation(program, "aPos")
         GLES30.glEnableVertexAttribArray(loc)
 
-        fun lines(l: Lines, color: FloatArray, lineWidth: Float) {
+        fun lines(l: Lines, color: FloatArray, lineWidth: Float, clipLines: Boolean = false) {
             if (l.vertices == 0) return
+            GLES30.glUniform1i(clipEnabledLoc, if (clipLines && clip != null) 1 else 0)
             GLES30.glUniform1f(flat, 1f)
             GLES30.glUniform3f(line, color[0], color[1], color[2])
             GLES30.glLineWidth(lineWidth)
@@ -166,6 +181,7 @@ internal class MeshRenderer : GLSurfaceView.Renderer {
 
         if (indexCount > 0) {
             // Flächen; leicht nach hinten versetzt, damit die Kanten darüber nicht flackern (z-fighting)
+            GLES30.glUniform1i(clipEnabledLoc, if (clip != null) 1 else 0)
             GLES30.glUniform1f(flat, 0f)
             GLES30.glEnable(GLES30.GL_POLYGON_OFFSET_FILL)
             GLES30.glPolygonOffset(1f, 1f)
@@ -174,17 +190,17 @@ internal class MeshRenderer : GLSurfaceView.Renderer {
             GLES30.glBindBuffer(GLES30.GL_ELEMENT_ARRAY_BUFFER, ibo)
             GLES30.glDrawElements(GLES30.GL_TRIANGLES, indexCount, GLES30.GL_UNSIGNED_INT, 0)
             GLES30.glDisable(GLES30.GL_POLYGON_OFFSET_FILL)
-            lines(edges, lineColor, 2f)
+            lines(edges, lineColor, 2f, clipLines = true)
         }
         // Gitter nach dem Körper, mit Tiefentest: der Körper verdeckt es
-        lines(grid, gridColor, 1f)
-        lines(gridMajor, gridMajorColor, 1.5f)
+        lines(grid, gridColor, 1f, clipLines = false)
+        lines(gridMajor, gridMajorColor, 1.5f, clipLines = false)
         GLES30.glDepthFunc(GLES30.GL_LEQUAL)
-        lines(highlight, highlightColor, 6f)
+        lines(highlight, highlightColor, 6f, clipLines = true)
         GLES30.glDepthFunc(GLES30.GL_LESS)
         // Skizzen: immer sichtbar (auch wenn sie in oder hinter dem Körper liegen)
         GLES30.glDisable(GLES30.GL_DEPTH_TEST)
-        lines(sketch, sketchColor, 3f)
+        lines(sketch, sketchColor, 3f, clipLines = false)
         GLES30.glEnable(GLES30.GL_DEPTH_TEST)
         GLES30.glDisableVertexAttribArray(loc)
     }
@@ -264,24 +280,34 @@ uniform mat4 uMvp;
 uniform mat4 uView;
 in vec3 aPos;
 out vec3 vViewPos;
+out vec3 vWorldPos;
 void main() {
+    vWorldPos = aPos;
     vViewPos = (uView * vec4(aPos, 1.0)).xyz;
     gl_Position = uMvp * vec4(aPos, 1.0);
 }"""
         const val FRAGMENT = """#version 300 es
 precision mediump float;
 uniform vec3 uColor;
+uniform vec3 uCapColor;
 uniform vec3 uLine;
 uniform float uFlat;
+uniform vec4 uClipPlane;
+uniform int uClipEnabled;
 in vec3 vViewPos;
+in vec3 vWorldPos;
 out vec4 outColor;
 void main() {
+    if (uClipEnabled != 0) {
+        if (dot(uClipPlane.xyz, vWorldPos) + uClipPlane.w < 0.0) discard;
+    }
     if (uFlat > 0.5) { outColor = vec4(uLine, 1.0); return; }
     // Flächennormale aus Bildschirmableitungen; dem Betrachter zugewandt ausrichten (+z im Sichtraum).
     vec3 n = normalize(cross(dFdx(vViewPos), dFdy(vViewPos)));
     if (n.z < 0.0) n = -n;
     float diff = clamp(dot(n, normalize(vec3(-0.35, 0.45, 0.82))), 0.0, 1.0);
-    outColor = vec4(uColor * (0.42 + 0.58 * diff), 1.0);  // kräftiges Grundlicht: auch abgewandte Seiten bleiben vor dunklem Grund lesbar
+    vec3 col = gl_FrontFacing ? uColor : uCapColor;
+    outColor = vec4(col * (0.42 + 0.58 * diff), 1.0);  // kräftiges Grundlicht: auch abgewandte Seiten bleiben vor dunklem Grund lesbar
 }"""
     }
 }
@@ -303,6 +329,7 @@ internal fun MeshViewport(
     mesh: Mesh?, camera: ViewCamera, base: Color, background: Color, modifier: Modifier = Modifier, edges: FloatArray? = null,
     lineColor: Color = Color(0xFF1B1B25), highlight: FloatArray? = null, sketchLines: FloatArray? = null, sketchColor: Color = Color(0xFF1A66F2),
     backgroundBottom: Color = background, highlightColor: Color = Color(0xFFFF8C00),
+    capColor: Color = Color(0xFFD46A55), clipPlane: ClipPlane? = null,
     grid: GridLines? = null, gridColor: Color = Color(0xFFD0D6E0), gridMajorColor: Color = Color(0xFFB4BDCC),
     pickEdges: EdgePickData? = null, onPickEdge: ((Int) -> Unit)? = null,
     pickFaces: FacePickData? = null, onPickFace: ((FaceHit?) -> Unit)? = null,
@@ -318,16 +345,16 @@ internal fun MeshViewport(
         onRelease = { it.release() },
         modifier = modifier
             .fillMaxSize()
-            .pointerInput(mesh, pickEdges, pickFaces, sketchLines) {
+            .pointerInput(mesh, pickEdges, pickFaces, sketchLines, clipPlane) {
                 detectTapGestures { tap ->
                     val m = mesh ?: return@detectTapGestures
                     val cam = OrthoCamera(camera.yaw, camera.pitch, camera.zoom, SceneFrame.of(m.positions, sketchLines), size.width, size.height)
                     // Kanten zuerst; mit beiden (Messen) trifft ein Tipp neben jede Kante die Fläche darunter
-                    val edge = pickEdges?.let { EdgePicker.pick(cam, tap.x, tap.y, it.polylines, it.counts, m.positions, m.triangles) } ?: -1
+                    val edge = pickEdges?.let { EdgePicker.pick(cam, tap.x, tap.y, it.polylines, it.counts, m.positions, m.triangles, clipPlane = clipPlane) } ?: -1
                     if (pickEdges != null && (edge >= 0 || pickFaces == null)) {
                         currentOnPick?.invoke(edge)
                     } else if (pickFaces != null) {
-                        currentOnPickFace?.invoke(FacePicker.pick(cam, tap.x, tap.y, m.positions, m.triangles, pickFaces.triangleFace))
+                        currentOnPickFace?.invoke(FacePicker.pick(cam, tap.x, tap.y, m.positions, m.triangles, pickFaces.triangleFace, clipPlane = clipPlane))
                     }
                 }
             }
@@ -355,8 +382,10 @@ internal fun MeshViewport(
             renderer.background = floatArrayOf(background.red, background.green, background.blue)
             renderer.backgroundBottom = floatArrayOf(backgroundBottom.red, backgroundBottom.green, backgroundBottom.blue)
             renderer.highlightColor = floatArrayOf(highlightColor.red, highlightColor.green, highlightColor.blue)
+            renderer.capColor = floatArrayOf(capColor.red, capColor.green, capColor.blue)
             renderer.lineColor = floatArrayOf(lineColor.red, lineColor.green, lineColor.blue)
             renderer.sketchColor = floatArrayOf(sketchColor.red, sketchColor.green, sketchColor.blue)
+            renderer.clipPlane = clipPlane
             renderer.setMesh(mesh)
             renderer.setEdges(edges)
             renderer.setHighlight(highlight)
