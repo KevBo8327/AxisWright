@@ -30,8 +30,8 @@ eigenen Zweig; der Hauptagent (Koordinator) führt die Zweige nacheinander zusam
 
 | Agent | Aufgabe | Berührt | Hinweise |
 |---|---|---|---|
-| **B1 Transformieren** | Auswahl **verschieben, drehen, skalieren, kopieren** (Werte im Dialog, Bezugspunkt antippen) | `SketchOps` (neue Datei), `SketchEditor`, Kontextleiste der Auswahl | Bedingungen der Auswahl: beim Kopieren mitkopieren, bei Verschieben/Drehen Festlegungen (Fixieren, Maße zum Ursprung) prüfen |
-| **B2 Text** | **Text** als Skizzenelement (Text, Höhe, Lage, Drehung), Umrisse als geschlossene Konturen für Extrudieren/Gravieren | neues Element in `Sketch`/`SketchCodec`/`Regions`, App-Seite für Umrisse | Kern bleibt JVM-rein: Umrisse über eine Schnittstelle, die die App mit `Paint.getTextPath` + `Path.approximate` (ab API 26) erfüllt; Tests mit Ersatz-Umrissen. Schriftart mit freier Lizenz (z. B. aus dem System) und Lizenzseite prüfen |
+| **B1 Transformieren** ✅ (08.11.2026) | Auswahl **verschieben, drehen, skalieren, kopieren** (Werte im Dialog, Bezugspunkt antippen) | `SketchOps` (neue Datei), `SketchEditor`, Kontextleiste der Auswahl | Bedingungen der Auswahl: beim Kopieren mitkopieren, bei Verschieben/Drehen Festlegungen (Fixieren, Maße zum Ursprung) prüfen |
+| **B2 Text** ✅ (08.11.2026) | **Text** als Skizzenelement (Text, Höhe, Lage, Drehung), Umrisse als geschlossene Konturen für Extrudieren/Gravieren | neues Element in `Sketch`/`SketchCodec`/`Regions`, App-Seite für Umrisse | Kern bleibt JVM-rein: Umrisse über eine Schnittstelle, die die App mit `Paint.getTextPath` + `Path.approximate` (ab API 26) erfüllt; Tests mit Ersatz-Umrissen. Schriftart mit freier Lizenz (z. B. aus dem System) und Lizenzseite prüfen |
 
 ## Welle 3 – nach 1.0, drei Subagenten (C1 nach Welle 2, C2/C3 jederzeit)
 

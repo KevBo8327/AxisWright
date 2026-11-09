@@ -91,7 +91,7 @@ Spiegeln, Arbeitsebenen, Messen, Parameter, Export STEP/3MF/STL.
 
 **Skizze** (Umsetzung mit Subagenten: [PLAN_SKIZZENWERKZEUGE.md](PLAN_SKIZZENWERKZEUGE.md)):
 - [ ] vor der Beta: Punkt-Werkzeug, Fase an einer Skizzenecke, Teilen (Element auftrennen)
-- [ ] bis 1.0: Verschieben/Drehen/Skalieren/Kopieren der Auswahl, **Text** (größter Hebel beim 3D-Druck)
+- [x] bis 1.0: Verschieben/Drehen/Skalieren/Kopieren der Auswahl, **Text** (größter Hebel beim 3D-Druck) ✅ (08.11.2026)
 - [ ] nach 1.0: Ellipse, Spline, DXF/SVG-Import, Kanten anderer Körper/Skizzen übernehmen (auch Schnittkanten)
 
 **3D-Bearbeitung:**

@@ -59,4 +59,14 @@
     <string name="model_view_right">Right</string>
     <string name="model_fit_all">Fit all</string>
     <string name="model_grid">Grid</string>
+    <string name="model_section_view">Section view</string>
+    <string name="model_section_plane">Section plane</string>
+    <string name="model_section_plane_xy">XY</string>
+    <string name="model_section_plane_xz">XZ</string>
+    <string name="model_section_plane_yz">YZ</string>
+    <string name="model_section_plane_face">Face</string>
+    <string name="model_section_pick_face">Pick planar face…</string>
+    <string name="model_section_picking_face">Tap a planar face on the body</string>
+    <string name="model_section_offset">Offset</string>
+    <string name="model_section_flip">Flip side</string>
 </resources>

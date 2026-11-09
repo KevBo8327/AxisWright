@@ -50,7 +50,7 @@ class RevolveFeatureTest {
         sk.sketch.addRectangle(-5.0, 0.0, 10.0, 20.0)
         val f = doc.addRevolve("Welle", sk, RevolveAxis.SketchY)
         doc.build().use { res ->
-            assertTrue(res.errors[f.id]!!.contains("Drehachse"), res.errors.toString())
+            assertTrue(res.errors[f.id]!!.toString().contains("Drehachse") || res.errors[f.id]!!.key == ModelText.REGION_CROSSES_AXIS, res.errors.toString())
             assertEquals(null, res.body)
         }
     }
@@ -63,7 +63,7 @@ class RevolveFeatureTest {
         val axis = sk.sketch.addLine(0.0, 0.0, 0.0, 30.0, construction = true)
         val f = doc.addRevolve("Welle", sk, RevolveAxis.Line(axis))
         sk.sketch.remove(axis)
-        doc.build().use { res -> assertTrue(res.errors[f.id]!!.contains("Drehachse"), res.errors.toString()) }
+        doc.build().use { res -> assertTrue(res.errors[f.id]!!.toString().contains("Drehachse") || res.errors[f.id]!!.key == ModelText.AXIS_MISSING || res.errors[f.id]!!.key == ModelText.REVOLVE_AXIS_GONE, res.errors.toString()) }
     }
 
     @Test

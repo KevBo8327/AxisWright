@@ -20,6 +20,7 @@ public object EdgePicker {
         positions: FloatArray,
         triangles: IntArray,
         radiusPx: Float = 28f,
+        clipPlane: ClipPlane? = null,
     ): Int {
         class Candidate(val edge: Int, val dist: Float, val point: FloatArray)
         val candidates = ArrayList<Candidate>()
@@ -35,13 +36,15 @@ public object EdgePicker {
                 val len2 = dx * dx + dy * dy
                 val t = if (len2 < 1e-9f) 0f else (((tapX - pa.x) * dx + (tapY - pa.y) * dy) / len2).coerceIn(0f, 1f)
                 val d = hypot(tapX - (pa.x + t * dx), tapY - (pa.y + t * dy))
+                val p = floatArrayOf(
+                    polylines[a] + t * (polylines[b] - polylines[a]),
+                    polylines[a + 1] + t * (polylines[b + 1] - polylines[a + 1]),
+                    polylines[a + 2] + t * (polylines[b + 2] - polylines[a + 2]),
+                )
+                if (clipPlane != null && clipPlane.isClipped(p[0], p[1], p[2])) continue
                 if (d < best) {
                     best = d
-                    bestPoint = floatArrayOf(
-                        polylines[a] + t * (polylines[b] - polylines[a]),
-                        polylines[a + 1] + t * (polylines[b + 1] - polylines[a + 1]),
-                        polylines[a + 2] + t * (polylines[b + 2] - polylines[a + 2]),
-                    )
+                    bestPoint = p
                 }
             }
             if (bestPoint != null && best <= radiusPx) candidates += Candidate(edge, best, bestPoint)
@@ -49,11 +52,18 @@ public object EdgePicker {
         }
         candidates.sortBy { it.dist }
         val eps = 0.15f + 0.003f * camera.frame.radius // Tessellierung: Kantenpunkte liegen minimal neben den Flächendreiecken
-        return candidates.firstOrNull { !isOccluded(it.point, camera.towardViewer, positions, triangles, eps) }?.edge ?: -1
+        return candidates.firstOrNull { !isOccluded(it.point, camera.towardViewer, positions, triangles, eps, clipPlane) }?.edge ?: -1
     }
 
     /** `true`, wenn zwischen [p] und dem Betrachter (Richtung [toViewer]) ein Dreieck liegt. */
-    public fun isOccluded(p: FloatArray, toViewer: FloatArray, positions: FloatArray, triangles: IntArray, eps: Float): Boolean {
+    public fun isOccluded(
+        p: FloatArray,
+        toViewer: FloatArray,
+        positions: FloatArray,
+        triangles: IntArray,
+        eps: Float,
+        clipPlane: ClipPlane? = null,
+    ): Boolean {
         val dx = toViewer[0]; val dy = toViewer[1]; val dz = toViewer[2]
         for (t in triangles.indices step 3) {
             val a = 3 * triangles[t]; val b = 3 * triangles[t + 1]; val c = 3 * triangles[t + 2]
@@ -71,7 +81,15 @@ public object EdgePicker {
             val v = (dx * qx + dy * qy + dz * qz) * inv
             if (v < 0f || u + v > 1f) continue
             val dist = (e2x * qx + e2y * qy + e2z * qz) * inv
-            if (dist > eps) return true
+            if (dist > eps) {
+                if (clipPlane != null) {
+                    val hx = p[0] + dx * dist
+                    val hy = p[1] + dy * dist
+                    val hz = p[2] + dz * dist
+                    if (clipPlane.isClipped(hx, hy, hz)) continue
+                }
+                return true
+            }
         }
         return false
     }

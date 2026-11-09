@@ -27,6 +27,7 @@ data class CadColors(
     val isDark: Boolean,
     // 3D-Ansicht
     val viewportTop: Color, val viewportBottom: Color, val model: Color, val modelEdge: Color, val selection: Color, val sketchInSpace: Color,
+    val sectionCap: Color = Color(0xFFD46A55),
     // Skizze
     val sketchBackground: Color, val grid: Color, val gridMajor: Color,
     val underDefined: Color, val fullyDefined: Color, val construction: Color, val conflict: Color, val dimension: Color,
@@ -39,7 +40,7 @@ data class CadColors(
 private val BlueprintDark = CadColors(
     isDark = true,
     viewportTop = Color(0xFF0E1A36), viewportBottom = Color(0xFF1D3160), model = Color(0xFFB4C8E6), modelEdge = Color(0xFF0A1226),
-    selection = Color(0xFFFF9A2E), sketchInSpace = Color(0xFF34D1F0),
+    selection = Color(0xFFFF9A2E), sketchInSpace = Color(0xFF34D1F0), sectionCap = Color(0xFFD46A55),
     sketchBackground = Color(0xFF0C1730), grid = Color(0xFF15284A), gridMajor = Color(0xFF1F3A66),
     underDefined = Color(0xFF34D1F0), fullyDefined = Color(0xFFF4F8FF), construction = Color(0xFF6F86B0),
     conflict = Color(0xFFFF5D6C), dimension = Color(0xFFFFD66B),
@@ -51,7 +52,7 @@ private val BlueprintDark = CadColors(
 private val BlueprintLight = CadColors(
     isDark = false,
     viewportTop = Color(0xFFF1F5FB), viewportBottom = Color(0xFFCCD8EB), model = Color(0xFF7C9DCC), modelEdge = Color(0xFF0E1A33),
-    selection = Color(0xFFF57C00), sketchInSpace = Color(0xFF0A7FA6),
+    selection = Color(0xFFF57C00), sketchInSpace = Color(0xFF0A7FA6), sectionCap = Color(0xFFCC5544),
     sketchBackground = Color(0xFFF7F9FD), grid = Color(0xFFE3E9F3), gridMajor = Color(0xFFC9D5E8),
     underDefined = Color(0xFF1E6FE0), fullyDefined = Color(0xFF0E1A33), construction = Color(0xFF7A8AA6),
     conflict = Color(0xFFD32F2F), dimension = Color(0xFF8A5A00),
