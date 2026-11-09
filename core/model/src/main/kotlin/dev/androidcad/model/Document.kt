@@ -150,6 +150,7 @@ class Document {
                     require(before.containsAll(f.references)) { "Ebene „${f.name}“ verweist auf ein Feature, das nicht davor liegt" }
                     DatumPlane.validate(f.def)?.let { throw IllegalArgumentException("Ebene „${f.name}“: $it") }
                 }
+                is ExtrudeFeature -> require(before.containsAll(f.references)) { "„${f.name}“ verweist auf ein Feature, das nicht davor liegt" }
                 is FilletFeature -> {
                     require(f.edges.isNotEmpty()) { "„${f.name}“ hat keine Kanten" }
                     require(before.containsAll(f.references)) { "„${f.name}“ verweist auf ein Feature, das nicht davor liegt" }
@@ -211,9 +212,21 @@ class Document {
         op: BodyOp = BodyOp.ADD,
         regionPoints: List<dev.androidcad.sketch.Vec2> = emptyList(),
         symmetric: Boolean = false,
+        throughAll: Boolean = false,
+        distance2: Double? = null,
+        untilFace: FaceRef? = null,
     ): ExtrudeFeature {
         require(items.any { it === sketch }) { "Skizze gehört nicht zu diesem Dokument" }
-        return ExtrudeFeature(FeatureId(nextId++), name, sketch.id, distance, op, regionPoints, symmetric).also { items += it }
+        if (distance2 != null) {
+            require(distance2 > 0.0 && distance2.isFinite()) { "Länge der zweiten Seite muss größer als 0 sein" }
+        }
+        if (untilFace != null) {
+            require(items.any { f -> f.id == untilFace.feature }) { "Zielfläche verweist auf ein unbekanntes Feature" }
+            require(!symmetric && !throughAll && distance2 == null) {
+                "„Bis Fläche“ kann nicht mit symmetrisch, durch alles oder zwei Seiten kombiniert werden"
+            }
+        }
+        return ExtrudeFeature(FeatureId(nextId++), name, sketch.id, distance, op, regionPoints, symmetric, throughAll, distance2, untilFace).also { items += it }
     }
 
     /** Dreht Flächen der Skizze um [axis] (siehe [RevolveFeature]); [angle] in Grad. */
@@ -404,7 +417,7 @@ class Document {
         do {
             val before = gone.size
             for (f in items) when (f) {
-                is ExtrudeFeature -> if (f.sketch in gone) gone += f.id
+                is ExtrudeFeature -> if (f.references.any { it in gone }) gone += f.id
                 is RevolveFeature -> if (f.sketch in gone) gone += f.id
                 is FilletFeature -> if (f.references.any { it in gone }) gone += f.id
                 is HoleFeature -> if (f.references.any { it in gone }) gone += f.id
@@ -676,13 +689,49 @@ class Document {
 
     /** Alle ausgewählten Flächen der Skizze, extrudiert und in den Raum gestellt, vereinigt zu einem Werkzeugkörper. */
     private fun extrudeTool(f: ExtrudeFeature, planes: Map<FeatureId, Workplane>, body: BrepShape?): BrepShape {
-        val distance = if (f.throughAll) throughAllDistance(f, planes[f.sketch] ?: sketch(f.sketch).plane, body) else f.distance
+        if (f.untilFace != null && (f.symmetric || f.throughAll || f.distance2 != null)) {
+            throw ModelException(Msg(ModelText.EXTRUDE_UNTIL_FACE_CONFLICT))
+        }
+        if (f.distance2 != null && !(f.distance2 > 0.0 && f.distance2.isFinite())) {
+            throw ModelException(Msg(ModelText.LENGTH_NOT_POSITIVE))
+        }
+        val plane = planes[f.sketch] ?: sketch(f.sketch).plane
+        val distance = when {
+            f.throughAll -> throughAllDistance(f, plane, body)
+            f.untilFace != null -> untilFaceDistance(f, plane, body)
+            else -> f.distance
+        }
         return sketchTool(f.sketch, f.regionPoints, planes) { region ->
             BrepShape.extrude(
                 region.toProfile(f.id), distance, f.symmetric,
                 bottomTag = faceTag(f.id, FaceRole.BOTTOM), topTag = faceTag(f.id, FaceRole.TOP),
+                height2 = if (f.throughAll || f.symmetric) null else f.distance2,
             )
         }
+    }
+
+    /**
+     * Länge für „bis Fläche“: Abstand von der Skizzenebene zur gewählten ebenen Zielfläche, die parallel zur Skizzenebene
+     * liegen muss.
+     */
+    private fun untilFaceDistance(f: ExtrudeFeature, plane: Workplane, body: BrepShape?): Double {
+        val faceRef = f.untilFace ?: error("untilFace ist null")
+        if (body == null) throw ModelException(Msg(ModelText.NO_BODY))
+        val ids = body.facesWithTag(faceRef.tag)
+        if (ids.isEmpty()) throw ModelException(Msg(ModelText.FACE_GONE))
+        val planarFaces = body.planarFaces()
+        val targetPlanar = ids.firstNotNullOfOrNull { planarFaces.getOrNull(it - 1) }
+            ?: throw ModelException(Msg(ModelText.FACE_NOT_PLANAR))
+        val tn = Vec3(targetPlanar.normal.first, targetPlanar.normal.second, targetPlanar.normal.third)
+        if (kotlin.math.abs(kotlin.math.abs(plane.normal.dot(tn)) - 1.0) > 1e-4) {
+            throw ModelException(Msg(ModelText.FACE_NOT_PARALLEL))
+        }
+        val targetOrigin = Vec3(targetPlanar.origin.first, targetPlanar.origin.second, targetPlanar.origin.third)
+        val d = (targetOrigin - plane.origin).dot(plane.normal)
+        if (kotlin.math.abs(d) < 1e-4) {
+            throw ModelException(Msg(ModelText.DISTANCE_INVALID))
+        }
+        return d
     }
 
     /**
@@ -760,12 +809,17 @@ class Document {
                 tool.close()
                 throw ModelException(Msg(ModelText.NO_BODY_TO_CUT))
             }
+            if (op == BodyOp.INTERSECT) {
+                tool.close()
+                throw ModelException(Msg(ModelText.NO_BODY_TO_INTERSECT))
+            }
             return tool
         }
         val result = try {
             when (op) {
                 BodyOp.ADD -> body.union(tool)
                 BodyOp.CUT -> body.cut(tool)
+                BodyOp.INTERSECT -> body.intersect(tool)
             }
         } finally {
             tool.close()

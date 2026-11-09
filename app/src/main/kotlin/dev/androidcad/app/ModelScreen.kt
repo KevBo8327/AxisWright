@@ -467,7 +467,7 @@ private fun ModelViewport(state: WorkspaceState, modifier: Modifier) {
                 edges = out?.edges, highlight = state.highlight, sketchLines = state.sketchOverlay,
                 pickEdges = if ((state.edgeMode != null || state.measureMode != null) && out != null) EdgePickData(out.polylines, out.edgeCounts) else null,
                 onPickEdge = state::pickEdge,
-                pickFaces = if ((state.holeMode != null || state.shellMode != null || state.measureMode != null || state.faceSketchPick || state.planePick || state.sectionView.pickingFace) && out != null) FacePickData(out.triangleFace) else null,
+                pickFaces = if ((state.holeMode != null || state.shellMode != null || state.measureMode != null || state.faceSketchPick || state.planePick || state.extrudeFacePick || state.sectionView.pickingFace) && out != null) FacePickData(out.triangleFace) else null,
                 onPickFace = state::pickFace,
             )
         }

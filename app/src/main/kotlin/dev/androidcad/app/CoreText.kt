@@ -235,6 +235,7 @@ private fun ModelText.res(): Int = when (this) {
     ModelText.NO_BODY -> R.string.core_model_no_body
     ModelText.NO_BODY_TO_MIRROR -> R.string.core_model_no_body_to_mirror
     ModelText.NO_BODY_TO_CUT -> R.string.core_model_no_body_to_cut
+    ModelText.NO_BODY_TO_INTERSECT -> R.string.core_model_no_body_to_intersect
     ModelText.PATTERN_SOURCE_GONE -> R.string.core_model_pattern_source_gone
     ModelText.PATTERN_NO_COPIES -> R.string.core_model_pattern_no_copies
     ModelText.MIRROR_PLANE_GONE -> R.string.core_model_mirror_plane_gone
@@ -243,6 +244,8 @@ private fun ModelText.res(): Int = when (this) {
     ModelText.NO_CLOSED_REGION -> R.string.core_model_no_closed_region
     ModelText.FACE_GONE -> R.string.core_model_face_gone
     ModelText.FACE_NOT_PLANAR -> R.string.core_model_face_not_planar
+    ModelText.FACE_NOT_PARALLEL -> R.string.core_model_face_not_parallel
+    ModelText.EXTRUDE_UNTIL_FACE_CONFLICT -> R.string.core_model_extrude_until_face_conflict
     ModelText.HOLE_REF_EDGE_GONE -> R.string.core_model_hole_ref_edge_gone
     ModelText.HOLE_REF_EDGE_NOT_IN_FACE -> R.string.core_model_hole_ref_edge_not_in_face
     ModelText.HOLE_REF_EDGE_NOT_STRAIGHT -> R.string.core_model_hole_ref_edge_not_straight

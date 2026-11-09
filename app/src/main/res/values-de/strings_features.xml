@@ -88,8 +88,18 @@
     <!-- Extrusion / Drehung -->
     <string name="feat_op_add">Hinzufügen</string>
     <string name="feat_op_cut">Abtragen</string>
+    <string name="feat_op_intersect">Schnittmenge</string>
+    <string name="feat_extrude_end_label">Ende</string>
+    <string name="feat_extrude_end_length">Länge</string>
+    <string name="feat_extrude_end_to_face">Bis Fläche</string>
     <string name="feat_extrude_through_all">Durch alles</string>
     <string name="feat_extrude_length">Länge (mm)</string>
+    <string name="feat_extrude_second_side">Zweite Seite</string>
+    <string name="feat_extrude_length2">Länge Gegenseite (mm)</string>
+    <string name="feat_extrude_pick_face_hint">Eine ebene Fläche am Körper antippen, die parallel zur Skizzenebene liegt</string>
+    <string name="feat_extrude_pick_face">Fläche wählen</string>
+    <string name="feat_extrude_change_face">Ändern</string>
+    <string name="feat_extrude_target_face_selected">Zielfläche gewählt</string>
     <string name="feat_symmetric">Symmetrisch zur Skizzenebene</string>
     <string name="feat_reversed">Umgekehrte Richtung</string>
     <string name="feat_revolve_axis_label">Drehachse</string>

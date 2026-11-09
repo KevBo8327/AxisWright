@@ -153,8 +153,10 @@
     <string name="ws_name_sketch">Sketch</string>
     <string name="ws_name_extrusion">Extrusion</string>
     <string name="ws_name_cut">Cut</string>
+    <string name="ws_name_intersect">Intersection</string>
     <string name="ws_name_revolve">Revolve</string>
     <string name="ws_name_revolve_cut">Revolve cut</string>
+    <string name="ws_name_revolve_intersect">Revolve intersection</string>
     <string name="ws_name_fillet">Fillet</string>
     <string name="ws_name_chamfer">Chamfer</string>
     <string name="ws_name_mirror_body">Mirror body</string>
