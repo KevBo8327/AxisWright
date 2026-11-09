@@ -279,12 +279,25 @@ data class MirrorBodyFeature(
     val references: Set<FeatureId> get() = setOfNotNull(datum)
 }
 
+enum class HoleKind {
+    /** Einfache zylindrische Bohrung. */
+    SIMPLE,
+
+    /** Zylindrische Senkung (Flachsenkung mit Senkdurchmesser und Senktiefe). */
+    COUNTERBORE,
+
+    /** Kegelsenkung (mit Senkdurchmesser und Spitzenwinkel, Standard 90°). */
+    COUNTERSINK,
+}
+
 /**
  * Bohrung senkrecht in eine ebene Körperfläche. Die [face] wird über ihren Namen gefunden (stabil über Neuaufbauten); die
  * Position ist ein Raumpunkt ([x], [y], [z]), der beim Bauen auf die Ebene der Fläche projiziert wird. [depth] = Tiefe in mm
  * ab der Fläche, `null` = durchgehend.
  *
- * Wandfläche der Bohrung: `FaceRef(id, SIDE, 1)`, Boden einer Sacklochbohrung: `FaceRef(id, TOP)`.
+ * Wandfläche der Hauptbohrung: `FaceRef(id, SIDE, 1)`, Boden einer Sacklochbohrung: `FaceRef(id, TOP)`.
+ * Senkfläche einer Zylindersenkung: `FaceRef(id, COUNTERBORE, 1)`, Stufe: `FaceRef(id, COUNTERBORE_BOTTOM, 1)`.
+ * Kegelfläche einer Kegelsenkung: `FaceRef(id, COUNTERSINK, 1)`.
  */
 data class HoleFeature(
     override val id: FeatureId,
@@ -300,6 +313,11 @@ data class HoleFeature(
      * Lage der Bohrung; [x], [y], [z] dienen dann nur noch zur Wahl des richtigen Flächenstücks. `null` = fester Raumpunkt.
      */
     val anchors: Pair<EdgeDistance, EdgeDistance>? = null,
+    val kind: HoleKind = HoleKind.SIMPLE,
+    val counterboreDiameter: Double? = null,
+    val counterboreDepth: Double? = null,
+    val countersinkDiameter: Double? = null,
+    val countersinkAngle: Double = 90.0,
 ) : Feature {
     val references: Set<FeatureId>
         get() = buildSet {

@@ -13,6 +13,15 @@ enum class FaceRole(val code: Int) {
 
     /** Rundungs- bzw. Fasenfläche eines [FilletFeature]; [FaceRef.element] = Index der Kante in [FilletFeature.edges]. */
     ROUND(4),
+
+    /** Zylindrische Senkfläche einer Senkung ([HoleFeature]). */
+    COUNTERBORE(5),
+
+    /** Kegelfläche einer Kegelsenkung ([HoleFeature]). */
+    COUNTERSINK(6),
+
+    /** Stufenfläche (ebener Übergang/Boden) einer Zylindersenkung ([HoleFeature]). */
+    COUNTERBORE_BOTTOM(7),
 }
 
 /**
