@@ -53,6 +53,34 @@ class DocumentCodecTest {
     }
 
     @Test
+    fun roundTripWithTwoSidedExtrudeIntersectAndUntilFace() {
+        val doc = Document()
+        val sk1 = doc.addSketch("Grundriss")
+        sk1.sketch.addRectangle(0.0, 0.0, 40.0, 20.0)
+        val ex1 = doc.addExtrude("Block", sk1, 10.0, distance2 = 5.0)
+        val sk2 = doc.addSketch("Zweite")
+        sk2.sketch.addCircle(10.0, 10.0, 5.0)
+        val faceRef = FaceRef(ex1.id, FaceRole.TOP)
+        val ex2 = doc.addExtrude("BisFlaeche", sk2, 10.0, op = BodyOp.INTERSECT, untilFace = faceRef, distance2 = 3.0)
+        val rev = doc.addRevolve("DrehSchnitt", sk2, RevolveAxis.SketchY, 180.0, op = BodyOp.INTERSECT)
+        doc.setParameters(listOf(Parameter("d2", "7.5")))
+        doc.bind(ValueRef.FeatureValue(ex1.id, 1), "d2")
+
+        val encoded = DocumentCodec.encode(doc)
+        val back = DocumentCodec.decode(encoded)
+        assertSameDocument(doc, back)
+        val decodedEx1 = back.feature(ex1.id) as ExtrudeFeature
+        assertEquals(5.0, decodedEx1.distance2)
+        val decodedEx2 = back.feature(ex2.id) as ExtrudeFeature
+        assertEquals(BodyOp.INTERSECT, decodedEx2.op)
+        assertEquals(faceRef, decodedEx2.untilFace)
+        assertEquals(3.0, decodedEx2.distance2)
+        val decodedRev = back.feature(rev.id) as RevolveFeature
+        assertEquals(BodyOp.INTERSECT, decodedRev.op)
+        assertEquals("d2", back.bindings[ValueRef.FeatureValue(ex1.id, 1)])
+    }
+
+    @Test
     fun loadedDocumentContinuesWithFreshFeatureIds() {
         val back = DocumentCodec.decode(DocumentCodec.encode(sample()))
         val sk = back.addSketch("Neu")

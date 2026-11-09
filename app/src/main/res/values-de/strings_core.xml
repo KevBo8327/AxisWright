@@ -141,6 +141,7 @@
     <string name="core_model_no_body">es gibt noch keinen Körper</string>
     <string name="core_model_no_body_to_mirror">es gibt noch keinen Körper, der gespiegelt werden könnte</string>
     <string name="core_model_no_body_to_cut">es gibt noch keinen Körper, von dem abgetragen werden könnte</string>
+    <string name="core_model_no_body_to_intersect">es gibt noch keinen Körper für eine Schnittmenge</string>
     <string name="core_model_pattern_source_gone">das vervielfältigte Feature existiert nicht mehr</string>
     <string name="core_model_pattern_no_copies">das Muster hat keine Kopien</string>
     <string name="core_model_mirror_plane_gone">die Arbeitsebene, an der gespiegelt wird, fehlt</string>
@@ -149,6 +150,7 @@
     <string name="core_model_no_closed_region">keine geschlossene Fläche in „%1$s“ gefunden</string>
     <string name="core_model_face_gone">die gewählte Fläche existiert nicht mehr (verändert oder entfernt)</string>
     <string name="core_model_face_not_planar">die gewählte Fläche ist nicht eben</string>
+    <string name="core_model_face_not_parallel">Zielfläche muss parallel zur Skizzenebene sein</string>
     <string name="core_model_hole_ref_edge_gone">eine Referenzkante der Bohrung existiert nicht mehr (Fläche verändert oder entfernt)</string>
     <string name="core_model_hole_ref_edge_not_in_face">eine Referenzkante liegt nicht in der gewählten Fläche</string>
     <string name="core_model_hole_ref_edge_not_straight">Referenzkanten müssen gerade sein</string>

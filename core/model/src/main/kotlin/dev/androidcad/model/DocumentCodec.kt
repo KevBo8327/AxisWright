@@ -47,7 +47,7 @@ object DocumentCodec {
         if (doc.bindings.isNotEmpty()) m["bindings"] = doc.bindings.map { (ref, expr) ->
             when (ref) {
                 is ValueRef.Dim -> linkedMapOf<String, Any?>("sketch" to ref.sketch.value, "constraint" to ref.constraint.value, "expression" to expr)
-                is ValueRef.FeatureValue -> linkedMapOf<String, Any?>("feature" to ref.feature.value, "expression" to expr)
+                is ValueRef.FeatureValue -> linkedMapOf<String, Any?>("feature" to ref.feature.value, "expression" to expr).also { if (ref.index != 0) it["index"] = ref.index }
             }
         }
     }
@@ -61,7 +61,7 @@ object DocumentCodec {
         val bindings = json["bindings"]?.asList("Bindungen")?.associate { b ->
             val o = b.asObject("Bindung")
             val ref = if (o["sketch"] != null) ValueRef.Dim(FeatureId(o.int("sketch")), dev.androidcad.sketch.ConstraintId(o.int("constraint")))
-            else ValueRef.FeatureValue(FeatureId(o.int("feature")))
+            else ValueRef.FeatureValue(FeatureId(o.int("feature")), (o["index"] as? Number)?.toInt() ?: 0)
             ref to o.string("expression")
         } ?: emptyMap()
         val doc = Document()
@@ -90,7 +90,11 @@ object DocumentCodec {
             "kind" to "extrude", "id" to f.id.value, "name" to f.name, "sketch" to f.sketch.value,
             "distance" to f.distance, "op" to f.op.name, "symmetric" to f.symmetric,
             "regionPoints" to f.regionPoints.map { listOf(it.x, it.y) },
-        ).also { if (f.throughAll) it["throughAll"] = true }
+        ).also {
+            if (f.throughAll) it["throughAll"] = true
+            if (f.distance2 != null) it["distance2"] = f.distance2
+            if (f.untilFace != null) it["untilFace"] = encodeFace(f.untilFace)
+        }
         is RevolveFeature -> linkedMapOf(
             "kind" to "revolve", "id" to f.id.value, "name" to f.name, "sketch" to f.sketch.value,
             "axis" to when (val a = f.axis) {
@@ -187,7 +191,14 @@ object DocumentCodec {
             val d = o.double("distance")
             if (!d.isFinite()) throw JsonException("Extrusion: Länge ungültig")
             val op = BodyOp.entries.firstOrNull { it.name == o.string("op") } ?: throw JsonException("Extrusion: unbekannte Operation '${o["op"]}'")
-            ExtrudeFeature(FeatureId(o.int("id")), o.string("name"), FeatureId(o.int("sketch")), d, op, regionPoints(o), o.bool("symmetric", false), o.bool("throughAll", false))
+            val d2 = o["distance2"]?.let { (it as? Number)?.toDouble() ?: throw JsonException("Extrusion: distance2 ungültig") }
+            if (d2 != null && (!d2.isFinite() || d2 <= 0.0)) throw JsonException("Extrusion: distance2 ungültig")
+            val untilFace = o["untilFace"]?.let(::decodeFace)
+            ExtrudeFeature(
+                FeatureId(o.int("id")), o.string("name"), FeatureId(o.int("sketch")), d, op,
+                regionPoints(o), o.bool("symmetric", false), o.bool("throughAll", false),
+                distance2 = d2, untilFace = untilFace,
+            )
         }
         "revolve" -> {
             val angle = o.double("angle")

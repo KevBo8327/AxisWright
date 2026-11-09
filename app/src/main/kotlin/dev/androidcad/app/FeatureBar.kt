@@ -82,7 +82,11 @@ import dev.androidcad.sketchedit.formatValue
 /** Symbol eines Features (wie in der Werkzeugleiste). */
 internal fun Feature.icon(): CadIcon = when (this) {
     is SketchFeature -> if (onFace != null) CadIcon.SKETCH_ON_FACE else CadIcon.SKETCH
-    is ExtrudeFeature -> if (op == BodyOp.ADD) CadIcon.EXTRUDE else CadIcon.CUT
+    is ExtrudeFeature -> when (op) {
+        BodyOp.ADD -> CadIcon.EXTRUDE
+        BodyOp.CUT -> CadIcon.CUT
+        BodyOp.INTERSECT -> CadIcon.INTERSECT
+    }
     is RevolveFeature -> CadIcon.REVOLVE
     is ShellFeature -> CadIcon.SHELL
     is FilletFeature -> if (kind == EdgeKind.ROUND) CadIcon.ROUND else CadIcon.CHAMFER
@@ -423,17 +427,89 @@ fun FeatureControls(state: WorkspaceState) {
             val reversed = ex.distance < 0
             val length = kotlin.math.abs(ex.distance)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                FilterChip(selected = ex.op == BodyOp.ADD, onClick = { state.updateExtrusion(ex.distance, ex.symmetric, BodyOp.ADD) }, label = { Text("▲ ${stringResource(R.string.feat_op_add)}") })
-                FilterChip(selected = ex.op == BodyOp.CUT, onClick = { state.updateExtrusion(ex.distance, ex.symmetric, BodyOp.CUT) }, label = { Text("▼ ${stringResource(R.string.feat_op_cut)}") })
+                FilterChip(selected = ex.op == BodyOp.ADD, onClick = { state.updateExtrusion(ex.copy(op = BodyOp.ADD)) }, label = { Text("▲ ${stringResource(R.string.feat_op_add)}") })
+                FilterChip(selected = ex.op == BodyOp.CUT, onClick = { state.updateExtrusion(ex.copy(op = BodyOp.CUT)) }, label = { Text("▼ ${stringResource(R.string.feat_op_cut)}") }, enabled = ex.op == BodyOp.CUT || state.canCut)
+                FilterChip(selected = ex.op == BodyOp.INTERSECT, onClick = { state.updateExtrusion(ex.copy(op = BodyOp.INTERSECT)) }, label = { Text("∩ ${stringResource(R.string.feat_op_intersect)}") }, enabled = ex.op == BodyOp.INTERSECT || state.canCut)
             }
-            if (ex.op == BodyOp.CUT) SwitchRow(stringResource(R.string.feat_extrude_through_all), ex.throughAll) { state.updateExtrusion(ex.distance, ex.symmetric, throughAll = it) }
-            val bound = !ex.throughAll && ExprField(state, stringResource(R.string.feat_extrude_length), length, ValueRef.FeatureValue(ex.id)) { v -> if (v > 0) state.updateExtrusion(if (reversed) -v else v, ex.symmetric) }
-            if (!bound && !ex.throughAll) Slider(value = length.toFloat().coerceIn(1f, 100f), onValueChange = { v ->
-                val d = Math.round(v).toDouble().coerceAtLeast(1.0)
-                state.updateExtrusion(if (reversed) -d else d, ex.symmetric)
-            }, valueRange = 1f..100f)
-            SwitchRow(stringResource(R.string.feat_symmetric), ex.symmetric) { state.updateExtrusion(ex.distance, it) }
-            SwitchRow(stringResource(R.string.feat_reversed), reversed) { state.updateExtrusion(if (it) -length else length, ex.symmetric) }
+
+            Text(stringResource(R.string.feat_extrude_end_label), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            val isThroughAll = ex.throughAll
+            val isToFace = ex.untilFace != null || state.extrudeFacePick
+            val isLength = !isThroughAll && !isToFace
+            Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                FilterChip(
+                    selected = isLength,
+                    onClick = {
+                        state.cancelExtrudeFacePick()
+                        state.updateExtrusion(ex.copy(throughAll = false, untilFace = null))
+                    },
+                    label = { Text(stringResource(R.string.feat_extrude_end_length)) },
+                )
+                FilterChip(
+                    selected = isThroughAll,
+                    onClick = {
+                        state.cancelExtrudeFacePick()
+                        state.updateExtrusion(ex.copy(throughAll = true, untilFace = null, distance2 = null))
+                    },
+                    label = { Text(stringResource(R.string.feat_extrude_through_all)) },
+                    enabled = state.canCut,
+                )
+                FilterChip(
+                    selected = isToFace,
+                    onClick = {
+                        if (!isToFace) {
+                            state.startExtrudeFacePick()
+                        }
+                    },
+                    label = { Text(stringResource(R.string.feat_extrude_end_to_face)) },
+                    enabled = state.canCut,
+                )
+            }
+
+            if (isThroughAll) {
+                SwitchRow(stringResource(R.string.feat_symmetric), ex.symmetric) { state.updateExtrusion(ex.copy(symmetric = it)) }
+                SwitchRow(stringResource(R.string.feat_reversed), reversed) { state.updateExtrusion(ex.copy(distance = if (it) -length else length)) }
+            } else if (isToFace) {
+                if (state.extrudeFacePick) {
+                    Text(stringResource(R.string.feat_extrude_pick_face_hint), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
+                    OutlinedButton(onClick = state::cancelExtrudeFacePick, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.common_cancel)) }
+                } else if (ex.untilFace != null) {
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text(stringResource(R.string.feat_extrude_target_face_selected), style = MaterialTheme.typography.bodyMedium)
+                        OutlinedButton(onClick = state::startExtrudeFacePick) { Text(stringResource(R.string.feat_extrude_change_face)) }
+                    }
+                } else {
+                    Button(onClick = state::startExtrudeFacePick, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.feat_extrude_pick_face)) }
+                }
+            } else {
+                val bound = ExprField(state, stringResource(R.string.feat_extrude_length), length, ValueRef.FeatureValue(ex.id)) { v -> if (v > 0) state.updateExtrusion(ex.copy(distance = if (reversed) -v else v)) }
+                if (!bound) Slider(value = length.toFloat().coerceIn(1f, 100f), onValueChange = { v ->
+                    val d = Math.round(v).toDouble().coerceAtLeast(1.0)
+                    state.updateExtrusion(ex.copy(distance = if (reversed) -d else d))
+                }, valueRange = 1f..100f)
+                SwitchRow(stringResource(R.string.feat_symmetric), ex.symmetric) {
+                    state.updateExtrusion(ex.copy(symmetric = it, distance2 = if (it) null else ex.distance2))
+                }
+                SwitchRow(stringResource(R.string.feat_reversed), reversed) { state.updateExtrusion(ex.copy(distance = if (it) -length else length)) }
+            }
+
+            if (!isThroughAll) {
+                val hasSecondSide = ex.distance2 != null
+                SwitchRow(stringResource(R.string.feat_extrude_second_side), hasSecondSide) {
+                    state.updateExtrusion(ex.copy(distance2 = if (it) (ex.distance2 ?: 10.0) else null, symmetric = if (it) false else ex.symmetric))
+                }
+                if (hasSecondSide) {
+                    val d2 = ex.distance2 ?: 10.0
+                    val bound2 = ExprField(state, stringResource(R.string.feat_extrude_length2), d2, ValueRef.FeatureValue(ex.id, 1)) { v ->
+                        if (v > 0) state.updateExtrusion(ex.copy(distance2 = v))
+                    }
+                    if (!bound2) Slider(value = d2.toFloat().coerceIn(1f, 100f), onValueChange = { v ->
+                        val d = Math.round(v).toDouble().coerceAtLeast(1.0)
+                        state.updateExtrusion(ex.copy(distance2 = d))
+                    }, valueRange = 1f..100f)
+                }
+            }
+
             OutlinedButton(onClick = state::editSketch, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.feat_edit_sketch)) }
         }
     }
@@ -448,6 +524,7 @@ private fun RevolveControls(state: WorkspaceState, f: RevolveFeature) {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
         FilterChip(selected = f.op == BodyOp.ADD, onClick = { state.updateRevolve(f.copy(op = BodyOp.ADD)) }, label = { Text("▲ ${stringResource(R.string.feat_op_add)}") })
         FilterChip(selected = f.op == BodyOp.CUT, onClick = { state.updateRevolve(f.copy(op = BodyOp.CUT)) }, label = { Text("▼ ${stringResource(R.string.feat_op_cut)}") }, enabled = f.op == BodyOp.CUT || state.canCut)
+        FilterChip(selected = f.op == BodyOp.INTERSECT, onClick = { state.updateRevolve(f.copy(op = BodyOp.INTERSECT)) }, label = { Text("∩ ${stringResource(R.string.feat_op_intersect)}") }, enabled = f.op == BodyOp.INTERSECT || state.canCut)
     }
     Text(stringResource(R.string.feat_revolve_axis_label), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     val lines = state.revolveAxisOptions(f.sketch)

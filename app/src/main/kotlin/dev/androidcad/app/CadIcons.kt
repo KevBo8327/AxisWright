@@ -69,6 +69,7 @@ enum class CadIcon(private vararg val parts: Part) {
     SKETCH_ON_FACE(Part("M3 18 L8 9 H21 L16 18 Z"), Part("M10.5 13.5 a2.5 2 0 1 0 5 0 a2.5 2 0 1 0 -5 0")),
     EXTRUDE(Part("M3 19 L7 15 H21 L17 19 Z"), Part("M12 13 V3"), Part("M8.5 6.5 L12 3 L15.5 6.5")),
     CUT(Part("M3 19 L7 15 H21 L17 19 Z"), Part("M12 3 V13"), Part("M8.5 9.5 L12 13 L15.5 9.5")),
+    INTERSECT(Part("M4 12 a5.5 5.5 0 1 0 11 0 a5.5 5.5 0 1 0 -11 0"), Part("M9 12 a5.5 5.5 0 1 0 11 0 a5.5 5.5 0 1 0 -11 0")),
     // Drehen: Profil neben der (gestrichelten) Achse, darüber der Drehpfeil
     REVOLVE(Part("M7 3 V21", dashed = true), Part("M10 11 H16 V19 H10 Z"), Part("M3 7 A9 3.2 0 0 0 17 8.2"), Part("M14.2 5.6 L17 8.2 L13.6 9.4")),
     // Schale: offener Kasten mit innerer Wand

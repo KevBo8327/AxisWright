@@ -260,6 +260,9 @@ class WorkspaceState(
     /** Fläche antippen, auf die eine neue Skizze gelegt werden soll (Auswahlmodus an/aus). */
     var faceSketchPick by mutableStateOf(false)
         private set
+    /** Fläche antippen, bis zu der eine Extrusion reichen soll (Auswahlmodus an/aus). */
+    var extrudeFacePick by mutableStateOf(false)
+        private set
     /**
      * Mitte der Fläche, auf der die aktive Skizze liegt, für „Mittig auf Fläche“: projiziert bei Bedarf ihre Kanten (fester, mitwandernder
      * Umriss) und nimmt die Diagonale zwischen der Ecke links unten und rechts oben; bei einer runden Fläche den Mittelpunkt des größten
@@ -525,7 +528,7 @@ class WorkspaceState(
         val sel = selectedId
         doc = DocumentCodec.decode(text) // stammt aus encode(): bleibt lesbar
         handle.replace(SketchEditor(doc.features.filterIsInstance<SketchFeature>().first().sketch)) // alter Editor zeigt auf die alte Skizze
-        edgeMode = null; holeMode = null; shellMode = null; measureMode = null; planePick = false; faceSketchPick = false
+        edgeMode = null; holeMode = null; shellMode = null; measureMode = null; planePick = false; faceSketchPick = false; extrudeFacePick = false
         select(sel?.takeIf { id -> doc.features.any { it.id == id } } ?: doc.features.last().id)
         canUndo = history.canUndo; canRedo = history.canRedo
         markDirty(record = false)
@@ -567,7 +570,7 @@ class WorkspaceState(
 
     /** Ob die Einstellungskarte gebraucht wird: ein Feature ist gewählt und zum Bearbeiten geöffnet, oder ein Werkzeug läuft. */
     val panelVisible: Boolean
-        get() = (selectedId != null && cardOpen) || edgeMode != null || holeMode != null || shellMode != null || measureMode != null || planePick || faceSketchPick
+        get() = (selectedId != null && cardOpen) || edgeMode != null || holeMode != null || shellMode != null || measureMode != null || planePick || faceSketchPick || extrudeFacePick
 
     /** Schließt die Einstellungskarte: bricht ein laufendes Werkzeug ab, sonst hebt es die Auswahl auf. */
     /**
@@ -579,7 +582,7 @@ class WorkspaceState(
     /** Läuft gerade die Bearbeitung eines Körper-Features (✓ übernehmen / ✕ verwerfen)? Skizzen bearbeitet man im Skizzenmodus. */
     val editing: Boolean
         get() = selectedId != null && features.firstOrNull { it.id == selectedId } !is SketchFeature &&
-            edgeMode == null && holeMode == null && shellMode == null && measureMode == null && !planePick && !faceSketchPick
+            edgeMode == null && holeMode == null && shellMode == null && measureMode == null && !planePick && !faceSketchPick && !extrudeFacePick
 
     /** ✕ beim Bearbeiten: verwirft alle Änderungen seit dem Wählen des Features – ein gerade angelegtes Feature verschwindet wieder. */
     fun cancelEdit() {
@@ -602,6 +605,7 @@ class WorkspaceState(
             holeMode != null -> cancelHoleMode()
             planePick -> cancelPlanePick()
             faceSketchPick -> cancelFaceSketchPick()
+            extrudeFacePick -> cancelExtrudeFacePick()
             else -> { selectedId = null; refreshHighlight(); refresh() }
         }
     }
@@ -751,10 +755,16 @@ class WorkspaceState(
         if (hasExtrusions()) scheduleBuild(0)
     }
 
-    /** Extrudiert alle geschlossenen Flächen der aktiven Skizze: hinzufügen oder (von vorhandenem Material) abtragen. */
+    /** Extrudiert alle geschlossenen Flächen der aktiven Skizze: hinzufügen, abtragen oder Schnittmenge. */
     fun createExtrusion(op: BodyOp = BodyOp.ADD, distance: Double = 10.0) {
         if (regionCount == 0) return
-        val name = nextName(if (op == BodyOp.ADD) R.string.ws_name_extrusion else R.string.ws_name_cut)
+        val name = nextName(
+            when (op) {
+                BodyOp.ADD -> R.string.ws_name_extrusion
+                BodyOp.CUT -> R.string.ws_name_cut
+                BodyOp.INTERSECT -> R.string.ws_name_intersect
+            }
+        )
         // Abtragen läuft standardmäßig gegen die Ebenennormale, also in das Material hinein, wenn die Skizze auf der Oberseite liegt
         val f = doc.addExtrude(name, activeSketch, if (op == BodyOp.CUT) -distance else distance, op)
         select(f.id)
@@ -762,14 +772,19 @@ class WorkspaceState(
         scheduleBuild(0)
     }
 
-    /** [throughAll] gilt nur beim Abtragen (beim Wechsel auf Hinzufügen fällt es weg). */
-    fun updateExtrusion(distance: Double, symmetric: Boolean, op: BodyOp? = null, throughAll: Boolean? = null) {
-        val f = extrusion ?: return
-        val newOp = op ?: f.op
-        doc.update(f.copy(distance = distance, symmetric = symmetric, op = newOp, throughAll = (throughAll ?: f.throughAll) && newOp == BodyOp.CUT))
+    fun updateExtrusion(feature: ExtrudeFeature) {
+        doc.update(feature)
         refresh()
         markDirty()
         scheduleBuild()
+    }
+
+    /** [throughAll] gilt nur beim Abtragen oder der Schnittmenge (beim Wechsel auf Hinzufügen fällt es weg). */
+    fun updateExtrusion(distance: Double, symmetric: Boolean, op: BodyOp? = null, throughAll: Boolean? = null) {
+        val f = extrusion ?: return
+        val newOp = op ?: f.op
+        val newThroughAll = (throughAll ?: f.throughAll) && (newOp == BodyOp.CUT || newOp == BodyOp.INTERSECT)
+        updateExtrusion(f.copy(distance = distance, symmetric = symmetric, op = newOp, throughAll = newThroughAll))
     }
 
     /**
@@ -783,7 +798,14 @@ class WorkspaceState(
         val candidates = revolveAxisOptions(activeSketch.id) + listOf(RevolveAxis.SketchY, RevolveAxis.SketchX)
         val axis = candidates.firstOrNull { a -> RevolveGeometry.resolve(sk, a)?.let { RevolveGeometry.problem(regions, it) } == null }
             ?: candidates.first()
-        val f = doc.addRevolve(nextName(if (op == BodyOp.ADD) R.string.ws_name_revolve else R.string.ws_name_revolve_cut), activeSketch, axis, 360.0, op)
+        val name = nextName(
+            when (op) {
+                BodyOp.ADD -> R.string.ws_name_revolve
+                BodyOp.CUT -> R.string.ws_name_revolve_cut
+                BodyOp.INTERSECT -> R.string.ws_name_revolve_intersect
+            }
+        )
+        val f = doc.addRevolve(name, activeSketch, axis, 360.0, op)
         select(f.id)
         markDirty()
         scheduleBuild(0)
@@ -1175,6 +1197,24 @@ class WorkspaceState(
         faceSketchPick = false
     }
 
+    /** Schaltet den Auswahlmodus ein: eine ebene Zielfläche im 3D-Bild antippen, bis zu der die Extrusion reicht. */
+    fun startExtrudeFacePick() {
+        if (output?.mesh == null) return
+        planePick = false
+        edgeMode = null
+        holeMode = null
+        shellMode = null
+        measureMode = null
+        faceSketchPick = false
+        extrudeFacePick = true
+        refreshHighlight()
+    }
+
+    fun cancelExtrudeFacePick() {
+        extrudeFacePick = false
+        refreshHighlight()
+    }
+
     /** Legt eine neue Skizze auf die ebene Fläche [face] und öffnet sie zum Zeichnen. */
     private fun createFaceSketch(face: FaceRef, plane: PlanarFace) {
         val f = doc.addSketchOnFace(nextName(R.string.ws_name_sketch), face, FacePlane.workplane(plane))
@@ -1437,7 +1477,7 @@ class WorkspaceState(
     /** Verarbeitet einen Tipp im 3D-Bild in den Flächenmodi (Bohrung, Skizze/Ebene auf Fläche, Schale). */
     fun pickFace(hit: FaceHit?) {
         if (measureMode != null) { hit?.let { addMeasure(BrepShape.Part.Face(it.faceId)) }; return }
-        if ((holeMode == null && !faceSketchPick && !planePick && shellMode == null) || hit == null) return
+        if ((holeMode == null && !faceSketchPick && !planePick && shellMode == null && !extrudeFacePick) || hit == null) return
         val out = output ?: return
         val ref = out.faceRefs.getOrNull(hit.faceId - 1)
         shellMode?.let { mode ->
@@ -1454,6 +1494,18 @@ class WorkspaceState(
         }
         if (ref == null) {
             notice = UiText.Res(R.string.ws_notice_face_unnamed)
+            return
+        }
+        if (extrudeFacePick) {
+            val ex = extrusion ?: return
+            val sketchPlane = doc.sketch(ex.sketch).plane
+            val tn = Vec3(plane.normal.first, plane.normal.second, plane.normal.third)
+            if (kotlin.math.abs(kotlin.math.abs(sketchPlane.normal.dot(tn)) - 1.0) > 1e-4) {
+                notice = UiText.Res(R.string.core_model_face_not_parallel)
+                return
+            }
+            extrudeFacePick = false
+            updateExtrusion(ex.copy(untilFace = ref, throughAll = false))
             return
         }
         if (faceSketchPick) {
@@ -1562,8 +1614,8 @@ class WorkspaceState(
             }
             measure.segment?.let { for (f in it) segs += f }
         }
-        // Öffnungen der Schale (Modus bzw. gewählte Schale): ihre Randkanten
-        val openFaces = (shellMode?.selected ?: shell?.openFaces).orEmpty()
+        // Öffnungen der Schale (Modus bzw. gewählte Schale) und Zielfläche einer Extrusion: ihre Randkanten
+        val openFaces = (shellMode?.selected ?: shell?.openFaces).orEmpty() + listOfNotNull(extrusion?.untilFace)
         if (out != null && (selected.isNotEmpty() || openFaces.isNotEmpty())) {
             var offset = 0
             for ((i, n) in out.edgeCounts.withIndex()) {

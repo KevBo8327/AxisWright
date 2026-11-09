@@ -80,8 +80,18 @@
     <!-- Extrusion / Drehung -->
     <string name="feat_op_add">Add</string>
     <string name="feat_op_cut">Cut</string>
+    <string name="feat_op_intersect">Intersect</string>
+    <string name="feat_extrude_end_label">End</string>
+    <string name="feat_extrude_end_length">Length</string>
+    <string name="feat_extrude_end_to_face">To face</string>
     <string name="feat_extrude_through_all">Through all</string>
     <string name="feat_extrude_length">Length (mm)</string>
+    <string name="feat_extrude_second_side">Second side</string>
+    <string name="feat_extrude_length2">Length side 2 (mm)</string>
+    <string name="feat_extrude_pick_face_hint">Tap a planar face on the body parallel to the sketch plane</string>
+    <string name="feat_extrude_pick_face">Select face</string>
+    <string name="feat_extrude_change_face">Change</string>
+    <string name="feat_extrude_target_face_selected">Target face selected</string>
     <string name="feat_symmetric">Symmetric about the sketch plane</string>
     <string name="feat_reversed">Reverse direction</string>
     <string name="feat_revolve_axis_label">Axis of revolution</string>

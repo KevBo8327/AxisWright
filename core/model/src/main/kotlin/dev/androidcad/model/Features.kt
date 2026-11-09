@@ -92,6 +92,9 @@ enum class BodyOp {
 
     /** Material abtragen. */
     CUT,
+
+    /** Schnittmenge mit dem bisherigen Körper bilden. */
+    INTERSECT,
 }
 
 /**
@@ -103,6 +106,8 @@ enum class BodyOp {
  * @param symmetric Verteilt die Länge zu gleichen Teilen auf beide Seiten der Ebene.
  * @param throughAll „Durch alles“: die Länge reicht beim Aufbau immer durch den ganzen bisherigen Körper ([distance] gibt nur
  *   noch die Richtung an; mit [symmetric] in beide Richtungen).
+ * @param distance2 Optionale zweite Länge für die Gegenseite (in mm; > 0).
+ * @param untilFace Extrusion endet an dieser ebenen Fläche des Körpers (parallel zur Skizzenebene).
  */
 data class ExtrudeFeature(
     override val id: FeatureId,
@@ -113,6 +118,8 @@ data class ExtrudeFeature(
     val regionPoints: List<Vec2> = emptyList(),
     val symmetric: Boolean = false,
     val throughAll: Boolean = false,
+    val distance2: Double? = null,
+    val untilFace: FaceRef? = null,
 ) : Feature
 
 /** Drehachse eines [RevolveFeature], in der Ebene seiner Skizze. */

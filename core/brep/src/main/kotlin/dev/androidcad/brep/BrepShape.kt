@@ -309,20 +309,33 @@ class BrepShape private constructor(private val handle: Long) : AutoCloseable {
         /**
          * Extrudiert [profile] (in der XY-Ebene) um [height] mm entlang +Z; bei negativem [height] nach −Z.
          * Mit [symmetric] wird [height] gleichmäßig auf beide Seiten der Ebene verteilt (Gesamtdicke |height|).
+         * Mit [height2] wird die Gegenseite um [height2] mm extrudiert (> 0).
          * [bottomTag]/[topTag] benennen die untere (kleineres z) und die obere Stirnfläche, die [ProfileSegment.tag]s die Seitenflächen.
          */
-        fun extrude(profile: Profile, height: Double, symmetric: Boolean = false, bottomTag: Long = 0, topTag: Long = 0): BrepShape {
+        fun extrude(
+            profile: Profile,
+            height: Double,
+            symmetric: Boolean = false,
+            bottomTag: Long = 0,
+            topTag: Long = 0,
+            height2: Double? = null,
+        ): BrepShape {
             if (height == 0.0) throw BrepException(Msg(BrepText.EXTRUSION_HEIGHT_ZERO))
-            val h = kotlin.math.abs(height)
+            if (height2 != null && height2 < 0.0) throw BrepException(Msg(BrepText.EXTRUSION_HEIGHT_ZERO))
+            val h1 = kotlin.math.abs(height)
+            val h2 = height2?.let { kotlin.math.abs(it) } ?: 0.0
+            val totalHeight = if (height2 != null) h1 + h2 else h1
+            if (totalHeight == 0.0) throw BrepException(Msg(BrepText.EXTRUSION_HEIGHT_ZERO))
             val up = try {
-                BrepShape(NativeBrep.extrude(profile.encode(), h, profile.segmentTags(), bottomTag, topTag))
+                BrepShape(NativeBrep.extrude(profile.encode(), totalHeight, profile.segmentTags(), bottomTag, topTag))
             } catch (e: IllegalStateException) {
                 throw BrepException(if (e.message.isNullOrBlank()) Msg(BrepText.BREP_ERROR) else Msg(BrepText.BREP_ERROR_DETAIL, e.message!!), e)
             }
             // Die Richtung wird durch Verschieben des positiv extrudierten Körpers erreicht (vermeidet ein verkehrtes Solid).
             val dz = when {
-                symmetric -> -h / 2
-                height < 0 -> -h
+                height2 != null -> if (height > 0) -h2 else -h1
+                symmetric -> -h1 / 2
+                height < 0 -> -h1
                 else -> 0.0
             }
             return if (dz == 0.0) up else up.use { it.translate(0.0, 0.0, dz) }

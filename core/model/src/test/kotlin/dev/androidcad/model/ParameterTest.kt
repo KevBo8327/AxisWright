@@ -55,6 +55,17 @@ class ParameterTest {
     }
 
     @Test
+    fun secondDistanceCanBeDrivenByParameter() {
+        val p = plate()
+        p.doc.update((p.doc.feature(p.extrude.id) as ExtrudeFeature).copy(distance2 = 5.0))
+        p.doc.setParameters(listOf(Parameter("d2", "12.5")))
+        p.doc.bind(ValueRef.FeatureValue(p.extrude.id, 1), "d2")
+        val r = p.doc.applyParameters()
+        assertTrue(r.errors.isEmpty(), r.errors.toString())
+        assertEquals(12.5, (p.doc.feature(p.extrude.id) as ExtrudeFeature).distance2)
+    }
+
+    @Test
     fun renamingAParameterRenamesItEverywhere() {
         val p = plate()
         p.doc.setParameters(listOf(Parameter("wand", "3"), Parameter("wand2", "1"), Parameter("breite", "10 * wand + wand2")))

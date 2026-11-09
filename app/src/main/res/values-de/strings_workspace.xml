@@ -153,8 +153,10 @@
     <string name="ws_name_sketch">Skizze</string>
     <string name="ws_name_extrusion">Extrusion</string>
     <string name="ws_name_cut">Abtrag</string>
+    <string name="ws_name_intersect">Schnittmenge</string>
     <string name="ws_name_revolve">Drehung</string>
     <string name="ws_name_revolve_cut">Drehabtrag</string>
+    <string name="ws_name_revolve_intersect">Drehschnittmenge</string>
     <string name="ws_name_fillet">Verrundung</string>
     <string name="ws_name_chamfer">Fase</string>
     <string name="ws_name_mirror_body">Körperspiegelung</string>

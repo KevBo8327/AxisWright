@@ -141,6 +141,7 @@
     <string name="core_model_no_body">there is no body yet</string>
     <string name="core_model_no_body_to_mirror">there is no body to mirror yet</string>
     <string name="core_model_no_body_to_cut">there is no body to cut from yet</string>
+    <string name="core_model_no_body_to_intersect">there is no body to intersect with yet</string>
     <string name="core_model_pattern_source_gone">the patterned feature no longer exists</string>
     <string name="core_model_pattern_no_copies">the pattern has no copies</string>
     <string name="core_model_mirror_plane_gone">the mirror plane is missing</string>
@@ -149,6 +150,7 @@
     <string name="core_model_no_closed_region">no closed profile found in “%1$s”</string>
     <string name="core_model_face_gone">the selected face no longer exists (changed or removed)</string>
     <string name="core_model_face_not_planar">the selected face is not planar</string>
+    <string name="core_model_face_not_parallel">target face must be parallel to the sketch plane</string>
     <string name="core_model_hole_ref_edge_gone">a reference edge of the hole no longer exists (face changed or removed)</string>
     <string name="core_model_hole_ref_edge_not_in_face">a reference edge is not in the selected face</string>
     <string name="core_model_hole_ref_edge_not_straight">reference edges must be straight</string>

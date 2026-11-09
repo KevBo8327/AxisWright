@@ -204,4 +204,26 @@ class BrepTest {
         s.close()
         assertFailsWith<IllegalStateException> { s.volume() }
     }
+
+    @Test
+    fun extrudeWithSecondSide() {
+        // Rechteck 20 x 30, height = 10, height2 = 5 -> Gesamthöhe 15, z von -5 bis 10
+        BrepShape.extrude(Profile.rectangle(0.0, 0.0, 20.0, 30.0), 10.0, height2 = 5.0).use { box ->
+            assertVolume(9000.0, box.volume())
+            val b = box.bounds()
+            assertEquals(-5.0, b[2], 1e-4)
+            assertEquals(10.0, b[5], 1e-4)
+        }
+    }
+
+    @Test
+    fun extrudeWithSecondSideNegativeDistance() {
+        // Rechteck 20 x 30, height = -10, height2 = 5 -> Gesamthöhe 15, z von -10 bis 5
+        BrepShape.extrude(Profile.rectangle(0.0, 0.0, 20.0, 30.0), -10.0, height2 = 5.0).use { box ->
+            assertVolume(9000.0, box.volume())
+            val b = box.bounds()
+            assertEquals(-10.0, b[2], 1e-4)
+            assertEquals(5.0, b[5], 1e-4)
+        }
+    }
 }
