@@ -236,7 +236,7 @@ class FaceRefTest {
         model.document.update(hole.copy(anchors = EdgeDistance(cornerHoleEdge, 2.0) to EdgeDistance(EdgeRef.of(top, rightFace), 10.0)))
         model.build().use { r ->
             assertEquals(setOf(hole.id), r.errors.keys)
-            assertEquals(ModelText.HOLE_REF_EDGE_NOT_STRAIGHT, r.errors.values.single().key)
+            assertFeatureFailedWithReason(r.errors.values.single(), ModelText.HOLE_REF_EDGE_NOT_STRAIGHT)
         }
         // Referenzkante existiert nicht mehr
         val ghost = EdgeRef.of(top, FaceRef(ext, FaceRole.SIDE, 99999))

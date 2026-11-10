@@ -159,7 +159,7 @@ class HoleGeometryTest {
             kind = HoleKind.COUNTERBORE, counterboreDiameter = 8.0, counterboreDepth = 3.0,
         )
         s.doc.build().use { res ->
-            assertEquals(ModelText.HOLE_SINK_DIAMETER_TOO_SMALL, res.errors[h1.id]?.key)
+            assertFeatureFailedWithReason(res.errors[h1.id], ModelText.HOLE_SINK_DIAMETER_TOO_SMALL)
         }
         s.doc.remove(h1.id)
 
@@ -169,7 +169,7 @@ class HoleGeometryTest {
             kind = HoleKind.COUNTERBORE, counterboreDiameter = 10.0, counterboreDepth = 5.0,
         )
         s.doc.build().use { res ->
-            assertEquals(ModelText.HOLE_SINK_DEPTH_TOO_LARGE, res.errors[h2.id]?.key)
+            assertFeatureFailedWithReason(res.errors[h2.id], ModelText.HOLE_SINK_DEPTH_TOO_LARGE)
         }
         s.doc.remove(h2.id)
 
@@ -180,7 +180,7 @@ class HoleGeometryTest {
             kind = HoleKind.COUNTERSINK, countersinkDiameter = 16.0, countersinkAngle = 90.0,
         )
         s.doc.build().use { res ->
-            assertEquals(ModelText.HOLE_SINK_DEPTH_TOO_LARGE, res.errors[h3.id]?.key)
+            assertFeatureFailedWithReason(res.errors[h3.id], ModelText.HOLE_SINK_DEPTH_TOO_LARGE)
         }
         s.doc.remove(h3.id)
 
@@ -190,7 +190,7 @@ class HoleGeometryTest {
             kind = HoleKind.COUNTERSINK, countersinkDiameter = 10.0, countersinkAngle = 180.0,
         )
         s.doc.build().use { res ->
-            assertEquals(ModelText.HOLE_SINK_ANGLE_RANGE, res.errors[h4.id]?.key)
+            assertFeatureFailedWithReason(res.errors[h4.id], ModelText.HOLE_SINK_ANGLE_RANGE)
         }
     }
 }
