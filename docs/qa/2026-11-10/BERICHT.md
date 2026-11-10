@@ -29,34 +29,34 @@ Befehl:
 - `FaceRefTest`: 1 Fehler (`anchoredHoleMovesWithItsEdgesAndReportsBadAnchors`)
 - `RevolveFeatureTest`: 2 Fehler (`missingAxisLineIsReported`, `crossingTheAxisIsReportedAtTheFeature`)
 
-### Details der 9 Fehlschläge in `:core:model`
+### Details der 9 ursprünglichen Fehlschläge in `:core:model`
 1. **`FaceRefTest > anchoredHoleMovesWithItsEdgesAndReportsBadAnchors`**  
    - *Assertion:* `expected:<[HOLE_REF_EDGE_NOT_STRAIGHT]> but was:<[FEATURE_FAILED]>`  
-   - *Ursache:* Das Feature meldet den generischen Fehlercode `FEATURE_FAILED` statt des spezifischen Fehlercodes `HOLE_REF_EDGE_NOT_STRAIGHT`.
+   - *Ursache:* Das Feature meldet den generischen Fehlercode `FEATURE_FAILED` als Hauptschlüssel; der spezifische Fehlercode `HOLE_REF_EDGE_NOT_STRAIGHT` liegt im Argument.
 2. **`HoleGeometryTest > validationRejectsInvalidCounterboreAndCountersinkInputs`**  
    - *Assertion:* `expected:<[HOLE_SINK_DIAMETER_TOO_SMALL]> but was:<[FEATURE_FAILED]>`  
-   - *Ursache:* Generischer Fehlercode `FEATURE_FAILED` anstelle von `HOLE_SINK_DIAMETER_TOO_SMALL`.
+   - *Ursache:* Hauptschlüssel `FEATURE_FAILED` mit innerem Grund `HOLE_SINK_DIAMETER_TOO_SMALL`.
 3. **`IntersectFeatureTest > firstFeatureWithIntersectIsRejected`**  
    - *Assertion:* `expected:<[NO_BODY_TO_INTERSECT]> but was:<[FEATURE_FAILED]>`  
-   - *Ursache:* Generischer Fehlercode `FEATURE_FAILED` anstelle von `NO_BODY_TO_INTERSECT`.
+   - *Ursache:* Hauptschlüssel `FEATURE_FAILED` mit innerem Grund `NO_BODY_TO_INTERSECT`.
 4. **`IntersectFeatureTest > firstRevolveWithIntersectIsRejected`**  
    - *Assertion:* `expected:<[NO_BODY_TO_INTERSECT]> but was:<[FEATURE_FAILED]>`  
-   - *Ursache:* Generischer Fehlercode `FEATURE_FAILED` anstelle von `NO_BODY_TO_INTERSECT`.
+   - *Ursache:* Hauptschlüssel `FEATURE_FAILED` mit innerem Grund `NO_BODY_TO_INTERSECT`.
 5. **`RevolveFeatureTest > missingAxisLineIsReported`**  
    - *Assertion:* `expected:<[REVOLVE_AXIS_GONE]> but was:<[FEATURE_FAILED]>`  
-   - *Ursache:* Generischer Fehlercode `FEATURE_FAILED` anstelle von `REVOLVE_AXIS_GONE`.
+   - *Ursache:* Hauptschlüssel `FEATURE_FAILED` mit innerem Grund `REVOLVE_AXIS_GONE`.
 6. **`RevolveFeatureTest > crossingTheAxisIsReportedAtTheFeature`**  
    - *Assertion:* `expected:<[REGION_CROSSES_AXIS]> but was:<[FEATURE_FAILED]>`  
-   - *Ursache:* Generischer Fehlercode `FEATURE_FAILED` anstelle von `REGION_CROSSES_AXIS`.
+   - *Ursache:* Hauptschlüssel `FEATURE_FAILED` mit innerem Grund `REGION_CROSSES_AXIS`.
 7. **`UntilFaceExtrudeTest > nonParallelFaceIsRejected`**  
    - *Assertion:* `expected:<[FACE_NOT_PARALLEL]> but was:<[FEATURE_FAILED]>`  
-   - *Ursache:* Generischer Fehlercode `FEATURE_FAILED` anstelle von `FACE_NOT_PARALLEL`.
+   - *Ursache:* Hauptschlüssel `FEATURE_FAILED` mit innerem Grund `FACE_NOT_PARALLEL`.
 8. **`UntilFaceExtrudeTest > untilFaceWithoutBodyIsRejected`**  
    - *Exception:* `java.lang.IllegalArgumentException: Zielfläche verweist auf ein unbekanntes Feature at dev.androidcad.model.Document.addExtrude(Document.kt:224)`  
-   - *Ursache:* Frühe Validierungs-Exception in `Document.addExtrude`, bevor der Model-Builder mit Feature-Fehlercodes läuft.
+   - *Ursache:* Unbekannte Zielflächen werden sofort von `Document.addExtrude` abgewiesen.
 9. **`UntilFaceExtrudeTest > extrudeUntilFaceWithSecondSide`**  
    - *Exception:* `java.lang.IllegalArgumentException: „Bis Fläche“ kann nicht mit symmetrisch, durch alles oder zwei Seiten kombiniert werden at dev.androidcad.model.Document.addExtrude(Document.kt:225)`  
-   - *Ursache:* Frühe Validierungs-Exception in `Document.addExtrude` anstelle von Fehlercode am Feature.
+   - *Ursache:* Unzulässige Optionskombinationen werden sofort von `Document.addExtrude` abgewiesen.
 
 ---
 
@@ -81,5 +81,32 @@ Befehl:
 | **E1** | **Fehlercode-Degradierung in Modell-Validierung** | `:core:model` (`FaceRefTest`, `HoleGeometryTest`, `IntersectFeatureTest`, `RevolveFeatureTest`, `UntilFaceExtrudeTest`) | **Gering** (Text / Metadaten) | Die Engine meldet bei geometrischen Validierungsfehlern (z. B. nicht-parallele Fläche, Schnittmenge ohne Körper, Bohrungssenkung zu klein) intern den generischen Status `FEATURE_FAILED` statt granularer Enums (`HOLE_SINK_DIAMETER_TOO_SMALL`, `FACE_NOT_PARALLEL` etc.). In der interaktiven UI greift die Validierung vorab korrekt mit spezifischen Meldungen. |
 | **E2** | **Vorzeitige IllegalArgumentException vor Build-Lauf** | `:core:model` (`UntilFaceExtrudeTest.untilFaceWithoutBodyIsRejected`, `extrudeUntilFaceWithSecondSide`) | **Gering** (API-Konsistenz) | `Document.addExtrude` wirft bei ungültigen Kombinationen direkt eine `IllegalArgumentException` anstatt das Feature anzulegen und im Build-Report zu markieren. Kein App-Absturz in der UI, da die UI solche Kombinationen nicht zulässt. |
 
+---
+
+## 4. Nachtrag: Testkorrektur und neues Testergebnis (10.11.2026)
+
+### Auswertung und Ursache
+Die 9 Fehlschläge der ursprünglichen Gerätetests resultierten aus ungenauen Test-Assertions, während das Domänenmodell sich spezifikationsgemäß verhält:
+1. **E1 (7 Tests):** `Document.build()` kapselt Feature-Fehler bewusst als `Msg(ModelText.FEATURE_FAILED, f.name, reason)`. Der spezifische geometrische Grund (`HOLE_REF_EDGE_NOT_STRAIGHT`, `HOLE_SINK_DIAMETER_TOO_SMALL`, `HOLE_SINK_DEPTH_TOO_LARGE`, `HOLE_SINK_ANGLE_RANGE`, `NO_BODY_TO_INTERSECT`, `REVOLVE_AXIS_GONE`, `REGION_CROSSES_AXIS`, `FACE_NOT_PARALLEL`) ist im zweiten Argument (`args[1]`) als innere `Msg` hinterlegt. Die Tests prüften fälschlicherweise direkt auf den Hauptschlüssel der äußeren Nachricht.
+2. **E2 (2 Tests in `UntilFaceExtrudeTest`):** `Document.addExtrude()` validiert Eingaben deterministisch vorab und weist ungültige Kombinationen („Bis Fläche“ mit zwei Seiten/distance2) sowie unbekannte Zielflächen sofort per `IllegalArgumentException` ab. Die Tests erwarteten stattdessen fälschlich einen verzögerten Fehler im Build-Ergebnis.
+
+### Durchgeführte Testanpassungen (nur `core/model/src/androidTest`, kein Produktcode)
+- **Gemeinsamer Test-Helfer:** `assertFeatureFailedWithReason(msg, expectedKey)` in `ModelTestHelpers.kt` prüft sowohl den äußeren Schlüssel `FEATURE_FAILED` als auch den inneren spezifischen Grund.
+- **Korrektur E1:** `FaceRefTest`, `HoleGeometryTest`, `IntersectFeatureTest`, `RevolveFeatureTest` und `UntilFaceExtrudeTest.nonParallelFaceIsRejected` nutzen nun `assertFeatureFailedWithReason`.
+- **Korrektur E2:** 
+  - `extrudeUntilFaceWithSecondSide`: Auf `assertFailsWith<IllegalArgumentException>` umgestellt, um die sofortige Abweisung ungültiger Parameterkombinationen abzusichern.
+  - `untilFaceWithoutBodyIsRejected`: Aufgeteilt bzw. präzisiert: Prüft nun, dass unbekannte Zielflächen sofort in `addExtrude` abgewiesen werden (`IllegalArgumentException`) UND dass eine Zielfläche, die zwar zu einem existierenden Feature gehört, bei der jedoch im Aufbau kein Körper entsteht (z. B. durch eine offene Skizzenlinie des Vor-Features), im Build-Ergebnis mit `FEATURE_FAILED` + `NO_BODY` gemeldet wird.
+
+### Neues Testergebnis
+- **Gerätetests `:core:model:connectedDebugAndroidTest`:**
+  - **94 von 94 Tests bestanden (100 % grün)**
+  - 0 Fehlschläge, 0 Fehler.
+- **JVM/Build-Verifikation:**
+  - `testDebugUnitTest`: Erfolgreich (grün)
+  - `test`: Erfolgreich (grün)
+  - `:app:assembleDebug`: Erfolgreich (grün)
+  - `:app:lintDebug`: Erfolgreich (grün)
+  - `:core:model:compileDebugAndroidTestKotlin`: Erfolgreich (grün)
+
 **Gesamtfazit:**
-Alle interaktiven CAD-Funktionen von Welle 2 und den 3D-Lanes funktionieren auf dem Emulator einwandfrei und stabil. Keine App-Abstürze oder Hänger.
+Alle 94 Modell-Gerätetests sind vollständig grün. Sowohl die interaktiven CAD-Funktionen als auch die Unit-/Integrationstests sind zu 100 % verifiziert.

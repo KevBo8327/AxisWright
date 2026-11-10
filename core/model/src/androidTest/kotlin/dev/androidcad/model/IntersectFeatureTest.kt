@@ -62,7 +62,7 @@ class IntersectFeatureTest {
         val f = doc.addExtrude("SchnittOhneKoerper", sk, 10.0, BodyOp.INTERSECT)
 
         doc.build().use { res ->
-            assertEquals(ModelText.NO_BODY_TO_INTERSECT, res.errors[f.id]?.key)
+            assertFeatureFailedWithReason(res.errors[f.id], ModelText.NO_BODY_TO_INTERSECT)
             assertEquals(null, res.body)
         }
     }
@@ -75,7 +75,7 @@ class IntersectFeatureTest {
         val f = doc.addRevolve("DrehungOhneKoerper", sk, RevolveAxis.SketchY, 360.0, BodyOp.INTERSECT)
 
         doc.build().use { res ->
-            assertEquals(ModelText.NO_BODY_TO_INTERSECT, res.errors[f.id]?.key)
+            assertFeatureFailedWithReason(res.errors[f.id], ModelText.NO_BODY_TO_INTERSECT)
             assertEquals(null, res.body)
         }
     }

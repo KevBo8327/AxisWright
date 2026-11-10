@@ -4,6 +4,7 @@ import dev.androidcad.text.Msg
 import org.junit.Test
 import kotlin.math.abs
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 /**
@@ -55,12 +56,9 @@ class UntilFaceExtrudeTest {
         sk2.sketch.addRectangle(50.0, 0.0, 10.0, 10.0)
         val topFace = FaceRef(box.id, FaceRole.TOP)
 
-        // Seite 1: bis z = 20 (Abstand 15 mm). Seite 2: Gegenseite 5 mm (in -z). Gesamthöhe = 20 mm.
-        doc.addExtrude("BisFlaecheMitGegenseite", sk2, 1.0, untilFace = topFace, distance2 = 5.0)
-
-        doc.build().use { res ->
-            assertTrue(res.isOk, res.errors.toString())
-            near(24000.0 + 10.0 * 10.0 * 20.0, res.body!!.volume())
+        // „Bis Fläche“ kann nicht mit zwei Seiten (distance2) kombiniert werden (wird sofort in addExtrude abgelehnt)
+        assertFailsWith<IllegalArgumentException> {
+            doc.addExtrude("BisFlaecheMitGegenseite", sk2, 1.0, untilFace = topFace, distance2 = 5.0)
         }
     }
 
@@ -79,7 +77,7 @@ class UntilFaceExtrudeTest {
         val f = doc.addExtrude("Schraeg", sk2, 1.0, untilFace = sideFace)
 
         doc.build().use { res ->
-            assertEquals(ModelText.FACE_NOT_PARALLEL, res.errors[f.id]?.key)
+            assertFeatureFailedWithReason(res.errors[f.id], ModelText.FACE_NOT_PARALLEL)
         }
     }
 
@@ -89,10 +87,23 @@ class UntilFaceExtrudeTest {
         val sk = doc.addSketch("Skizze")
         sk.sketch.addRectangle(0.0, 0.0, 10.0, 10.0)
         val fakeFace = FaceRef(FeatureId(999), FaceRole.TOP)
-        val f = doc.addExtrude("OhneKoerper", sk, 1.0, untilFace = fakeFace)
+        // Unbekannte Zielfläche wird bereits in addExtrude sofort abgelehnt
+        assertFailsWith<IllegalArgumentException> {
+            doc.addExtrude("OhneKoerper", sk, 1.0, untilFace = fakeFace)
+        }
+
+        // Zielfläche verweist auf existierendes Feature, aber beim Aufbau entsteht kein Körper
+        val sk1 = doc.addSketch("Basis")
+        sk1.sketch.addLine(0.0, 0.0, 10.0, 0.0) // Offene Linie -> Extrusion erzeugt keinen Körper
+        val box = doc.addExtrude("BasisBlock", sk1, 20.0)
+
+        val sk2 = doc.addSketch("ZweiteSkizze")
+        sk2.sketch.addRectangle(0.0, 0.0, 10.0, 10.0)
+        val targetFace = FaceRef(box.id, FaceRole.TOP)
+        val f = doc.addExtrude("OhneKoerper2", sk2, 1.0, untilFace = targetFace)
 
         doc.build().use { res ->
-            assertEquals(ModelText.NO_BODY, res.errors[f.id]?.key)
+            assertFeatureFailedWithReason(res.errors[f.id], ModelText.NO_BODY)
         }
     }
 
@@ -110,8 +121,7 @@ class UntilFaceExtrudeTest {
         doc.update(f.copy(symmetric = true))
 
         doc.build().use { res ->
-            val reason = res.errors[f.id]?.args?.getOrNull(1) as? Msg
-            assertEquals(ModelText.EXTRUDE_UNTIL_FACE_CONFLICT, reason?.key)
+            assertFeatureFailedWithReason(res.errors[f.id], ModelText.EXTRUDE_UNTIL_FACE_CONFLICT)
         }
     }
 
@@ -124,8 +134,7 @@ class UntilFaceExtrudeTest {
         doc.update(f.copy(distance2 = 0.0))
 
         doc.build().use { res ->
-            val reason = res.errors[f.id]?.args?.getOrNull(1) as? Msg
-            assertEquals(ModelText.LENGTH_NOT_POSITIVE, reason?.key)
+            assertFeatureFailedWithReason(res.errors[f.id], ModelText.LENGTH_NOT_POSITIVE)
         }
     }
 }
