@@ -24,14 +24,15 @@ Die App arbeitet vollständig **offline**: ohne Benutzerkonto, ohne Cloud-Zwang,
 ## Funktionen
 
 - **Skizzieren (2D):**
-  - Grundformen: Linie (auch tangential), Rechteck (Ecke, Mitte, 3 Punkte), Kreis (Mitte, 2/3 Punkte, tangential), Bogen, Langloch, regelmäßiges Vieleck.
-  - 2D-Werkzeuge: Trimmen, Verlängern, Versatz, Ecken runden, Spiegeln, Muster (Reihe und Kreis).
+  - Grundformen: Linie (auch tangential), Rechteck (Ecke, Mitte, 3 Punkte), Kreis (Mitte, 2/3 Punkte, tangential), Bogen, Langloch, regelmäßiges Vieleck, Text als Skizzenelement (für Gravur oder erhabene Beschriftung).
+  - 2D-Werkzeuge: Trimmen, Verlängern, Versatz, Ecken runden, Spiegeln, Muster (Reihe und Kreis), Transformieren (Verschieben, Drehen, Skalieren und Kopieren der Auswahl).
   - Geometrische Bedingungen: 16 Constraints (horizontal, vertikal, parallel, senkrecht, tangential, konzentrisch, symmetrisch u. v. m.).
   - Bemaßung: 8 Maßarten mit Maßlinie, Pfeilen und Maßhilfslinien; Freiheitsgrad-Analyse (vollständig bestimmt).
 - **Körper (3D):**
-  - Features: Extrudieren (Hinzufügen/Abtragen/durch alles), Drehen (Revolve um Skizzen- oder Hilfsachse), Bohrungen, Verrunden, Anfasen, Schale (Aushöhlen).
+  - Features: Extrudieren (Hinzufügen, Abtragen, Schnittmenge, durch alles, zwei Seiten mit verschiedenen Längen, bis Fläche), Drehen (Revolve um Skizzen- oder Hilfsachse), Bohrungen (einfach, mit Senkung/Kegelsenkung und Normgrößen M3–M10), Verrunden, Anfasen, Schale (Aushöhlen).
   - Muster & Symmetrie: Reihen-, Raster- und Kreismuster, Spiegeln von Features oder des gesamten Körpers.
   - Bezugselemente: Skizzen auf ebenen Körperflächen oder versetzten/gedrehten Arbeitsebenen; Körperkanten in Skizzen projizieren.
+  - Ansichten: Schnittansicht mit dynamischer Schnittebene zur Kontrolle von Innenkonturen und Hohlräumen.
   - Parametrischer Modellaufbau: Chronologische Zeitleiste; jeder Schritt bleibt nachträglich editierbar.
 - **Parameter & Messen:**
   - Parameter-Tabelle für Variablen und mathematische Ausdrücke (z. B. `wand * 2`).
@@ -106,7 +107,7 @@ ParamWorker ist komplett kostenlos, werbefrei und ohne Abos. Wenn dir das Projek
 
 ## Marke
 
-Der Name **ParamWorker** und das Anwendungs-Logo sind geschützte Kennzeichen von Kevin Bodenstein und nicht Teil der GPL-Lizenz. Details und Richtlinien für Forks findest du in [TRADEMARK.md](TRADEMARK.md).
+Name und Logo ParamWorker sind Kennzeichen von Kevin Bodenstein (nicht eingetragen) und nicht Teil der GPL-Lizenz. Details und Richtlinien für Forks findest du in [TRADEMARK.md](TRADEMARK.md).
 
 ---
 
@@ -130,14 +131,15 @@ The app works entirely **offline**: no user accounts, no cloud sync required, no
 ## Features
 
 - **2D Sketching:**
-  - Shapes: Lines (including tangent), Rectangles (corner, center, 3-point), Circles (center, 2/3 points, tangent), Arcs, Slots, Regular Polygons.
-  - 2D Operations: Trim, Extend, Offset, Fillet corners, Mirror, Linear and Circular Patterns.
+  - Shapes: Lines (including tangent), Rectangles (corner, center, 3-point), Circles (center, 2/3 points, tangent), Arcs, Slots, Regular Polygons, Text as sketch element (for engraving or embossed text).
+  - 2D Operations: Trim, Extend, Offset, Fillet corners, Mirror, Linear and Circular Patterns, Transform (Move, Rotate, Scale, and Copy selection).
   - Constraints: 16 geometric constraints (horizontal, vertical, parallel, perpendicular, tangent, concentric, symmetric, etc.).
   - Dimensions: 8 dimension types with dimension lines, arrows, and extension lines; degree-of-freedom solver analysis.
 - **3D Modeling:**
-  - Operations: Extrude (Add/Cut/Through-All), Revolve, Holes, Fillets, Chamfers, Shell (Hollow out).
+  - Operations: Extrude (Add, Cut, Intersect, Through-All, Two Sides with different lengths, Up to Face), Revolve, Holes (simple, counterbore, countersink, standard metric sizes M3–M10), Fillets, Chamfers, Shell (Hollow out).
   - Patterns & Symmetry: Linear, Grid, and Circular patterns; Body and Feature Mirroring.
   - References: Sketches on planar faces or offset/rotated work planes; edge projection into sketches.
+  - Views: Section view with dynamic cutting plane to inspect internal cavities and features.
   - History Tree: Parametric chronological feature timeline; every step remains editable.
 - **Parameters & Measurement:**
   - Parameter table supporting named variables and math formulas (e.g., `wall * 2`).
@@ -212,4 +214,4 @@ ParamWorker is completely free, ad-free, and has no paywalls or subscriptions. I
 
 ## Trademark
 
-The name **ParamWorker** and its logo are trademarks of Kevin Bodenstein and are not covered by the GPL-3.0 license. For guidance on naming forks, see [TRADEMARK.md](TRADEMARK.md).
+The name and logo ParamWorker are unregistered trademarks of Kevin Bodenstein and are not covered by the GPL-3.0 license. For guidance on naming forks, see [TRADEMARK.md](TRADEMARK.md).

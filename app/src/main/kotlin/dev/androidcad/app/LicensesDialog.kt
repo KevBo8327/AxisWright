@@ -1,7 +1,5 @@
 package dev.androidcad.app
 
-import android.content.Intent
-import android.net.Uri
 import androidx.annotation.StringRes
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -109,7 +107,7 @@ internal fun LicensesDialog(onDismiss: () -> Unit) {
         confirmButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.common_close)) } },
         dismissButton = {
             TextButton(onClick = {
-                context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(Distribution.SOURCE_CODE_URL)))
+                openUrl(context, Distribution.SOURCE_CODE_URL)
             }) {
                 Text(stringResource(R.string.legal_source_code_link))
             }

@@ -1,17 +1,19 @@
 ParamWorker is a parametric CAD app for Android tablets and phones. Draw a sketch, add dimensions and turn it into a part – with real, exact geometry that you can change at any time through its dimensions. Everything runs on your device: no account, no cloud, no servers of our own.
 
 SKETCHING
-• Line, rectangle (corner, centre, 3 points), circle (centre, 2 or 3 points, tangent), arc, slot, polygon
-• Trim, extend, offset and round corners
+• Line, rectangle (corner, centre, 3 points), circle (centre, 2 or 3 points, tangent), arc, slot, polygon, text as sketch element (engraving/embossed)
+• Trim, extend, offset, round corners, plus move, rotate, scale and copy selection
 • 16 geometric constraints (parallel, perpendicular, tangent, symmetric, concentric …) and 8 kinds of dimensions
 • The solver shows whether the sketch is fully defined – change a dimension and everything follows
 • Sketch patterns whose count you can change later
 
 SOLIDS
-• Extrude and cut, revolve, holes
+• Extrude (add, cut, intersect; two sides with different lengths, up to face), revolve
+• Holes with counterbore/countersink and standard sizes M3–M10
 • Fillet and chamfer edges, shell into a hollow part
 • Linear, grid and circular patterns, mirror
 • Sketches on faces and work planes; project edges into a sketch
+• Section view to inspect interior geometry and cavities
 • The model history is kept: every step stays editable and the model rebuilds itself
 
 PARAMETERS AND MEASURING

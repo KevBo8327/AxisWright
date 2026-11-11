@@ -2,7 +2,7 @@
 
 ## Deutsch
 
-Der Name **ParamWorker** und das zugehörige Anwendungs-Logo sind geschützte Marken und Kennzeichen von Kevin Bodenstein.
+Name und Logo ParamWorker sind Kennzeichen von Kevin Bodenstein (nicht eingetragen).
 
 ### Verhältnis zur GPL-3.0-Lizenz
 Der Quelltext von ParamWorker steht unter der GNU General Public License v3.0 (oder höher). Die GPL gewährt das Recht zur Nutzung, Änderung und Weiterverbreitung des Software-Codes, beinhaltet jedoch **keine Markenlizenz**.
@@ -18,7 +18,7 @@ Sie dürfen wahrheitsgemäß auf die Kompatibilität mit ParamWorker hinweisen (
 
 ## English
 
-The name **ParamWorker** and its associated application icon/logo are trademarks of Kevin Bodenstein.
+The name and logo ParamWorker are unregistered trademarks of Kevin Bodenstein.
 
 ### Relationship to the GPL-3.0 License
 The source code of ParamWorker is distributed under the GNU General Public License v3.0 (or later). The GPL grants you rights to use, modify, and redistribute the program code, but it **does not grant any trademark license**.

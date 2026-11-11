@@ -20,17 +20,19 @@ Parametrische 3D-Konstruktion auf dem Tablet: skizzieren, bemaßen, drucken.
 ParamWorker ist ein parametrisches CAD-Programm für Android-Tablets und -Smartphones. Sie zeichnen eine Skizze, bemaßen sie und machen daraus ein Bauteil – mit echter, exakter Geometrie, die sich jederzeit über ihre Maße ändern lässt. Alles läuft direkt auf dem Gerät: ohne Konto, ohne Cloud, ohne eigene Server.
 
 SKIZZIEREN
-• Linie, Rechteck (Ecke, Mitte, 3 Punkte), Kreis (Mitte, 2 oder 3 Punkte, tangential), Bogen, Langloch, Vieleck
-• Kürzen, Verlängern, Versatz und Ecken runden
+• Linie, Rechteck (Ecke, Mitte, 3 Punkte), Kreis (Mitte, 2 oder 3 Punkte, tangential), Bogen, Langloch, Vieleck, Text als Skizzenelement (Gravur/erhaben)
+• Kürzen, Verlängern, Versatz, Ecken runden sowie Verschieben, Drehen, Skalieren und Kopieren der Auswahl
 • 16 geometrische Bedingungen (parallel, senkrecht, tangential, symmetrisch, konzentrisch …) und 8 Maßarten
 • Der Löser zeigt, ob die Skizze vollständig bestimmt ist – ändern Sie ein Maß, passt sich alles an
 • Muster in der Skizze, deren Anzahl sich später ändern lässt
 
 KÖRPER
-• Extrudieren und Abtragen, Drehen, Bohrungen
+• Extrusion (Hinzufügen, Abtragen, Schnittmenge; zwei Seiten mit verschiedenen Längen, bis Fläche), Drehen
+• Bohrungen mit Senkung/Kegelsenkung und Normgrößen M3–M10
 • Verrunden und Anfasen von Kanten, Aushöhlen zur Schale
 • Reihen-, Raster- und Kreismuster, Spiegeln
 • Skizzen auf Körperflächen und Arbeitsebenen; Körperkanten in die Skizze projizieren
+• Schnittansicht zur Prüfung von Hohlräumen und Innengeometrie
 • Der Modellaufbau bleibt als Verlauf erhalten: Jeder Schritt ist änderbar, das Modell baut sich neu auf
 
 PARAMETER UND MESSEN
@@ -70,17 +72,19 @@ Parametric 3D design on your tablet: sketch, dimension, print.
 ParamWorker is a parametric CAD app for Android tablets and phones. Draw a sketch, add dimensions and turn it into a part – with real, exact geometry that you can change at any time through its dimensions. Everything runs on your device: no account, no cloud, no servers of our own.
 
 SKETCHING
-• Line, rectangle (corner, centre, 3 points), circle (centre, 2 or 3 points, tangent), arc, slot, polygon
-• Trim, extend, offset and round corners
+• Line, rectangle (corner, centre, 3 points), circle (centre, 2 or 3 points, tangent), arc, slot, polygon, text as sketch element (engraving/embossed)
+• Trim, extend, offset, round corners, plus move, rotate, scale and copy selection
 • 16 geometric constraints (parallel, perpendicular, tangent, symmetric, concentric …) and 8 kinds of dimensions
 • The solver shows whether the sketch is fully defined – change a dimension and everything follows
 • Sketch patterns whose count you can change later
 
 SOLIDS
-• Extrude and cut, revolve, holes
+• Extrude (add, cut, intersect; two sides with different lengths, up to face), revolve
+• Holes with counterbore/countersink and standard sizes M3–M10
 • Fillet and chamfer edges, shell into a hollow part
 • Linear, grid and circular patterns, mirror
 • Sketches on faces and work planes; project edges into a sketch
+• Section view to inspect interior geometry and cavities
 • The model history is kept: every step stays editable and the model rebuilds itself
 
 PARAMETERS AND MEASURING

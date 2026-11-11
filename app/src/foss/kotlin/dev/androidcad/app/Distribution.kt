@@ -1,7 +1,5 @@
 package dev.androidcad.app
 
-import android.content.Intent
-import android.net.Uri
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -60,7 +58,7 @@ private fun SupportDialog(onDismiss: () -> Unit) {
                 ) {
                     Button(
                         onClick = {
-                            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(Distribution.LIBERAPAY_URL)))
+                            openUrl(context, Distribution.LIBERAPAY_URL)
                         },
                         modifier = Modifier.weight(1f),
                     ) {
@@ -68,7 +66,7 @@ private fun SupportDialog(onDismiss: () -> Unit) {
                     }
                     Button(
                         onClick = {
-                            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(Distribution.GITHUB_SPONSORS_URL)))
+                            openUrl(context, Distribution.GITHUB_SPONSORS_URL)
                         },
                         modifier = Modifier.weight(1f),
                     ) {
