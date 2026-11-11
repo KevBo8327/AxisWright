@@ -44,7 +44,6 @@ internal fun ImprintDialog(onDismiss: () -> Unit) {
                 Text(stringResource(R.string.legal_liability_text), style = body)
                 Heading(stringResource(R.string.legal_privacy_heading))
                 Text(stringResource(R.string.legal_privacy_text), style = body)
-                Text(stringResource(R.string.legal_privacy_purchase), style = body)
                 Text(stringResource(R.string.legal_privacy_feedback), style = body)
                 Text(stringResource(R.string.legal_privacy_full, Imprint.PRIVACY_URL), style = body)
             }

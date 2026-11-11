@@ -38,9 +38,6 @@
     <string name="menu_delete">Delete…</string>
     <string name="menu_section_app">App</string>
     <string name="menu_appearance">Appearance</string>
-    <string name="menu_pro">ParamWorker Pro…</string>
-    <string name="menu_pro_active">active</string>
-    <string name="menu_pro_trial">Free during trial</string>
     <string name="menu_help">Help &amp; gestures…</string>
     <string name="menu_feedback">Send feedback…</string>
     <string name="menu_imprint">Legal notice &amp; privacy…</string>

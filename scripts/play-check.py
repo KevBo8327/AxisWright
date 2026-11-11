@@ -1,7 +1,7 @@
 """
 Prüft das Release-Paket und die Store-Unterlagen gegen die Vorgaben von Google Play (Stand Oktober 2026).
 
-Aufruf (nach ./gradlew :app:bundleRelease :app:assembleRelease):  python scripts/play-check.py
+Aufruf (nach ./gradlew :app:bundlePlayRelease :app:assemblePlayRelease):  python scripts/play-check.py
 Ausgabe: je Prüfung OK / WARNUNG / FEHLER, Exit-Code 1 bei mindestens einem FEHLER.
 
 Geprüft wird, was sich am Paket und an den Dateien maschinell feststellen lässt. Formulare in der Play Console (Datensicherheit,
@@ -20,8 +20,8 @@ from PIL import Image
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SDK = os.environ.get("ANDROID_HOME") or os.path.join(os.environ.get("LOCALAPPDATA", ""), "Android", "Sdk")
-APK = os.path.join(ROOT, "app", "build", "outputs", "apk", "release", "app-release.apk")
-AAB = os.path.join(ROOT, "app", "build", "outputs", "bundle", "release", "app-release.aab")
+APK = os.path.join(ROOT, "app", "build", "outputs", "apk", "play", "release", "app-play-release.apk")
+AAB = os.path.join(ROOT, "app", "build", "outputs", "bundle", "playRelease", "app-play-release.aab")
 STORE = os.path.join(ROOT, "docs", "store")
 
 PACKAGE = "io.github.kevbo8327.paramworker"
@@ -50,7 +50,7 @@ def run(args):
 # ---- 1. Paket ------------------------------------------------------------------------------------------
 def check_package():
     if not os.path.isfile(APK) or not os.path.isfile(AAB):
-        fail("Release-Paket fehlt: erst ./gradlew :app:bundleRelease :app:assembleRelease"); return
+        fail("Release-Paket fehlt: erst ./gradlew :app:bundlePlayRelease :app:assemblePlayRelease"); return
     aapt2 = tool("aapt2")
     badging = run([aapt2, "dump", "badging", APK])
     pkg = re.search(r"package: name='([^']+)' versionCode='(\d+)' versionName='([^']*)'", badging)
@@ -63,10 +63,7 @@ def check_package():
     perms = re.findall(r"uses-permission: name='([^']+)'", badging)
     # vom Build selbst erzeugt (AndroidX), keine Nutzerberechtigung und nicht in der Datensicherheit anzugeben
     internal = [p for p in perms if p.endswith(".DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION")]
-    # aus der Play Billing Library (Einmalkauf „ParamWorker Pro“): erlaubt nur die Bindung an den Play Store, keine Nutzerdaten
-    billing = "com.android.vending.BILLING"
-    if billing in perms: ok("Berechtigung com.android.vending.BILLING (In-App-Kauf über Google Play)")
-    other = [p for p in perms if p not in internal and p != billing]
+    other = [p for p in perms if p not in internal]
     if other: warn("Berechtigungen (in der Datensicherheit begründen): " + ", ".join(other))
     else: ok("keine Berechtigungen (passt zu „keine Daten erhoben“, kein Internet)")
     abis = re.search(r"native-code: (.*)", badging)
@@ -187,7 +184,8 @@ def check_licenses():
     required = {"MIT (manifold svd.h)": "wi-re", "BSD-3 (NVIDIA PhysX in manifold)": "NVIDIA",
                 "MIT (Delabella in OCCT)": "Sokalski", "BSD (flex in OCCT)": "Regents of the University of California",
                 "MIT (musl in manifold)": "Rich Felker", "strtod (Lucent) in OCCT": "Lucent Technologies",
-                "Unicode, Inc. in OCCT": "Unicode, Inc.", "Google Play Billing (Protocol Buffers)": "Protocol Buffers", "LLVM-Ausnahme (libc++_shared.so)": "LLVM Exceptions"}
+                "Unicode, Inc. in OCCT": "Unicode, Inc.", "LLVM-Ausnahme (libc++_shared.so)": "LLVM Exceptions",
+                "GPL-3.0 (ParamWorker)": "GNU GENERAL PUBLIC LICENSE"}
     texts = "".join(open(f, encoding="utf-8").read() for f in glob.glob(os.path.join(ROOT, "app", "src", "main", "assets", "licenses", "*.txt")))
     for what, marker in required.items():
         (ok if marker in texts else fail)(f"Hinweis vorhanden: {what}")

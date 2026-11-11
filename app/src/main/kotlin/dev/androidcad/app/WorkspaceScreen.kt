@@ -229,7 +229,7 @@ private fun SketchTopBar(state: WorkspaceState, compact: Boolean, onPlaneDialog:
             }
         }
         // Parameter schon beim Skizzieren anlegen und in Maßen verwenden
-        if (!compact) TextButton(onClick = { if (Pro.allows()) state.parametersOpen = true }) { Text(stringResource(R.string.common_parameters)); ProMark() }
+        if (!compact) TextButton(onClick = { state.parametersOpen = true }) { Text(stringResource(R.string.common_parameters)) }
         if (state.parametersOpen) ParameterDialog(state) { state.parametersOpen = false }
         ActionButton(CadIcon.UNDO, stringResource(R.string.ws_top_undo), enabled = e.canUndo) { e.undo() }
         ActionButton(CadIcon.REDO, stringResource(R.string.ws_top_redo), enabled = e.canRedo) { e.redo() }
@@ -245,7 +245,7 @@ private fun SketchTopBar(state: WorkspaceState, compact: Boolean, onPlaneDialog:
                     DropdownMenuItem(text = { Text(stringResource(R.string.ws_top_plane_current, planeLabel(state.sketch))) }, onClick = { menu = false }, enabled = false)
                     if (!state.sketch.planeIsDerived) DropdownMenuItem(text = { Text(stringResource(R.string.ws_top_change_plane)) }, onClick = { menu = false; onPlaneDialog() })
                     else if (state.sketch.onFace != null) DropdownMenuItem(text = { Text(stringResource(R.string.ws_top_project_edges)) }, onClick = { menu = false; state.projectFaceEdges() })
-                    DropdownMenuItem(text = { Text(stringResource(R.string.ws_top_parameters_menu)) }, trailingIcon = { ProMark() }, onClick = { menu = false; if (Pro.allows()) state.parametersOpen = true })
+                    DropdownMenuItem(text = { Text(stringResource(R.string.ws_top_parameters_menu)) }, onClick = { menu = false; state.parametersOpen = true })
                     DropdownMenuItem(text = { Text(stringResource(R.string.ws_top_grid_snap) + if (e.gridSnap) " ✓" else "") }, onClick = { menu = false; e.gridSnap = !e.gridSnap })
                     DropdownMenuItem(text = { Text(stringResource(R.string.ws_top_fit_all)) }, onClick = { menu = false; fit() })
                 }

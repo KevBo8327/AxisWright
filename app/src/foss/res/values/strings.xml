@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="menu_support">Support development…</string>
+    <string name="support_title">Support development</string>
+    <string name="support_text">ParamWorker is free open-source software (GPL-3.0-or-later) without ads, tracking or subscriptions. If you enjoy using the app, you can support further development with a voluntary donation.</string>
+    <string name="support_liberapay">Liberapay</string>
+    <string name="support_github">GitHub Sponsors</string>
+</resources>

@@ -4,34 +4,6 @@
     <string name="export_target_unavailable">Cannot open the destination</string>
     <string name="export_failed">Export failed: %1$s</string>
 
-    <!-- Pro-Dialog -->
-    <string name="pro_title">ParamWorker Pro</string>
-    <string name="pro_mark">(Pro)</string>
-    <string name="pro_trial_notice">Trial: all Pro features are free to use for now.</string>
-    <string name="pro_heading_pro">Pro – buy once, use forever</string>
-    <string name="pro_feature_step">STEP export (exchange with other CAD programs)</string>
-    <string name="pro_feature_3mf">3MF export (3D printing)</string>
-    <string name="pro_feature_param_table">Create and edit the parameter table</string>
-    <string name="pro_heading_free">Always free</string>
-    <string name="pro_free_modeling">Modeling: sketches, bodies and all tools</string>
-    <string name="pro_free_measure">Measure</string>
-    <string name="pro_free_stl">STL export</string>
-    <string name="pro_free_share">Share and import projects</string>
-    <string name="pro_free_script">Script editor (OpenSCAD)</string>
-    <string name="pro_free_unlimited">Unlimited projects</string>
-    <string name="pro_existing_params_note">Existing parameters in your models keep working without Pro.</string>
-    <string name="pro_status_active">Pro active – thank you!</string>
-    <string name="pro_status_price">Price: %1$s (one-time)</string>
-    <string name="pro_status_loading">Loading price from Google Play …</string>
-    <string name="pro_buy">Buy</string>
-    <string name="pro_restore">Restore purchase</string>
-    <string name="pro_msg_restored">Purchase restored – Pro is active.</string>
-    <string name="pro_msg_not_found">No ParamWorker Pro purchase found.</string>
-    <string name="pro_msg_pending">Purchase pending – Pro unlocks as soon as the payment is confirmed.</string>
-    <string name="pro_err_unavailable">Google Play is not reachable. Buying and restoring need the Play Store and an internet connection.</string>
-    <string name="pro_err_item_unavailable">ParamWorker Pro is currently not available in the Play Store.</string>
-    <string name="pro_err_other">Purchase not possible (Google Play reports code %1$d).</string>
-
     <!-- Hilfe -->
     <string name="help_version">ParamWorker %1$s</string>
     <string name="help_title_welcome">Welcome to ParamWorker</string>

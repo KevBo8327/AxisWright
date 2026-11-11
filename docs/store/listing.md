@@ -49,13 +49,13 @@ FÜR FINGER, STIFT UND MAUS
 • Tablet- und Smartphone-Layout, helles und dunkles Design
 
 IHRE DATEN BLEIBEN BEI IHNEN
-Internet nur für den Kauf von Pro über Google Play – keine Werbung, kein Tracking, Ihre Projekte bleiben auf Ihrem Gerät.
+Vollständig offline: keine Internetverbindung, keine Werbung, kein Tracking – Ihre Projekte bleiben auf Ihrem Gerät.
+
+ParamWorker ist freie Open-Source-Software (GPL-3.0-or-later). Alle Funktionen sind ohne Einschränkungen oder Abos für alle frei nutzbar.
 
 Hinweis: ParamWorker ist ein Konstruktionswerkzeug. Prüfen Sie Maße und Festigkeit Ihrer Teile vor der Fertigung selbst; für sicherheitsrelevante Bauteile ist die App nicht vorgesehen.
 
 Der Geometriekern ist Open CASCADE Technology. ParamWorker befindet sich in aktiver Entwicklung – Rückmeldungen sind sehr willkommen.
-
-In der Testphase sind alle Funktionen frei. Später bleibt das gesamte Modellieren kostenlos; STEP- und 3MF-Export sowie die Parameter-Tabelle werden Teil von „Pro“ (einmaliger Kauf, kein Abo).
 
 ## English
 
@@ -99,13 +99,13 @@ FOR FINGER, PEN AND MOUSE
 • Tablet and phone layouts, light and dark theme
 
 YOUR DATA STAYS WITH YOU
-Internet only for buying Pro via Google Play – no ads, no tracking, your projects stay on your device.
+Completely offline: no internet connection, no ads, no tracking – your projects stay on your device.
+
+ParamWorker is free open-source software (GPL-3.0-or-later). All features are freely available without paywalls or subscriptions.
 
 Note: ParamWorker is a design tool. Check the dimensions and strength of your parts yourself before manufacturing; the app is not intended for safety-critical components.
 
 The geometry kernel is Open CASCADE Technology. ParamWorker is in active development – feedback is very welcome.
-
-During testing, all features are free. Later, all modelling stays free; STEP and 3MF export and the parameter table become part of "Pro" (one-time purchase, no subscription).
 
 ## Grafiken
 

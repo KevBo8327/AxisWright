@@ -8,8 +8,7 @@
     <string name="legal_liability_heading">Liability</string>
     <string name="legal_liability_text">ParamWorker is a design tool. Check the dimensions, tolerances and strength of your parts yourself before manufacturing; the app is not intended for safety-critical components. Statutory liability for intent, gross negligence and injury to life, body or health remains unaffected.</string>
     <string name="legal_privacy_heading">Privacy</string>
-    <string name="legal_privacy_text">ParamWorker has no servers of its own, no ads, no analytics or tracking tools and no user account. Internet access is used only to buy ParamWorker Pro via Google Play (Google Play Billing). Your projects do not leave the device unless you export or share them. They are stored locally; depending on your system settings, Android may include them in a device backup. Feedback opens your email app.</string>
-    <string name="legal_privacy_purchase">When you buy, Google (Google Ireland / Google Commerce) processes payment and purchase data as an independent controller under its own privacy policy. The app receives only the purchase status and the receipt (order number, purchase token) to unlock Pro and stores them locally. Google’s Billing library may send technical diagnostic data to Google.</string>
+    <string name="legal_privacy_text">ParamWorker has no servers of its own, no ads, no analytics or tracking tools and no user account. The app makes no internet connections. Your projects do not leave the device unless you export or share them. They are stored locally; depending on your system settings, Android may include them in a device backup. Feedback opens your email app.</string>
     <string name="legal_privacy_feedback">“Send feedback” only opens your email app with a prepared message (app version, device, Android version); nothing is sent until you send it yourself.</string>
     <string name="legal_privacy_full">Full privacy policy: %1$s</string>
 
@@ -19,13 +18,20 @@
     <string name="legal_licenses_show_text">Show license text ›</string>
     <string name="legal_licenses_loading">Loading…</string>
     <string name="legal_licenses_file_missing">(%1$s missing)</string>
+    <string name="legal_source_code_link">Source code</string>
+
+    <!-- Lizenzen: Eigener Code -->
+    <string name="legal_app_name" translatable="false">ParamWorker</string>
+    <string name="legal_app_use">Parametric 3D CAD app for Android</string>
+    <string name="legal_app_license" translatable="false">GNU GPL 3.0 or later (GPL-3.0-or-later) · © 2026 Kevin Bodenstein</string>
+    <string name="legal_app_source">Source code</string>
 
     <!-- Lizenzen: Bibliotheken (Eigennamen bleiben unübersetzt) -->
     <string name="legal_lib_occt_name" translatable="false">Open CASCADE Technology 7.9.3</string>
     <string name="legal_lib_occt_use">Geometry kernel (B-rep: bodies, faces, edges, fillets)</string>
     <string name="legal_lib_occt_license">GNU LGPL 2.1 with Open CASCADE exception</string>
     <string name="legal_lib_occt_source">https://github.com/Open-Cascade-SAS/OCCT (tag V7_9_3)</string>
-    <string name="legal_lib_occt_note">Shipped unmodified as separate libraries (libTK*.so) and therefore replaceable with a self-built version. On request to kb-it-services@outlook.de we will send you the complete source code of this OCCT version including build instructions free of charge (for at least three years after you received this app version). These libraries may be modified for your own use and reverse-engineered for debugging such modifications (LGPL 2.1 § 6). Contains DELABELLA (MIT), flex (BSD), strtod by David M. Gay/Lucent and Unicode code (Unicode, Inc.).</string>
+    <string name="legal_lib_occt_note">Shipped as separate libraries (libTK*.so). Because ParamWorker is open source under GPL-3.0-or-later, the full source code of the app and build scripts (scripts/build-occt.ps1) are publicly available, allowing OpenCascade to be replaced with custom versions and relinked (LGPL 2.1 § 6). Contains DELABELLA (MIT), flex (BSD), strtod by David M. Gay/Lucent and Unicode code (Unicode, Inc.).</string>
 
     <string name="legal_lib_manifold_name" translatable="false">Manifold 3</string>
     <string name="legal_lib_manifold_use">Solid computation in the script editor (OpenSCAD)</string>
@@ -53,12 +59,6 @@
     <string name="legal_lib_androidx_name" translatable="false">AndroidX: Jetpack Compose, Material 3, Activity</string>
     <string name="legal_lib_androidx_use">User interface</string>
     <string name="legal_lib_androidx_source" translatable="false">© The Android Open Source Project · https://developer.android.com/jetpack/androidx</string>
-
-    <string name="legal_lib_billing_name">Google Play Billing Library and Google Play Services</string>
-    <string name="legal_lib_billing_use">Purchase of ParamWorker Pro</string>
-    <string name="legal_lib_billing_license">Android Software Development Kit License; for included open-source components see notices</string>
-    <string name="legal_lib_billing_source" translatable="false">© Google LLC · https://developer.android.com/studio/terms</string>
-    <string name="legal_lib_billing_note">Includes Guava, Protocol Buffers, Dagger and Error Prone, among others.</string>
 
     <string name="legal_license_apache" translatable="false">Apache License 2.0</string>
 </resources>
