@@ -96,17 +96,21 @@ class DocumentCodecTest {
 
     @Test
     fun filesFromBeforeTheRenameStayReadable() {
-        for (name in listOf("androidcad-model", "partwright-model")) {
-            val old = DocumentCodec.encode(sample()).replace("paramworker-model", name)
+        for (name in listOf("androidcad-model", "partwright-model", "paramworker-model")) {
+            val old = DocumentCodec.encode(sample()).replace("axiswright-model", name)
             assertTrue(DocumentCodec.looksLikeModel(old), name)
-            assertSameDocument(sample(), DocumentCodec.decode(old))
+            val decoded = DocumentCodec.decode(old)
+            assertSameDocument(sample(), decoded)
+            // Nach dem erneuten Speichern steht das neue Format drin
+            val reSaved = DocumentCodec.encode(decoded)
+            assertTrue(reSaved.contains("\"format\": \"axiswright-model\""))
         }
     }
 
     @Test
     fun fileIsHumanReadableAndVersioned() {
         val text = DocumentCodec.encode(sample())
-        assertTrue(text.contains("\"format\": \"paramworker-model\""))
+        assertTrue(text.contains("\"format\": \"axiswright-model\""))
         assertTrue(DocumentCodec.looksLikeModel(text))
         assertTrue(!DocumentCodec.looksLikeModel("cube(10); // format"))
         assertTrue(text.contains("\"version\": 1"))

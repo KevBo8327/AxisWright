@@ -46,7 +46,7 @@ class MainActivity : ComponentActivity() {
                 )
                 onDispose { }
             }
-            ParamWorkerTheme(mode) {
+            AxisWrightTheme(mode) {
                 AppRoot(hub)
             }
         }

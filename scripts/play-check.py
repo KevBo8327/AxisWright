@@ -24,7 +24,7 @@ APK = os.path.join(ROOT, "app", "build", "outputs", "apk", "play", "release", "a
 AAB = os.path.join(ROOT, "app", "build", "outputs", "bundle", "playRelease", "app-play-release.aab")
 STORE = os.path.join(ROOT, "docs", "store")
 
-PACKAGE = "io.github.kevbo8327.paramworker"
+PACKAGE = "io.github.kevbo8327.axiswright"
 MIN_TARGET_SDK = 35        # Pflicht für neue Apps und Updates seit 31.08.2025
 RECOMMENDED_TARGET_SDK = 36  # Pflicht ab 31.08.2026 (Android 16)
 PAGE = 16384               # 16-KB-Seiten: Pflicht für native Bibliotheken bei targetSdk ≥ 35 seit 01.11.2025
@@ -153,7 +153,7 @@ def check_listing():
         title, short, full = field(title_h, short_h), field(short_h, long_h), field(long_h, None)
         for name, value, limit in (("Titel", title, 30), ("Kurzbeschreibung", short, 80), ("Langbeschreibung", full, 4000)):
             (ok if 0 < len(value) <= limit else fail)(f"{lang}: {name} {len(value)}/{limit} Zeichen")
-        if "Partwright" in part: fail(f"{lang}: alter Name „Partwright“ im Store-Text")
+        if "Partwright" in part or "ParamWorker" in part: fail(f"{lang}: alter Name („Partwright“ / „ParamWorker“) im Store-Text")
         hits = [w for w in ("beste", "best ", "Nr. 1", "#1", "kostenlos", "free download", "Top ") if w.lower() in (title + short).lower()]
         if hits: warn(f"{lang}: Titel/Kurzbeschreibung enthalten {hits} (Metadaten-Richtlinie)")
     shots_with_old_name = []  # Bilder lassen sich nicht lesen – Hinweis über das Änderungsdatum gegenüber der Umbenennung
@@ -185,7 +185,7 @@ def check_licenses():
                 "MIT (Delabella in OCCT)": "Sokalski", "BSD (flex in OCCT)": "Regents of the University of California",
                 "MIT (musl in manifold)": "Rich Felker", "strtod (Lucent) in OCCT": "Lucent Technologies",
                 "Unicode, Inc. in OCCT": "Unicode, Inc.", "LLVM-Ausnahme (libc++_shared.so)": "LLVM Exceptions",
-                "GPL-3.0 (ParamWorker)": "GNU GENERAL PUBLIC LICENSE"}
+                "GPL-3.0 (AxisWright)": "GNU GENERAL PUBLIC LICENSE"}
     texts = "".join(open(f, encoding="utf-8").read() for f in glob.glob(os.path.join(ROOT, "app", "src", "main", "assets", "licenses", "*.txt")))
     for what, marker in required.items():
         (ok if marker in texts else fail)(f"Hinweis vorhanden: {what}")

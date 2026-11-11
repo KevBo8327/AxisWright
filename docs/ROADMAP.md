@@ -35,15 +35,15 @@ Entscheidungen: Vertrieb über **Google Play**, **Freemium** (Pro als einmaliger
 (heutiger Stand stabil + Export, Messen, Parameter), weitere Funktionen als Updates. Grobe Dauer: ca. 3–4 Monate.
 
 - [ ] **Phase 0 – Fundament:**
-  - [x] App-Name **ParamWorker** (18.10.2026; vorher „Partwright“ – Websuche ergab doch bestehende Nutzungen), App-Kennung
-    `io.github.kevbo8327.paramworker` (vorher `…partwright`, davor `dev.androidcad.app`; nach dem ersten Upload nicht mehr änderbar).
-    Websuche ohne Treffer in Software/CAD; Registerprüfung DPMA/EUIPO/WIPO am 22.10. ohne Treffer in Klasse 9/42. Dateiformat-Kennung seit 19.10. `paramworker-model` (`partwright-model`/`androidcad-model` bleiben lesbar)
+  - [x] App-Name **AxisWright** (11.11.2026; vorher „ParamWorker“ 18.10.2026, davor „Partwright“), App-Kennung
+    `io.github.kevbo8327.axiswright` (vorher `…paramworker`, davor `…partwright`, `dev.androidcad.app`; vor dem ersten Play-Upload geändert).
+    Dateiformat-Kennung seit 11.11.2026 `axiswright-model` (`paramworker-model`, `partwright-model`, `androidcad-model` bleiben lesbar).
   - [x] Release-Build: Signatur über nicht eingecheckte `keystore.properties` (sonst Debug-Schlüssel zum Testen), R8 + Ressourcen-Verkleinerung,
     `bundleRelease` → AAB (≈ 16 MB Download je Gerät). Release-APK auf dem Emulator geprüft (Skizze, Extrusion, Verrundung, Lizenzseite – keine
     JNI-/R8-Fehler). Offen: Upload-Schlüssel erzeugen (Nutzer, siehe README)
   - [x] **App-Icon und Startbildschirm:** Stil „Blaupause“: türkise Skizzenfläche, blauer Block mit Tasche, orangefarbener Extrusionspfeil auf Marineblau mit Raster (nach Entwurf des Nutzers); adaptives Vektor-Icon mit
     einfarbiger Ebene (Themensymbole), Startbildschirm über `androidx.core:core-splashscreen` (einheitlich ab Android 8) mit detaillierterem Motiv (Lichtschein, Skizzenlinien,
-    verdeckte Kanten) und ab Android 12 dem Schriftzug PARAMWORKER (eigene Linienschrift, keine fremde Schriftart). Alles aus
+    verdeckte Kanten) und ab Android 12 dem Schriftzug AXISWRIGHT (eigene Linienschrift, keine fremde Schriftart). Alles aus
     `scripts/make-icon.py` erzeugt, dazu Store-Symbol `docs/store/icon-512.png` und Store-Grafik `docs/store/feature-graphic.png`
   - [x] **Automatische Prüfung** (GitHub Actions): JVM-Tests, OpenCascade je ABI mit Zwischenspeicher, Debug-APK und Release-AAB;
     `scripts/build-occt.ps1` läuft dafür auch unter Linux (PowerShell 7, `ANDROID_HOME`)

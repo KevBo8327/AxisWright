@@ -25,7 +25,7 @@ internal object Imprint {
     const val ADDRESS = "14612 Falkensee, Rembrandtstraße 34"
     const val PHONE = "+49 3322 8312325" // zweiter unmittelbarer Kontaktweg neben der E-Mail (§ 5 Abs. 1 Nr. 2 DDG)
     const val EMAIL = "kb-it-services@outlook.de"
-    const val PRIVACY_URL = "https://sites.google.com/view/paramworker/datenschutz"
+    const val PRIVACY_URL = "https://sites.google.com/view/axiswright/datenschutz"
 }
 
 /** „Impressum & Datenschutz“: Anbieter, Kontakt und die Datenschutz-Kurzfassung (vollständig unter [Imprint.PRIVACY_URL]). */

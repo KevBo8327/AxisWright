@@ -10,14 +10,14 @@ sonst verspricht der Eintrag eine Sprache, die die App nicht hat.
 ## Deutsch
 
 **Titel**
-ParamWorker – CAD für Android
+AxisWright – CAD für Android
 
 **Kurzbeschreibung**
 Parametrische 3D-Konstruktion auf dem Tablet: skizzieren, bemaßen, drucken.
 
 **Langbeschreibung**
 
-ParamWorker ist ein parametrisches CAD-Programm für Android-Tablets und -Smartphones. Sie zeichnen eine Skizze, bemaßen sie und machen daraus ein Bauteil – mit echter, exakter Geometrie, die sich jederzeit über ihre Maße ändern lässt. Alles läuft direkt auf dem Gerät: ohne Konto, ohne Cloud, ohne eigene Server.
+AxisWright ist ein parametrisches CAD-Programm für Android-Tablets und -Smartphones. Sie zeichnen eine Skizze, bemaßen sie und machen daraus ein Bauteil – mit echter, exakter Geometrie, die sich jederzeit über ihre Maße ändern lässt. Alles läuft direkt auf dem Gerät: ohne Konto, ohne Cloud, ohne eigene Server.
 
 SKIZZIEREN
 • Linie, Rechteck (Ecke, Mitte, 3 Punkte), Kreis (Mitte, 2 oder 3 Punkte, tangential), Bogen, Langloch, Vieleck, Text als Skizzenelement (Gravur/erhaben)
@@ -53,23 +53,23 @@ FÜR FINGER, STIFT UND MAUS
 IHRE DATEN BLEIBEN BEI IHNEN
 Vollständig offline: keine Internetverbindung, keine Werbung, kein Tracking – Ihre Projekte bleiben auf Ihrem Gerät.
 
-ParamWorker ist freie Open-Source-Software (GPL-3.0-or-later). Alle Funktionen sind ohne Einschränkungen oder Abos für alle frei nutzbar.
+AxisWright ist freie Open-Source-Software (GPL-3.0-or-later). Alle Funktionen sind ohne Einschränkungen oder Abos für alle frei nutzbar.
 
-Hinweis: ParamWorker ist ein Konstruktionswerkzeug. Prüfen Sie Maße und Festigkeit Ihrer Teile vor der Fertigung selbst; für sicherheitsrelevante Bauteile ist die App nicht vorgesehen.
+Hinweis: AxisWright ist ein Konstruktionswerkzeug. Prüfen Sie Maße und Festigkeit Ihrer Teile vor der Fertigung selbst; für sicherheitsrelevante Bauteile ist die App nicht vorgesehen.
 
-Der Geometriekern ist Open CASCADE Technology. ParamWorker befindet sich in aktiver Entwicklung – Rückmeldungen sind sehr willkommen.
+Der Geometriekern ist Open CASCADE Technology. AxisWright befindet sich in aktiver Entwicklung – Rückmeldungen sind sehr willkommen.
 
 ## English
 
 **Title**
-ParamWorker – CAD for Android
+AxisWright – CAD for Android
 
 **Short description**
 Parametric 3D design on your tablet: sketch, dimension, print.
 
 **Full description**
 
-ParamWorker is a parametric CAD app for Android tablets and phones. Draw a sketch, add dimensions and turn it into a part – with real, exact geometry that you can change at any time through its dimensions. Everything runs on your device: no account, no cloud, no servers of our own.
+AxisWright is a parametric CAD app for Android tablets and phones. Draw a sketch, add dimensions and turn it into a part – with real, exact geometry that you can change at any time through its dimensions. Everything runs on your device: no account, no cloud, no servers of our own.
 
 SKETCHING
 • Line, rectangle (corner, centre, 3 points), circle (centre, 2 or 3 points, tangent), arc, slot, polygon, text as sketch element (engraving/embossed)
@@ -105,11 +105,11 @@ FOR FINGER, PEN AND MOUSE
 YOUR DATA STAYS WITH YOU
 Completely offline: no internet connection, no ads, no tracking – your projects stay on your device.
 
-ParamWorker is free open-source software (GPL-3.0-or-later). All features are freely available without paywalls or subscriptions.
+AxisWright is free open-source software (GPL-3.0-or-later). All features are freely available without paywalls or subscriptions.
 
-Note: ParamWorker is a design tool. Check the dimensions and strength of your parts yourself before manufacturing; the app is not intended for safety-critical components.
+Note: AxisWright is a design tool. Check the dimensions and strength of your parts yourself before manufacturing; the app is not intended for safety-critical components.
 
-The geometry kernel is Open CASCADE Technology. ParamWorker is in active development – feedback is very welcome.
+The geometry kernel is Open CASCADE Technology. AxisWright is in active development – feedback is very welcome.
 
 ## Grafiken
 

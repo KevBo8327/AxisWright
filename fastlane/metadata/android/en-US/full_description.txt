@@ -1,4 +1,4 @@
-ParamWorker is a parametric CAD app for Android tablets and phones. Draw a sketch, add dimensions and turn it into a part – with real, exact geometry that you can change at any time through its dimensions. Everything runs on your device: no account, no cloud, no servers of our own.
+AxisWright is a parametric CAD app for Android tablets and phones. Draw a sketch, add dimensions and turn it into a part – with real, exact geometry that you can change at any time through its dimensions. Everything runs on your device: no account, no cloud, no servers of our own.
 
 SKETCHING
 • Line, rectangle (corner, centre, 3 points), circle (centre, 2 or 3 points, tangent), arc, slot, polygon, text as sketch element (engraving/embossed)
@@ -34,8 +34,8 @@ FOR FINGER, PEN AND MOUSE
 YOUR DATA STAYS WITH YOU
 Completely offline: no internet connection, no ads, no tracking – your projects stay on your device.
 
-ParamWorker is free open-source software (GPL-3.0-or-later). All features are freely available without paywalls or subscriptions.
+AxisWright is free open-source software (GPL-3.0-or-later). All features are freely available without paywalls or subscriptions.
 
-Note: ParamWorker is a design tool. Check the dimensions and strength of your parts yourself before manufacturing; the app is not intended for safety-critical components.
+Note: AxisWright is a design tool. Check the dimensions and strength of your parts yourself before manufacturing; the app is not intended for safety-critical components.
 
-The geometry kernel is Open CASCADE Technology. ParamWorker is in active development – feedback is very welcome.
+The geometry kernel is Open CASCADE Technology. AxisWright is in active development – feedback is very welcome.

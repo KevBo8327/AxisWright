@@ -239,7 +239,7 @@ private fun ModelTopBar(hub: ProjectHub, compact: Boolean) {
                 }
                 DropdownMenuItem(text = { Text(stringResource(R.string.model_export_step)) }, onClick = { menu = false; stepExporter.launch("${state.projectName}.step") }, enabled = out?.body != null)
                 DropdownMenuItem(text = { Text(stringResource(R.string.model_export_3mf)) }, onClick = { menu = false; threeMfExporter.launch("${state.projectName}.3mf") }, enabled = out?.mesh != null)
-                DropdownMenuItem(text = { Text(stringResource(R.string.model_export_project)) }, onClick = { menu = false; projectExporter.launch("${state.projectName}.paramworker.json") })
+                DropdownMenuItem(text = { Text(stringResource(R.string.model_export_project)) }, onClick = { menu = false; projectExporter.launch("${state.projectName}.axiswright.json") })
                 DropdownMenuItem(text = { Text(stringResource(R.string.model_to_script)) }, onClick = { menu = false; hub.switchTo(ProjectKind.SCRIPT) })
             }
         }

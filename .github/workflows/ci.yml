@@ -104,6 +104,6 @@ jobs:
       - name: APKs hochladen
         uses: actions/upload-artifact@v4
         with:
-          name: paramworker-debug-apks
+          name: axiswright-debug-apks
           path: app/build/outputs/apk/*/*/*.apk
           retention-days: 14
