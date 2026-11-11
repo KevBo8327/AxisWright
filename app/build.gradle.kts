@@ -19,7 +19,11 @@ val keystoreProps = Properties().apply {
     rootProject.file("keystore.properties").takeIf { it.isFile }?.inputStream()?.use { load(it) }
 }
 
-val releaseTasks = setOf("assembleRelease", "bundleRelease", "packageRelease", "packageReleaseBundle")
+val releaseTasks = setOf(
+    "assembleRelease", "bundleRelease", "packageRelease", "packageReleaseBundle",
+    "assemblePlayRelease", "bundlePlayRelease", "packagePlayRelease", "packagePlayReleaseBundle",
+    "assembleFossRelease", "bundleFossRelease", "packageFossRelease", "packageFossReleaseBundle"
+)
 gradle.taskGraph.whenReady {
     if (keystoreProps.getProperty("storeFile") == null && findProperty("allowDebugSignedRelease") != "true" &&
         allTasks.any { it.project == project && it.name in releaseTasks }
@@ -40,6 +44,16 @@ android {
         versionName = "0.9.2-beta"
         // Googlebooks laufen auch auf Intel/AMD → x86_64 ist Pflicht neben arm64.
         ndk { abiFilters += listOf("arm64-v8a", "x86_64") }
+    }
+
+    flavorDimensions += "distribution"
+    productFlavors {
+        create("play") {
+            dimension = "distribution"
+        }
+        create("foss") {
+            dimension = "distribution"
+        }
     }
 
     signingConfigs {
@@ -87,7 +101,6 @@ dependencies {
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.core.splashscreen)
     implementation(libs.haze)
-    implementation(libs.billing.ktx)
     implementation(libs.kotlinx.coroutines.android)
 
     debugImplementation(libs.androidx.compose.ui.tooling)

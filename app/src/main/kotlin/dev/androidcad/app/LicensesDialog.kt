@@ -32,7 +32,7 @@ import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-/** Eine mitgelieferte Fremdbibliothek: Name, Zweck, Lizenz, Herkunft (Ressourcen) und die Lizenztexte in `assets/licenses`. */
+/** Eine Komponente oder Fremdbibliothek: Name, Zweck, Lizenz, Herkunft (Ressourcen) und die Lizenztexte in `assets/licenses`. */
 internal data class ThirdParty(
     @StringRes val name: Int,
     @StringRes val use: Int,
@@ -42,12 +42,15 @@ internal data class ThirdParty(
     @StringRes val note: Int? = null,
 )
 
-/** Alle Fremdbibliotheken der App (Reihenfolge = Anzeige). */
+/** Alle Komponenten der App (Reihenfolge = Anzeige; eigener Code an erster Stelle). */
 internal val THIRD_PARTY = listOf(
+    ThirdParty(
+        R.string.legal_app_name, R.string.legal_app_use, R.string.legal_app_license, R.string.legal_app_source,
+        listOf("gpl_3.0.txt"),
+    ),
     ThirdParty(
         R.string.legal_lib_occt_name, R.string.legal_lib_occt_use, R.string.legal_lib_occt_license, R.string.legal_lib_occt_source,
         listOf("occt_lgpl_2.1.txt", "occt_lgpl_exception.txt", "occt_delabella_mit.txt", "occt_flex_bsd.txt", "occt_strtod_lucent.txt", "occt_unicode.txt"),
-        // LGPL 2.1 §6: austauschbar (eigene .so) und schriftliches Angebot des Quelltexts – der App-Quelltext selbst ist nicht öffentlich
         note = R.string.legal_lib_occt_note,
     ),
     ThirdParty(
@@ -75,18 +78,14 @@ internal val THIRD_PARTY = listOf(
         R.string.legal_lib_androidx_name, R.string.legal_lib_androidx_use, R.string.legal_license_apache, R.string.legal_lib_androidx_source,
         listOf("apache_2.0.txt"),
     ),
-    ThirdParty(
-        R.string.legal_lib_billing_name, R.string.legal_lib_billing_use, R.string.legal_lib_billing_license, R.string.legal_lib_billing_source,
-        listOf("google_play_notices.txt"),
-        note = R.string.legal_lib_billing_note,
-    ),
 )
 
-/** „Lizenzen“: Fremdbibliotheken mit Lizenz und Herkunft; ein Tipp zeigt den vollständigen Lizenztext. */
+/** „Lizenzen“: Eigener Code und Fremdbibliotheken mit Lizenz und Herkunft; ein Tipp zeigt den vollständigen Lizenztext. */
 @Composable
 internal fun LicensesDialog(onDismiss: () -> Unit) {
     var shown by remember { mutableStateOf<ThirdParty?>(null) }
     val colors = MaterialTheme.colorScheme
+    val context = LocalContext.current
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.legal_licenses_title)) },
@@ -106,6 +105,13 @@ internal fun LicensesDialog(onDismiss: () -> Unit) {
             }
         },
         confirmButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.common_close)) } },
+        dismissButton = {
+            TextButton(onClick = {
+                openUrl(context, Distribution.SOURCE_CODE_URL)
+            }) {
+                Text(stringResource(R.string.legal_source_code_link))
+            }
+        },
     )
     shown?.let { t -> LicenseTextDialog(t) { shown = null } }
 }
@@ -114,7 +120,6 @@ internal fun LicensesDialog(onDismiss: () -> Unit) {
 private fun LicenseTextDialog(t: ThirdParty, onDismiss: () -> Unit) {
     val context = LocalContext.current
     val res = LocalResources.current
-    // Zeilenweise (null = lädt noch): Lesen abseits des UI-Threads, Anzeige lazy – die Google-Hinweise sind ~560 KB groß
     val lines by produceState<List<String>?>(null, t) {
         value = withContext(Dispatchers.IO) {
             t.files.joinToString("\n\n――――――――\n\n") { f ->

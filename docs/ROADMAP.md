@@ -70,14 +70,16 @@ Entscheidungen: Vertrieb über **Google Play**, **Freemium** (Pro als einmaliger
 - [ ] **Phase 2 – Qualität:** verständliche Fehler statt Abbruch, Autosave/Wiederherstellen, Grenzen bei großen Modellen,
   Einführung beim ersten Start, Beispielprojekte, Hilfe zu Gesten; Stift/Maus/Chromebook auf echten Geräten; Barrierefreiheit (Grundstufe)
 - [x] **Phase 3 – Übersetzung:** Texte aus dem Code in `strings.xml` (Englisch Standard, Deutsch `values-de`), Meldungen der Kernmodule über Schlüssel (`Msg` + Enums in `core/text`, `core/sketch`, `core/sketchedit`, `core/model`, `core/lang`, `core/brep`), vollständige Zweisprachigkeit inkl. Impressum, Lizenzseite und Dialoge, Lint-Prüfung (`MissingTranslation` / `ExtraTranslation`) und `TranslationTest` ✅ (08.11.2026)
-- [x] **Phase 4 – Freemium** (Aufteilung beschlossen am 08.10.2026; umgesetzt am 01.11.2026 in Commit 13d7899; Grundsatz: Konstruieren frei, Pro = Datenaustausch und Arbeitskomfort):
-  - **Frei:** alle Skizzen- und Körperwerkzeuge (auch künftige wie Drehen), Messen, **STL-Export**, Projekte teilen/importieren,
-    Skript-Editor (OpenSCAD); **keine Begrenzung der Projektanzahl**
-  - **Pro (einmaliger Kauf, ca. 15–25 €):** STEP-Export (später Import), 3MF-Export, Parameter-Tabelle; später DXF-Export von Skizzen,
-    technische Zeichnungen (PDF), Varianten/Konfigurationen
-  - Regeln: eigene Daten nie sperren (immer öffnen, bearbeiten, als STL exportieren); Pro-Funktionen sichtbar mit „(Pro)“ und kurzer Erklärung
-  - Technik: Google Play Billing mit Wiederherstellen und Offline-Zwischenspeicher (`Pro.kt`, Google Play Billing 9.1.0, Testphase frei über `Pro.FREE_DURING_TEST`, `ProTest`), Sperren zentral über `Pro.allows()` und Menühinweise
-- [ ] **Phase 5 – Store:** Entwicklerkonto, Datenschutzerklärung (öffentliche URL), Data-Safety, Inhaltsbewertung, Store-Eintrag DE/EN mit Screenshots
+- [x] **Phase 4 – Open Source (GPL-3.0-or-later, Spenden statt Pro):**
+  - **Entscheidung des Nutzers (11.11.2026):** Verbreitung und Mitwirkende sind wichtiger als Einnahmen. Das Pro-Modell (Google Play Billing) entfällt vollständig, alle Funktionen sind frei für alle. Einnahmen erfolgen über freiwillige Spenden (Liberapay und GitHub Sponsors).
+  - **Lizenzierung:** GPL-3.0-or-later, Copyright © 2026 Kevin Bodenstein. Beiträge über eine Individual Contributor License Agreement (CLA auf Basis Apache ICLA v2.2), Verhaltenskodex (Contributor Covenant 2.1) und Markenrichtlinie (TRADEMARK.md; Name und Logo nicht unter der GPL).
+  - **Build-Varianten:** `play` (ohne In-App-Spendenhinweise gem. Google-Play-Richtlinien) und `foss` (mit Projektmenü-Eintrag „Unterstützen …“ und Spendenlinks zu Liberapay und GitHub Sponsors).
+  - **Freie Funktionen:** STEP-Export, 3MF-Export und Parameter-Tabelle sind nun für alle Nutzer frei; keine Sperren, keine „(Pro)“-Kennzeichnungen.
+  - **Datenschutz & Netzwerk:** Google Play Billing entfernt (`billing-ktx`); `INTERNET`-Berechtigung vollständig entfernt – die App arbeitet 100 % offline.
+  - *(Alte Freemium-Beschlüsse vom 08.10.2026 / 01.11.2026 mit Google Play Billing und Pro-Aufteilung verworfen am 11.11.2026).*
+- [ ] **Phase 5 – Store & F-Droid:**
+  - Google Play: Entwicklerkonto, Datenschutzerklärung (öffentliche URL), Data-Safety (keine Datenerhebung, keine Berechtigungen), Inhaltsbewertung, Store-Eintrag DE/EN mit Screenshots (`listing.md`, `scripts/play-check.py`).
+  - F-Droid: Vorbereitung der Metadaten (`fastlane/metadata/android/de-DE` und `en-US`), Quelltext-Build der `foss`-Variante (`assembleFossRelease`).
 - [ ] **Phase 6 – Tests und Start:** interner Test → **geschlossener Test mit ≥ 12 Testern über ≥ 14 Tage** (Pflicht für neue Privatkonten; als Beta,
   sobald Projekt-Export und Drehen da sind – Rückmeldungen fließen noch in die 1.0)
   → Produktionszugang → gestaffelter Rollout; Android Vitals beobachten

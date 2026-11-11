@@ -1,6 +1,6 @@
-# Prüfung: Lizenzen und Google-Play-Vorgaben (ParamWorker 0.9.0-beta, Stand 18.10.2026)
+# Prüfung: Lizenzen und Google-Play-Vorgaben (ParamWorker 0.9.0-beta, Stand 18.10.2026 / aktualisiert 11.11.2026)
 
-Anlass: Die App soll im Play Store verkauft werden (Freemium mit „Pro“-Kauf, ggf. später kostenpflichtig).
+Anlass: Die App wird im Play Store und über FOSS-Kanäle kostenlos und werbefrei als freie Open-Source-Software bereitgestellt.
 Geprüft wurden alle Bestandteile, die im Release-Paket landen, und die Vorgaben von Google Play, soweit sie sich am Paket,
 an den Store-Unterlagen und am Code feststellen lassen. **Keine Rechtsberatung** – bei Zweifeln (v. a. Markenrecht, Impressum,
 Händlerstatus) eine Fachanwältin oder einen Fachanwalt fragen.
@@ -11,9 +11,9 @@ Automatischer Test: `python scripts/play-check.py` (nach `./gradlew :app:bundleR
 
 | Bereich | Ergebnis |
 |---|---|
-| Verkauf grundsätzlich erlaubt? | **Ja.** Alle Fremdlizenzen erlauben kommerziellen Vertrieb; keine Lizenz verlangt die Offenlegung des eigenen Codes. |
+| Freier Vertrieb erlaubt? | **Ja.** Alle Fremdlizenzen erlauben Vertrieb; eigener Code steht unter GPL-3.0-or-later. |
 | Lizenzpflichten erfüllt? | **Ja, nach den Korrekturen vom 18.10.2026** (5 fehlende Hinweise ergänzt, LGPL-Quelltextangebot statt Verweis auf den privaten Quelltext). |
-| Technische Play-Vorgaben | **Erfüllt** (targetSdk 36, 64 Bit, 16-KB-Seiten, nur Billing-/Internet-Berechtigungen (siehe B1), nicht debuggable, Größe). |
+| Technische Play-Vorgaben | **Erfüllt** (targetSdk 36, 64 Bit, 16-KB-Seiten, keine Berechtigungen (weder Internet noch Billing, siehe B1), nicht debuggable, Größe). |
 | Offen beim Entwickler | Upload-Schlüssel, Datenschutzerklärung ausfüllen + veröffentlichen, Play-Console-Formulare, Händlerstatus/Impressum, Herkunft des Beispiels „Streaminghalterung“ (erledigt 21.10.2026: Eigenentwicklung); Markenprüfung „ParamWorker“ (erledigt 22.10.2026, keine Treffer in Klasse 9/42). |
 
 ---
@@ -84,7 +84,7 @@ Alle Lizenztexte liegen in `app/src/main/assets/licenses/` und sind in der App u
 |---|---|
 | Paketname `io.github.kevbo8327.paramworker`, versionCode 900 | ✅ |
 | targetSdk 36 (Pflicht für neue Apps ab 31.08.2026: 36) | ✅ |
-| Berechtigungen seit Pro-Kauf (Play Billing 9.1.0): `com.android.vending.BILLING`, `INTERNET`, `ACCESS_NETWORK_STATE` (über die Billing-Bibliothek bzw. Data Transport) plus die interne AndroidX-Berechtigung. Keine Laufzeitberechtigungen. Erwartete Warnung von `play-check.py`. | ✅ (Stand 01.11.2026) |
+| Berechtigungen: Keine Nutzerberechtigungen, weder Internet noch Billing (vollständig entfernt). Keine Laufzeitberechtigungen. | ✅ (Stand 11.11.2026) |
 | 64-Bit-Pflicht (arm64-v8a, x86_64) | ✅ |
 | **16-KB-Seitengröße**: alle 62 nativen Bibliotheken mit LOAD-Ausrichtung ≥ 16 384, im Paket passend abgelegt | ✅ |
 | Nicht debuggable; nur die Startaktivität ungeschützt exportiert (der AndroidX-ProfileInstallReceiver ist durch `DUMP` geschützt) | ✅ |
@@ -102,12 +102,12 @@ Alle Lizenztexte liegen in `app/src/main/assets/licenses/` und sind in der App u
 | Punkt | Was zu tun ist | Hinweis |
 |---|---|---|
 | Entwicklerkonto | Konto (25 $), Identitätsprüfung | vor allem anderen, dauert Tage |
-| **Händlerstatus (EU Digital Services Act)** | Beim Verkauf (Bezahl-App oder In-App-Kauf) bist du „Händler“: Name, **Anschrift**, E-Mail und Telefon werden im Store **öffentlich angezeigt**. | Ggf. Geschäftsadresse statt Privatanschrift verwenden |
+| **Händlerstatus (EU Digital Services Act)** | Kostenlose App ohne In-App-Käufe; Name, Anschrift und E-Mail im Impressum der App und Website. | Ggf. Geschäftsadresse statt Privatanschrift verwenden |
 | **Impressum** | Für geschäftsmäßige Angebote in Deutschland Anbieterkennzeichnung (§ 5 DDG) – z. B. auf der Website/Datenschutzseite verlinken | anwaltlich klären lassen |
-| Zahlungsprofil | Händlerkonto in der Play Console (für Pro-Kauf/Bezahl-App) | Umsatzsteuer in der EU führt Google ab |
-| In-App-Kauf „Pro“ | Nur über **Google Play Billing** (keine fremden Zahlungswege für digitale Inhalte) | eingebaut (Billing 9.1.0, `Pro.kt`); Produkt in der Play Console anlegen |
+| Zahlungsprofil | Nicht erforderlich (kostenlose App ohne In-App-Käufe) | – |
+| In-App-Kauf | Entfallen (alle Funktionen kostenlos und frei verfügbar) | Open Source (GPL-3.0) |
 | Datenschutzerklärung | öffentliche URL eintragen | siehe B1 |
-| Datensicherheit | **Nicht mehr** „Keine Daten erhoben“. Empfehlung für das Formular: **Finanzinfos → Kaufverlauf** als *erhoben*, *nicht geteilt*, Zweck *App-Funktionen*, Verarbeitung *erforderlich* (nicht optional). „Feedback senden“ öffnet nur die E-Mail-App des Nutzers (nichts erhoben). Verschlüsselung bei der Übertragung: Einschätzung ja (Verbindung zu Google Play), vor dem Ausfüllen prüfen. Löschanfrage: Daten liegen nur lokal bzw. bei Google. | Siehe B4 |
+| Datensicherheit | Vollständig offline: keine Daten erhoben („Keine Daten erhoben“ im Formular). „Feedback senden“ öffnet nur die E-Mail-App des Nutzers (nichts erhoben). | Siehe B4 |
 | Inhaltsbewertung (IARC) | Fragebogen: keine Gewalt, keine Nutzerinhalte, kein Austausch | ergibt „USK ab 0“ |
 | Zielgruppe | Erwachsene/ab 13; **nicht** für Kinder (sonst Familienrichtlinien) | |
 | Werbung | „Enthält keine Werbung“ | |
@@ -119,24 +119,17 @@ Alle Lizenztexte liegen in `app/src/main/assets/licenses/` und sind in der App u
 
 ### B3. Richtlinien zum Verhalten der App (Code-Durchsicht)
 
-- Netzwerkzugriff nur über die Google-Play-Billing-Bibliothek (Pro-Kauf); keine eigenen Server, keine Analyse-/Werbe-SDKs, keine Hintergrunddienste → keine sensiblen Richtlinienbereiche betroffen. ✅
+- Kein Netzwerkzugriff, keine Berechtigungen, keine eigenen Server, keine Analyse-/Werbe-SDKs, keine Hintergrunddienste → keine sensiblen Richtlinienbereiche betroffen. ✅
 - Dateien nur über das System-Dateiauswahlfenster (Storage Access Framework) – keine Speicherberechtigung nötig. ✅
 - Absturz-/ANR-Robustheit: Hänger nach App-Wechsel am 16.10. behoben (TextureView), unlesbare Dateien führen nie zum Absturz. Vitals im Test beobachten. ✅
 - Barrierefreiheit: Inhaltsbeschreibungen für Bedienknöpfe vorhanden (keine Pflicht, aber geprüft beim Layout-Audit). ✅
 
-### B4. Datensicherheitsformular nach Einbau von Play Billing (Stand 01.11.2026)
+### B4. Datensicherheitsformular nach Entfernung von Play Billing (Stand 11.11.2026)
 
-- **Fakten:** Die App hat keine eigenen Server, keine Werbung, keine Analyse. Beim Kauf verarbeitet Google Zahlungs- und Kaufdaten als eigener
-  Verantwortlicher; die App erhält nur Kaufstatus und Kaufbeleg (Bestellnummer, Kauftoken) und speichert sie lokal. Die Billing-Bibliothek
-  bindet Google Data Transport ein (`INTERNET`, `ACCESS_NETWORK_STATE`) und kann technische Diagnosedaten an Google übermitteln.
-- **Empfehlung (Einschätzung, keine Rechtsberatung):** Kaufverlauf (Finanzinfos) erhoben, nicht geteilt, Zweck App-Funktionen, Verarbeitung
-  erforderlich. Ob die Diagnosedaten der Bibliothek zusätzlich anzugeben sind (z. B. Diagnosedaten/Geräte- oder andere IDs), hängt davon ab,
-  was die Bibliothek tatsächlich sendet – das ist **unsicher**; im Zweifel großzügiger angeben.
-- **Verantwortung:** Google veröffentlicht für die Billing-Bibliothek keine eigene Anleitung zum Datensicherheitsformular (Play SDK Index:
-  „Not provided“). Der Entwickler ist für die Angaben selbst verantwortlich.
-- **Weitere Stellen anpassen:** Datenschutzerklärung (Abschnitt „Käufe über Google Play“, Stand 01.11.2026) auf der Google-Sites-Seite
-  nachziehen; Lizenzhinweise der Billing-/Play-Services-Bibliotheken liegen in `assets/licenses/google_play_notices.txt` (Android SDK License + enthaltene
-  Open-Source-Komponenten wie Guava, Protocol Buffers, Dagger).
+- **Fakten:** Die App hat keine eigenen Server, keine Werbung, keine Analyse und keine In-App-Käufe mehr.
+  Sie fordert keinerlei Berechtigungen an (kein Internet). Daher: Keine Datenerhebung („Keine Daten erhoben“).
+- **Weitere Stellen anpassen:** Datenschutzerklärung (Stand 11.11.2026) auf der Google-Sites-Seite
+  bestätigen; veraltete Kauf- und Lizenzhinweise zu Play Services / Billing wurden entfernt.
 
 ---
 
@@ -148,6 +141,7 @@ Alle Lizenztexte liegen in `app/src/main/assets/licenses/` und sind in der App u
 - Store-Symbol als 32-Bit-PNG.
 - Neuer Test `scripts/play-check.py`.
 
-## Nachtrag 01.11.2026
+## Nachtrag 01.11.2026 / 11.11.2026
 
-- Pro-Kauf (Play Billing): Berechtigungen, Datensicherheit, Datenschutzerklärung und Store-Texte angepasst; Lizenzhinweise `google_play_notices.txt` ergänzt.
+- 01.11.2026: Temporärer Einbau von Play Billing für Pro-Kauf.
+- 11.11.2026: Vollständige Entfernung des Pro-Modells & Play Billing: App ist 100 % freie Open-Source-Software (GPL-3.0), ohne Berechtigungen und komplett offline.

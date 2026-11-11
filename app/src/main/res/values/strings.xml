@@ -24,4 +24,5 @@
     <string name="common_name">Name</string>
     <string name="common_parameters">Parameters</string>
     <string name="common_more_options">More options</string>
+    <string name="common_no_browser">No web browser found: %1$s</string>
 </resources>

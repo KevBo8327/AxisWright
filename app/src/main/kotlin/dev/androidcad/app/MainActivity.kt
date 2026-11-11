@@ -33,7 +33,6 @@ class MainActivity : ComponentActivity() {
         installSplashScreen()
         super.onCreate(savedInstanceState)
         AndroidTextOutlines.init()
-        Pro.start(this, workspace.prefs)
         setContent {
             val mode = workspace.prefs.themeMode
             val dark = isDarkTheme(mode)
@@ -51,11 +50,6 @@ class MainActivity : ComponentActivity() {
                 AppRoot(hub)
             }
         }
-    }
-
-    override fun onResume() {
-        super.onResume()
-        Pro.refresh() // ausstehende Käufe können inzwischen bezahlt sein
     }
 
     override fun onStop() {

@@ -76,6 +76,7 @@ internal fun ProjectMenu(hub: ProjectHub, modifier: Modifier = Modifier) {
     var showLicenses by remember { mutableStateOf(false) }
     var showImprint by remember { mutableStateOf(false) }
     var showHelp by remember { mutableStateOf(false) }
+    var showSupport by remember { mutableStateOf(false) }
     val import = rememberImporter(hub)
     val scriptName = stringResource(R.string.menu_script_default_name)
     val entries = hub.entries
@@ -129,7 +130,7 @@ internal fun ProjectMenu(hub: ProjectHub, modifier: Modifier = Modifier) {
             // eine Zeile statt drei: Tippen wechselt zur nächsten Darstellung, das Menü bleibt offen
             val theme = hub.workspace.prefs.themeMode
             MenuItem(stringResource(R.string.menu_appearance), CadIcon.THEME, trailing = stringResource(theme.label)) { hub.workspace.prefs.themeMode = ThemeMode.entries[(theme.ordinal + 1) % ThemeMode.entries.size] }
-            MenuItem(stringResource(R.string.menu_pro), CadIcon.PRO, trailing = when { Pro.isPro -> stringResource(R.string.menu_pro_active); Pro.FREE_DURING_TEST -> stringResource(R.string.menu_pro_trial); else -> Pro.price }) { open = false; Pro.dialogOpen = true }
+            Distribution.MenuItems { open = false; showSupport = true }
             MenuItem(stringResource(R.string.menu_help), CadIcon.HELP) { open = false; showHelp = true }
             MenuItem(stringResource(R.string.menu_feedback), CadIcon.MAIL) { open = false; sendFeedback(context) }
             MenuItem(stringResource(R.string.menu_imprint), CadIcon.INFO) { open = false; showImprint = true }
@@ -165,11 +166,12 @@ internal fun ProjectMenu(hub: ProjectHub, modifier: Modifier = Modifier) {
     if (showHelp) HelpDialog(hub, firstStart = false) { showHelp = false }
     if (showLicenses) LicensesDialog(onDismiss = { showLicenses = false })
     if (showImprint) ImprintDialog(onDismiss = { showImprint = false })
+    Distribution.Dialogs(showSupport) { showSupport = false }
 }
 
 /** Zeile des Projektmenüs: Symbol in der Akzentfarbe, optional ein Wert rechts; [danger] für Löschen (rot). */
 @Composable
-private fun MenuItem(text: String, icon: CadIcon, enabled: Boolean = true, danger: Boolean = false, trailing: String? = null, onClick: () -> Unit) {
+internal fun MenuItem(text: String, icon: CadIcon, enabled: Boolean = true, danger: Boolean = false, trailing: String? = null, onClick: () -> Unit) {
     val colors = MaterialTheme.colorScheme
     val tint = when { !enabled -> colors.onSurface.copy(alpha = 0.38f); danger -> colors.error; else -> colors.primary }
     DropdownMenuItem(

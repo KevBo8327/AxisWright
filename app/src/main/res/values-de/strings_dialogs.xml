@@ -4,34 +4,6 @@
     <string name="export_target_unavailable">Ziel lässt sich nicht öffnen</string>
     <string name="export_failed">Export fehlgeschlagen: %1$s</string>
 
-    <!-- Pro-Dialog -->
-    <string name="pro_title">ParamWorker Pro</string>
-    <string name="pro_mark">(Pro)</string>
-    <string name="pro_trial_notice">Testphase: Alle Pro-Funktionen sind zurzeit frei nutzbar.</string>
-    <string name="pro_heading_pro">Pro – einmal kaufen, dauerhaft nutzen</string>
-    <string name="pro_feature_step">STEP-Export (Austausch mit anderen CAD-Programmen)</string>
-    <string name="pro_feature_3mf">3MF-Export (3D-Druck)</string>
-    <string name="pro_feature_param_table">Parameter-Tabelle anlegen und bearbeiten</string>
-    <string name="pro_heading_free">Immer frei</string>
-    <string name="pro_free_modeling">Modellieren: Skizzen, Körper und alle Werkzeuge</string>
-    <string name="pro_free_measure">Messen</string>
-    <string name="pro_free_stl">STL-Export</string>
-    <string name="pro_free_share">Projekte teilen und importieren</string>
-    <string name="pro_free_script">Skript-Editor (OpenSCAD)</string>
-    <string name="pro_free_unlimited">Unbegrenzt viele Projekte</string>
-    <string name="pro_existing_params_note">Vorhandene Parameter in Ihren Modellen werden auch ohne Pro weiter berechnet.</string>
-    <string name="pro_status_active">Pro aktiv – danke!</string>
-    <string name="pro_status_price">Preis: %1$s (einmalig)</string>
-    <string name="pro_status_loading">Preis wird von Google Play geladen …</string>
-    <string name="pro_buy">Kaufen</string>
-    <string name="pro_restore">Kauf wiederherstellen</string>
-    <string name="pro_msg_restored">Kauf wiederhergestellt – Pro ist aktiv.</string>
-    <string name="pro_msg_not_found">Kein Kauf von ParamWorker Pro gefunden.</string>
-    <string name="pro_msg_pending">Kauf ausstehend – Pro wird freigeschaltet, sobald die Zahlung bestätigt ist.</string>
-    <string name="pro_err_unavailable">Google Play ist nicht erreichbar. Kaufen und Wiederherstellen brauchen den Play Store und eine Internetverbindung.</string>
-    <string name="pro_err_item_unavailable">ParamWorker Pro ist im Play Store derzeit nicht verfügbar.</string>
-    <string name="pro_err_other">Kauf nicht möglich (Google Play meldet Code %1$d).</string>
-
     <!-- Hilfe -->
     <string name="help_version">ParamWorker %1$s</string>
     <string name="help_title_welcome">Willkommen bei ParamWorker</string>

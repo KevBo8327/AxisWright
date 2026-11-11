@@ -1,0 +1,41 @@
+ParamWorker ist ein parametrisches CAD-Programm für Android-Tablets und -Smartphones. Sie zeichnen eine Skizze, bemaßen sie und machen daraus ein Bauteil – mit echter, exakter Geometrie, die sich jederzeit über ihre Maße ändern lässt. Alles läuft direkt auf dem Gerät: ohne Konto, ohne Cloud, ohne eigene Server.
+
+SKIZZIEREN
+• Linie, Rechteck (Ecke, Mitte, 3 Punkte), Kreis (Mitte, 2 oder 3 Punkte, tangential), Bogen, Langloch, Vieleck, Text als Skizzenelement (Gravur/erhaben)
+• Kürzen, Verlängern, Versatz, Ecken runden sowie Verschieben, Drehen, Skalieren und Kopieren der Auswahl
+• 16 geometrische Bedingungen (parallel, senkrecht, tangential, symmetrisch, konzentrisch …) und 8 Maßarten
+• Der Löser zeigt, ob die Skizze vollständig bestimmt ist – ändern Sie ein Maß, passt sich alles an
+• Muster in der Skizze, deren Anzahl sich später ändern lässt
+
+KÖRPER
+• Extrusion (Hinzufügen, Abtragen, Schnittmenge; zwei Seiten mit verschiedenen Längen, bis Fläche), Drehen
+• Bohrungen mit Senkung/Kegelsenkung und Normgrößen M3–M10
+• Verrunden und Anfasen von Kanten, Aushöhlen zur Schale
+• Reihen-, Raster- und Kreismuster, Spiegeln
+• Skizzen auf Körperflächen und Arbeitsebenen; Körperkanten in die Skizze projizieren
+• Schnittansicht zur Prüfung von Hohlräumen und Innengeometrie
+• Der Modellaufbau bleibt als Verlauf erhalten: Jeder Schritt ist änderbar, das Modell baut sich neu auf
+
+PARAMETER UND MESSEN
+• Parameter-Tabelle: benannte Werte und Formeln wie „wand * 3“ für Maße, Längen, Winkel und Wandstärken
+• Messen von Längen, Radien, Flächen, Abständen und Winkeln direkt im 3D-Bild
+• Rückgängig und Wiederholen für Skizze und Modell
+
+AUSTAUSCH
+• Export als STL und 3MF für den 3D-Druck
+• Export als STEP mit exakter Geometrie für andere CAD-Programme
+• Projekte als Datei exportieren und wieder importieren
+• Zusätzlich ein Skript-Editor für OpenSCAD-Dateien mit Schiebereglern für Parameter
+
+FÜR FINGER, STIFT UND MAUS
+• Bedienung für Touch ausgelegt, mit Stift-Unterstützung (auch Radierer) sowie Maus und Tastaturkürzeln
+• Tablet- und Smartphone-Layout, helles und dunkles Design
+
+IHRE DATEN BLEIBEN BEI IHNEN
+Vollständig offline: keine Internetverbindung, keine Werbung, kein Tracking – Ihre Projekte bleiben auf Ihrem Gerät.
+
+ParamWorker ist freie Open-Source-Software (GPL-3.0-or-later). Alle Funktionen sind ohne Einschränkungen oder Abos für alle frei nutzbar.
+
+Hinweis: ParamWorker ist ein Konstruktionswerkzeug. Prüfen Sie Maße und Festigkeit Ihrer Teile vor der Fertigung selbst; für sicherheitsrelevante Bauteile ist die App nicht vorgesehen.
+
+Der Geometriekern ist Open CASCADE Technology. ParamWorker befindet sich in aktiver Entwicklung – Rückmeldungen sind sehr willkommen.

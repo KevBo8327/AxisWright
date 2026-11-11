@@ -1,134 +1,217 @@
 # ParamWorker
 
-Arbeitsname bis Oktober 2026: „Android CAD“. Bis 18.10.2026: „Partwright“. App-Kennung: `io.github.kevbo8327.paramworker`.
+[Deutsch](#deutsch) | [English](#english)
 
-Parametrische CAD-App für Android-Tablets und Googlebooks: **OpenSCAD-kompatible Skriptsprache** +
-automatisch erzeugte **Customizer-Oberfläche** (Slider, Auswahl, Schalter), echte **Manifold-Geometrie**,
-offline, touch- und tastaturtauglich.
+---
 
-Hintergrund und Entscheidungsgrundlage: `Analyse_Parametrische_CAD_App.md` im Projekt
-`OpenSCAD/Streaminghalterung`. Umsetzungsstand: [docs/ROADMAP.md](docs/ROADMAP.md), Architektur:
-[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+<a name="deutsch"></a>
+# ParamWorker (Deutsch)
 
-![Streaminghalterung in der App](docs/screenshot_streaminghalterung.png)
+ParamWorker ist ein freies, quelloffenes (GPL-3.0-or-later) parametrisches 3D-CAD-Programm für Android-Tablets, Smartphones und Chromebooks. Es kombiniert exakte B-Rep-Geometrie auf Basis von Open CASCADE Technology mit einer modernen Touch- und Stiftbedienung sowie einem optionalen OpenSCAD-kompatiblen Skript-Editor mit Manifold-Geometriekern.
 
-## Produktrichtung
+Die App arbeitet vollständig **offline**: ohne Benutzerkonto, ohne Cloud-Zwang, ohne Werbung, ohne Tracking und ohne Internetberechtigung.
 
-Parametrische CAD für **Stift und Maus**: Formen und Constraints aus Werkzeugleisten, 2D-Skizze → Extrusion/Bohrung/Verrundung,
-Geometriekern **OpenCascade (B-Rep)**. Der OpenSCAD-kompatible Code-Editor bleibt als optionale Erweiterung.
-Plan und Zielarchitektur: [docs/ROADMAP.md](docs/ROADMAP.md). Aktuell:
-- **M0 (OpenCascade)** weitgehend abgeschlossen: `:core:brep` liefert Skizzenprofil → Körper → Netz mit Flächen-/Kanten-IDs.
-- **M1 (Skizzen-Engine)**: `:core:sketch` mit Punkten, Linien, Kreisen, Bögen, 16 Constraints, 8 Bemaßungen, Solver mit
-  Freiheitsgrad-Analyse, Ziehen und Regionen-Erkennung (40 JVM-Tests). Es fehlen noch Auto-Constraints und 2D-Operationen.
-- **Brücke Skizze → Körper** (`:core:model`): Skizze → Region → Profil → OpenCascade-Körper, parametrisch neu aufgebaut.
-- **M2 (Skizzier-Oberfläche)** läuft: Die App hat zwei Modi, die je den ganzen Bildschirm nutzen: **Skizze** (2D, mit „✓ Fertig“: Zeichenfläche vollflächig, Werkzeuggruppen wie im Modell, Status als Plakette, Bedingungen und Maße schweben direkt an der Auswahl) und **Modell** (3D: das Bild füllt den ganzen Bildschirm; Werkzeuge in vier Gruppen – Skizze, Körper, Kanten, Muster – die sich per Tipp aufklappen, auf dem Tablet links, auf dem Smartphone unten; Einstellungen erscheinen nur bei Auswahl oder laufendem Werkzeug als schwebende, einklappbare Karte bzw. auf dem Smartphone als Blatt unter dem Bild; der Modellaufbau steht als Chip „Schritt ‹ ›“ im Bild und öffnet sich auf Wunsch ganz; Standardansichten im Knopf „Ansicht“); „Fertig“ schwenkt die Kamera von der Skizzenebene in die isometrische Ansicht. Gezeichnet wird mit
-  Maus, Stift oder Finger (Linie, auch tangential an Kreise; Rechteck über Ecken, vom Mittelpunkt oder aus 3 Punkten; Kreis über Mittelpunkt, 2 oder 3 Punkte oder an 2/3 Tangenten; Bogen über Mittelpunkt, 3 Punkte oder tangential als Zug; Langloch; Vieleck mit Ecken auf dem Kreis oder Seiten am Kreis (Schlüsselweite) – Variante in der Leiste unten; Fangen, Auto-Constraints); Constraints und Maße kommen aus einer kontextabhängigen
-  Leiste; Ziehen hält die Bedingungen ein; „Extrudieren“ baut den Körper, der bei jeder Änderung live nachzieht.
-  Skizzen und Modell werden automatisch im Projektspeicher gesichert (`model.json`) und beim Start wiederhergestellt; Projektmenü zum Wechseln, Umbenennen, Duplizieren, Löschen.
-  Der **Feature-Baum** verwaltet mehrere Skizzen (Ebene XY/XZ/YZ + Versatz) und Extrusionen (Hinzufügen/Abtragen).
+## Screenshots
 
-  **Muster und Spiegelung:** an einer Extrusion oder Bohrung „Reihe“, „Kreismuster“ oder „Spiegeln“ wählen; Anzahl, Abstand, Achse bzw. Ebene sind live einstellbar, die Kopien wirken wie das Original (hinzufügen/abtragen). Eine Reihe bekommt per Schalter eine zweite Richtung (Raster in einem Schritt) oder lässt sich erneut vervielfältigen (z. B. im Kreis); ist eine Verrundung oder Fase gewählt, entsteht das Muster ihres Features und jede Kopie bekommt die Rundung bzw. Fase mit (Schalter im Muster).
-  **Körper spiegeln:** „Spiegeln“ ohne spiegelbares Feature in der Auswahl (oder „Stattdessen den ganzen Körper spiegeln“) spiegelt den ganzen bisherigen Körper an einer Koordinatenebene oder Arbeitsebene und vereinigt beide Hälften nahtlos zu einem Teil – halbes Teil zeichnen, symmetrisch ergänzen.
-  **Arbeitsebenen:** „Ebene“ in der Werkzeugleiste, Fläche antippen → Ebene mit Abstand oder um eine Kante gedreht; „Skizze auf dieser Ebene“ – Ebene und Skizze folgen dem Körper.
-  **Lage der Skizze:** Ursprung und X-/Y-Achse sind antippbar und lassen sich wie jede Linie in Bedingungen und Maße einbeziehen; mit einer gewählten Form setzen „Ecke auf Ursprung“ bzw. „Mittig auf Ursprung“ sie parametrisch an den Ursprung, in Skizzen auf einer Körperfläche „Mittig auf Fläche“ in die Mitte der Fläche; zusammen mit einer projizierten Bohrung bzw. Kante „Mittig auf Bohrung“ (konzentrisch) bzw. „Mittig zur Kante“ – alles bleibt mittig, wenn sich der Körper ändert. Ist nur noch die Lage frei, sagt es die Statuszeile.
-  **Skizzenwerkzeuge:** Trimmen, Verlängern, Versatz, Ecke runden, Spiegeln sowie Muster (Reihe, Kreis – der Abstand bleibt als Maß änderbar, die Anzahl über „# Anzahl im Muster“ an jedem Exemplar) in der Werkzeugleiste der Skizze (Versatzabstand und Rundungsradius als Feld darunter); neue Punkte bleiben per Constraint an den Elementen, an denen sie entstanden.
-  **Skizze auf Fläche:** eine Körperfläche antippen und darauf weiterzeichnen (der Umriss der Fläche erscheint als Referenz; die Skizze folgt der Fläche bei Maßänderungen). „Kanten projizieren“ legt Umriss und Bohrungen der Fläche als feste Referenz in die Skizze, an die man mit Maßen bindet – sie wandern mit dem Körper mit.
-  **Verrundung/Fase/Bohrung:** Kanten bzw. Flächen im 3D-Bild antippen, Größe einstellen – die Auswahl bleibt über Maßänderungen hinweg erhalten
-  ([Topological Naming](docs/TOPOLOGICAL_NAMING.md)).
+| Startseite | 2D-Skizze mit Bedingungen | 3D-Modell mit Verrundung |
+|---|---|---|
+| ![Startseite](docs/store/screenshots/phone-1-start.png) | ![Skizze](docs/store/screenshots/phone-2-skizze.png) | ![Modell](docs/store/screenshots/phone-3-modell.png) |
 
-![Platte mit Abtrag](docs/screenshot_features.png)
+| Parameter-Tabelle | Export-Menü | Tablet-Ansicht |
+|---|---|---|
+| ![Parameter](docs/store/screenshots/phone-4-parameter.png) | ![Export](docs/store/screenshots/phone-5-export.png) | ![Tablet](docs/store/screenshots/tablet10-3-modell.png) |
 
-![Skizze und Körper](docs/screenshot_skizze.png)
+## Funktionen
 
-![Modellmodus auf dem Tablet](docs/screenshot_modell.png) ![Modellmodus auf dem Smartphone](docs/screenshot_modell_smartphone.png)
+- **Skizzieren (2D):**
+  - Grundformen: Linie (auch tangential), Rechteck (Ecke, Mitte, 3 Punkte), Kreis (Mitte, 2/3 Punkte, tangential), Bogen, Langloch, regelmäßiges Vieleck, Text als Skizzenelement (für Gravur oder erhabene Beschriftung).
+  - 2D-Werkzeuge: Trimmen, Verlängern, Versatz, Ecken runden, Spiegeln, Muster (Reihe und Kreis), Transformieren (Verschieben, Drehen, Skalieren und Kopieren der Auswahl).
+  - Geometrische Bedingungen: 16 Constraints (horizontal, vertikal, parallel, senkrecht, tangential, konzentrisch, symmetrisch u. v. m.).
+  - Bemaßung: 8 Maßarten mit Maßlinie, Pfeilen und Maßhilfslinien; Freiheitsgrad-Analyse (vollständig bestimmt).
+- **Körper (3D):**
+  - Features: Extrudieren (Hinzufügen, Abtragen, Schnittmenge, durch alles, zwei Seiten mit verschiedenen Längen, bis Fläche), Drehen (Revolve um Skizzen- oder Hilfsachse), Bohrungen (einfach, mit Senkung/Kegelsenkung und Normgrößen M3–M10), Verrunden, Anfasen, Schale (Aushöhlen).
+  - Muster & Symmetrie: Reihen-, Raster- und Kreismuster, Spiegeln von Features oder des gesamten Körpers.
+  - Bezugselemente: Skizzen auf ebenen Körperflächen oder versetzten/gedrehten Arbeitsebenen; Körperkanten in Skizzen projizieren.
+  - Ansichten: Schnittansicht mit dynamischer Schnittebene zur Kontrolle von Innenkonturen und Hohlräumen.
+  - Parametrischer Modellaufbau: Chronologische Zeitleiste; jeder Schritt bleibt nachträglich editierbar.
+- **Parameter & Messen:**
+  - Parameter-Tabelle für Variablen und mathematische Ausdrücke (z. B. `wand * 2`).
+  - 3D-Messwerkzeug für Längen, Radien, Abstände, Winkel und Flächeninhalt.
+- **Austausch & Export:**
+  - Export als STEP (exakte B-Rep-Geometrie für andere CAD-Programme).
+  - Export als STL und 3MF für den 3D-Druck.
+  - Projektdateien (`.paramworker.json`) exportieren und importieren.
+  - Integrierter Skript-Editor für OpenSCAD-Dateien mit Customizer-Schiebereglern.
 
-![Skizze auf dem Tablet](docs/screenshot_skizze_tablet.png) ![Skizze auf dem Smartphone](docs/screenshot_skizze_smartphone.png)
+## Lizenz
 
-Die folgende Tabelle beschreibt den bisherigen **Skript-Teil** der App (optionale Erweiterung; Skripte stehen zusammen mit den Modellen im gemeinsamen Projektmenü der App-Leiste) (Code-Editor, Customizer, Manifold).
+ParamWorker ist freie Software unter der **GNU General Public License v3.0 oder höher (GPL-3.0-or-later)**.
+Copyright © 2026 Kevin Bodenstein.
 
-## Stand Skript-Teil (Phase 0 – Gate A erreicht)
+Vollständiger Lizenztext: siehe [LICENSE](LICENSE).
 
-| Baustein | Status |
-|---|---|
-| Gradle-Projekt (AGP 9, Kotlin 2.3, Compose), Module `:core:lang`, `:core:geometry`, `:core:project`, `:core:sketch`, `:core:sketchedit`, `:core:brep`, `:core:model`, `:app` | ✅ |
-| Sprachkern: Lexer, Parser, Evaluator → CSG-Baum (reines Kotlin/JVM) | ✅ Teilmenge, siehe unten |
-| Customizer-Parser (`// [min:step:max]`, Auswahllisten, Gruppen, `Hidden`) und -UI | ✅ |
-| Geometriekern: **Manifold 3.5.4** + Clipper2 per NDK/JNI (arm64-v8a + x86_64) | ✅ |
-| Referenzmodell `samples/streaming_halterung.scad`: alle 8 Teile **volumengleich zu OpenSCAD** (≤ 0,013 %) | ✅ (Instrumented Test) |
-| App: adaptives Layout (kompakt / mittel / erweitert), Editor, Konsole, Beispiele, „Öffnen …“ | ✅ |
-| 3D-Ansicht: OpenGL ES 3 (Tiefenpuffer, Flat-Shading), Orbit/Zoom per Touch, Pinch und Mausrad | ✅ |
-| **STL-Export** (binär, per Dateiauswahl) | ✅ |
-| **Projekte**: mehrere benannte Projekte, **Autosave** (700 ms) + Sicherung in `onStop`, Wiederherstellung nach Neustart/Prozess-Tod, Neu / Kopie / Löschen, Import und Export von `.scad` | ✅ |
-| **Undo/Redo**: Quelltext + Customizer-Werte, Tippen und Slider-Ziehen je ein Schritt, Strg+Z / Strg+Y / Strg+Umschalt+Z / Strg+S | ✅ |
-| 3MF, Share-Intent, Syntax-Highlighting | ⏳ |
-| `text()`, `import`, `projection`, Variablen-Hoisting wie OpenSCAD | ⏳ |
+Eingebundene Fremdbibliotheken:
+- **Open CASCADE Technology (OCCT)** 7.9.3: LGPL 2.1 mit Open-CASCADE-Ausnahme. Da der Quelltext und die Build-Skripte von ParamWorker öffentlich sind, ist das Neu-Linken und Austauschen der Bibliotheken nach LGPL 2.1 § 6 uneingeschränkt möglich.
+- **Manifold** (Apache 2.0) und **Clipper2** (Boost Software License 1.0).
+- **Haze**, **AndroidX**, **Kotlin** (Apache 2.0).
 
-**Messwerte (Emulator Pixel Tablet, x86_64, ohne Multithreading):** komplette Zusammenbau-Ansicht der
-Halterung (22 488 Dreiecke) in ≈ 0,6 s (Auswertung + Geometrie); einzelne Teile 40–130 ms.
+## Aus dem Quelltext bauen
 
-### Unterstützte Sprachteile
-Ausdrücke, Variablen, `module`/`function` (Rekursion, Standardwerte, benannte Argumente), `for`/`if`/`let`,
-List-Comprehensions (`for`, `if`, `let`, `each`), Bereiche, `children()`, `$fn/$fa/$fs` (dynamisch, auch als
-Aufrufargument), `include`/`use`, `echo`/`assert`, Modifier `*`; Primitive `cube sphere cylinder polyhedron circle
-square polygon`; `translate rotate scale mirror multmatrix color`; `union difference intersection hull minkowski`;
-`linear_extrude rotate_extrude offset`; Math-/Listenfunktionen. Polyeder werden orientierungstolerant behandelt
-(wie OpenSCAD). Unbekanntes erzeugt eine Warnung statt eines Abbruchs.
+### Voraussetzungen
+- Android SDK (compileSdk 36, minSdk 26)
+- JDK 17 oder 21
+- Android NDK `28.2.13676358`
+- CMake `3.31.6` im Android SDK (`$ANDROID_HOME/cmake/3.31.6`)
+- PowerShell 7 (`pwsh` unter Linux/macOS bzw. `powershell.exe` unter Windows)
 
-**Noch offen:** `text`, `import`, `projection`, `surface`, `resize`, Modifier `#`/`%`-Darstellung, `intersection_for`,
-Funktionsliterale; `rotate_extrude` nutzt noch eine feste Segmentzahl; Farben werden nicht ins Mesh übertragen.
-Bekannte Abweichung: Variablen werden sequenziell zugewiesen (kein „letzte Zuweisung gilt im ganzen Scope“-Hoisting).
-
-## Bauen & testen
-
-Voraussetzungen: Android SDK (Plattform 36), JDK 17+ (Android-Studio-JBR genügt), **NDK 28.2.13676358** (lädt AGP selbst),
-**CMake 3.31.6** im SDK (`Sdk/cmake/3.31.6`; der AGP lädt es nicht automatisch – Paket `cmake-3.31.6-windows.zip` von
-dl.google.com/android/repository oder per `sdkmanager "cmake;3.31.6"`).
-
-**OpenCascade (für `:core:brep`):** wird nicht ins Repo eingecheckt. Einmalig Quelltext holen und je ABI bauen
-(≈ 25 min pro ABI auf 32 Kernen; Ergebnis als gemeinsame Bibliotheken nach `third_party/occt-android-shared/<abi>`):
-
+### 1. OpenCascade bauen
+OpenCascade wird als native B-Rep-Engine für `:core:brep` benötigt und einmalig für die Ziel-ABIs kompiliert:
 ```powershell
 git clone --depth 1 --branch V7_9_3 https://github.com/Open-Cascade-SAS/OCCT.git third_party/occt
 ./scripts/build-occt.ps1 -Abis x86_64,arm64-v8a
 ```
+Unter Linux/macOS kann das Skript direkt mit PowerShell 7 (`pwsh ./scripts/build-occt.ps1 -Abis x86_64,arm64-v8a`) ausgeführt werden.
 
-Zum schnellen Testen nur einer ABI: `./gradlew :core:brep:connectedDebugAndroidTest -Pandroid.injected.build.abi=x86_64`.
+### 2. Build-Varianten: FOSS und Play
+Das Projekt bietet zwei Varianten:
+- **`foss`**: Für F-Droid und manuelle APK-Downloads. Enthält im Projektmenü den Eintrag „Unterstützen …“ mit Spendenlinks.
+- **`play`**: Für Google Play. Enthält keinerlei In-App-Spendenhinweise (gemäß Google-Play-Richtlinien).
 
+> **Hinweis zu F-Droid:** F-Droid baut ausschließlich die `foss`-Variante (`assembleFossRelease`).
+
+### 3. Kompilieren und Testen
 ```bash
-./gradlew :core:lang:test :core:project:test    # Sprachkern, Projektspeicher, Undo-Verlauf (JVM, schnell)
-./gradlew :app:assembleDebug                    # Debug-APK
-./gradlew :core:geometry:connectedDebugAndroidTest   # Manifold + OpenSCAD-Volumenvergleich (Emulator/Gerät nötig)
+# Unit-Tests beider Varianten ausführen
+./gradlew testPlayDebugUnitTest testFossDebugUnitTest test
+
+# Debug-APKs bauen
+./gradlew :app:assembleFossDebug
+./gradlew :app:assemblePlayDebug
+
+# Release für Google Play bauen (AAB)
+./gradlew :app:bundlePlayRelease -PallowDebugSignedRelease=true
 ```
 
-`local.properties` mit `sdk.dir=…` wird lokal angelegt (nicht eingecheckt). Die nativen Debug-Builds sind mit `-O2`
-optimiert, damit Messungen aussagekräftig sind.
+## Mitwirken
 
-**Release-Build (Google Play):** einmalig einen Upload-Schlüssel erzeugen – **außerhalb** des Projektordners aufbewahren und sichern
-(ohne ihn lassen sich keine Updates hochladen; bei Verlust hilft nur ein Antrag auf Schlüsseltausch bei Google):
+Beiträge zur Weiterentwicklung sind herzlich willkommen!
+- Bitte lies unsere [Beitragsrichtlinien (CONTRIBUTING.md)](CONTRIBUTING.md) vor der Einreichung von Pull Requests.
+- Vor dem Zusammenführen von Beiträgen ist die Zustimmung zu unserer [Individual Contributor License Agreement (CLA.md)](CLA.md) erforderlich.
+- Wir pflegen einen respektvollen Umgang gemäß unserem [Verhaltenskodex (CODE_OF_CONDUCT.md)](CODE_OF_CONDUCT.md).
 
+## Spenden
+
+ParamWorker ist komplett kostenlos, werbefrei und ohne Abos. Wenn dir das Projekt gefällt und du die Weiterentwicklung unterstützen möchtest, freuen wir uns über eine freiwillige Spende:
+- **Liberapay:** [https://liberapay.com/PLACEHOLDER](https://liberapay.com/PLACEHOLDER)
+- **GitHub Sponsors:** [https://github.com/sponsors/PLACEHOLDER](https://github.com/sponsors/PLACEHOLDER)
+
+## Marke
+
+Name und Logo ParamWorker sind Kennzeichen von Kevin Bodenstein (nicht eingetragen) und nicht Teil der GPL-Lizenz. Details und Richtlinien für Forks findest du in [TRADEMARK.md](TRADEMARK.md).
+
+---
+
+<a name="english"></a>
+# ParamWorker (English)
+
+ParamWorker is a free and open-source (GPL-3.0-or-later) parametric 3D CAD application designed for Android tablets, smartphones, and Chromebooks. It provides exact B-rep geometry powered by Open CASCADE Technology, tailored for touch, pen/stylus, and mouse interactions, alongside an optional OpenSCAD-compatible script editor powered by Manifold.
+
+The app works entirely **offline**: no user accounts, no cloud sync required, no ads, no telemetry/tracking, and no internet permission.
+
+## Screenshots
+
+| Start Page | 2D Sketch with Constraints | 3D Model with Fillets |
+|---|---|---|
+| ![Start Page](docs/store/screenshots/phone-1-start.png) | ![Sketch](docs/store/screenshots/phone-2-skizze.png) | ![Model](docs/store/screenshots/phone-3-modell.png) |
+
+| Parameter Table | Export Menu | Tablet Layout |
+|---|---|---|
+| ![Parameters](docs/store/screenshots/phone-4-parameter.png) | ![Export](docs/store/screenshots/phone-5-export.png) | ![Tablet](docs/store/screenshots/tablet10-3-modell.png) |
+
+## Features
+
+- **2D Sketching:**
+  - Shapes: Lines (including tangent), Rectangles (corner, center, 3-point), Circles (center, 2/3 points, tangent), Arcs, Slots, Regular Polygons, Text as sketch element (for engraving or embossed text).
+  - 2D Operations: Trim, Extend, Offset, Fillet corners, Mirror, Linear and Circular Patterns, Transform (Move, Rotate, Scale, and Copy selection).
+  - Constraints: 16 geometric constraints (horizontal, vertical, parallel, perpendicular, tangent, concentric, symmetric, etc.).
+  - Dimensions: 8 dimension types with dimension lines, arrows, and extension lines; degree-of-freedom solver analysis.
+- **3D Modeling:**
+  - Operations: Extrude (Add, Cut, Intersect, Through-All, Two Sides with different lengths, Up to Face), Revolve, Holes (simple, counterbore, countersink, standard metric sizes M3–M10), Fillets, Chamfers, Shell (Hollow out).
+  - Patterns & Symmetry: Linear, Grid, and Circular patterns; Body and Feature Mirroring.
+  - References: Sketches on planar faces or offset/rotated work planes; edge projection into sketches.
+  - Views: Section view with dynamic cutting plane to inspect internal cavities and features.
+  - History Tree: Parametric chronological feature timeline; every step remains editable.
+- **Parameters & Measurement:**
+  - Parameter table supporting named variables and math formulas (e.g., `wall * 2`).
+  - 3D measurement tool for distances, radii, angles, and surface areas.
+- **Exchange & Export:**
+  - Export STEP files (exact B-rep geometry for standard CAD applications).
+  - Export STL and 3MF files for 3D printing.
+  - Export and import project files (`.paramworker.json`).
+  - Integrated script editor for OpenSCAD files with Customizer parameter sliders.
+
+## License
+
+ParamWorker is free software licensed under the **GNU General Public License v3.0 or later (GPL-3.0-or-later)**.
+Copyright © 2026 Kevin Bodenstein.
+
+See the full license text in [LICENSE](LICENSE).
+
+Third-party libraries:
+- **Open CASCADE Technology (OCCT)** 7.9.3: LGPL 2.1 with Open CASCADE exception. Since ParamWorker's source code and build scripts are publicly available, relinking and replacing the libraries under LGPL 2.1 § 6 is fully supported.
+- **Manifold** (Apache 2.0) and **Clipper2** (Boost Software License 1.0).
+- **Haze**, **AndroidX**, **Kotlin** (Apache 2.0).
+
+## Building from Source
+
+### Prerequisites
+- Android SDK (compileSdk 36, minSdk 26)
+- JDK 17 or 21
+- Android NDK `28.2.13676358`
+- CMake `3.31.6` in the Android SDK (`$ANDROID_HOME/cmake/3.31.6`)
+- PowerShell 7 (`pwsh` on Linux/macOS or `powershell.exe` on Windows)
+
+### 1. Build OpenCascade
+OpenCascade is required for `:core:brep` and is compiled once per target ABI:
 ```powershell
-& "C:\Program Files\Android\Android Studio\jbr\bin\keytool.exe" -genkeypair -v -keystore C:\Users\<Name>\Schluessel\paramworker-upload.jks -alias upload -keyalg RSA -keysize 4096 -validity 10000
+git clone --depth 1 --branch V7_9_3 https://github.com/Open-Cascade-SAS/OCCT.git third_party/occt
+./scripts/build-occt.ps1 -Abis x86_64,arm64-v8a
+```
+On Linux/macOS, run with PowerShell 7 (`pwsh ./scripts/build-occt.ps1 -Abis x86_64,arm64-v8a`).
+
+### 2. Build Variants: FOSS and Play
+The application defines two flavors:
+- **`foss`**: Targeted for F-Droid and independent APK distribution. Includes a "Support development…" menu entry with donation links.
+- **`play`**: Targeted for Google Play. Does not contain any donation links or UI (complying with Google Play policies).
+
+> **Note on F-Droid:** F-Droid builds the `foss` flavor (`assembleFossRelease`).
+
+### 3. Build & Test Commands
+```bash
+# Run unit tests across all variants
+./gradlew testPlayDebugUnitTest testFossDebugUnitTest test
+
+# Assemble debug APKs
+./gradlew :app:assembleFossDebug
+./gradlew :app:assemblePlayDebug
+
+# Build release AAB for Google Play
+./gradlew :app:bundlePlayRelease -PallowDebugSignedRelease=true
 ```
 
-Dann `keystore.properties` im Projektordner anlegen (wird nicht eingecheckt) mit `storeFile`, `storePassword`, `keyAlias=upload`, `keyPassword`
-und `./gradlew :app:bundleRelease` ausführen → `app/build/outputs/bundle/release/app-release.aab`. Ohne `keystore.properties` bricht der
-Release-Build ab; nur zum Testen (und in CI) erlaubt `-PallowDebugSignedRelease=true` die Signatur mit dem Debug-Schlüssel (Google Play lehnt das ab). Download je Gerät ≈ 16 MB (native Bibliotheken ≈ 15 MB).
+## Contributing
 
-**Automatische Prüfung (GitHub Actions, `.github/workflows/ci.yml`):** bei jedem Push auf `main` und jedem Pull Request laufen die
-JVM-Tests und der App-Build (Debug-APK als Artefakt, Release-AAB). OpenCascade wird nur beim ersten Lauf bzw. nach Änderungen an
-`scripts/build-occt.ps1` gebaut (je ABI ein eigener Job, auf GitHub ca. 2–3 h) und danach aus dem Zwischenspeicher genommen.
-Gerätetests auf dem Emulator laufen weiter lokal.
+Contributions are warmly welcome!
+- Please read our [Contribution Guidelines (CONTRIBUTING.md)](CONTRIBUTING.md) before submitting pull requests.
+- Submitting contributions requires agreeing to our [Individual Contributor License Agreement (CLA.md)](CLA.md).
+- We maintain a welcoming and inclusive environment in accordance with our [Code of Conduct (CODE_OF_CONDUCT.md)](CODE_OF_CONDUCT.md).
 
-**App-Icon:** `python scripts/make-icon.py` erzeugt aus einer Geometrie-Beschreibung die Vektor-Icons (`res/drawable/ic_launcher_*`,
-`res/mipmap-anydpi-v26`) sowie Store-Symbol und Store-Grafik (`docs/store/`). Nicht die erzeugten Dateien von Hand ändern.
+## Donations
 
-**Referenzdaten:** `samples/reference/*.stl` sind mit OpenSCAD 2021.01 aus der aktuellen
-`samples/streaming_halterung.scad` erzeugt (Modus pro Teil, z. B. `-D 'mode="arm"'`). Bei Änderung der SCAD-Datei neu erzeugen.
+ParamWorker is completely free, ad-free, and has no paywalls or subscriptions. If you enjoy the app and want to support ongoing development, consider a voluntary donation:
+- **Liberapay:** [https://liberapay.com/PLACEHOLDER](https://liberapay.com/PLACEHOLDER)
+- **GitHub Sponsors:** [https://github.com/sponsors/PLACEHOLDER](https://github.com/sponsors/PLACEHOLDER)
 
-## Lizenzen
-Der Sprachkern ist eine **eigene Implementierung** (kein OpenSCAD-Code, kein CGAL) – bewusst, um die GPL nicht auf die App
-auszudehnen. Eingebunden in `third_party/`: [Manifold](https://github.com/elalish/manifold) (Apache 2.0) und
-[Clipper2](https://github.com/AngusJohnson/Clipper2) (Boost Software License).
-[Open CASCADE Technology](https://github.com/Open-Cascade-SAS/OCCT) 7.9.3 steht unter der **LGPL 2.1 mit Open-CASCADE-Ausnahme**:
-Es wird **unverändert als gemeinsame Bibliotheken** (`libTK*.so`) mitgeliefert, die sich gegen eine selbst gebaute Version tauschen
-lassen (`scripts/build-occt.ps1`). Die App zeigt alle Lizenztexte unter Projektmenü › „Lizenzen …“ (`app/src/main/assets/licenses`).
+## Trademark
+
+The name and logo ParamWorker are unregistered trademarks of Kevin Bodenstein and are not covered by the GPL-3.0 license. For guidance on naming forks, see [TRADEMARK.md](TRADEMARK.md).

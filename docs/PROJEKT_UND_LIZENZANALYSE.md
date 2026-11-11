@@ -362,7 +362,7 @@ Bei der Überprüfung aller 62 `.so`-Bibliotheken in `app-release.apk` und der e
 ### Sofort (vor Beta-Start / Play-Store-Upload)
 - [ ] **L-01 & L-02:** Platzhalter in `docs/privacy/index.html` ausfüllen, E-Mail-Feedback-Passus ergänzen und Offline-Dialog „Impressum & Datenschutz“ in `ProjectMenu.kt` einbauen.
 - [ ] **L-04, L-05, L-06, L-08:** Fehlende Lizenzdateien (`llvm_libc_apache_2.0_exception.txt`, `occt_strtod_lucent.txt`, `occt_unicode.txt`, `manifold_dset_zlib.txt`) in `app/src/main/assets/licenses/` anlegen und in `LicensesDialog.kt` sowie `scripts/play-check.py` verankern.
-- [ ] **L-03:** OCCT-Hinweistext in `LicensesDialog.kt` um das Relinking-Kit (`cadbrep.cpp` + Anleitung zum `.so`-Austausch im APK) sowie die ausdrückliche Erlaubnis zur Modifikation/Fehlersuche nach § 6 LGPL 2.1 ergänzen.
+- [x] **L-03:** (erledigt 11.11.2026 durch Open-Source-Freigabe unter GPL-3.0-or-later: Quelltext der App und Build-Skripte sind öffentlich, Neu-Linken nach LGPL 2.1 § 6 uneingeschränkt möglich)
 - [x] **L-07:** (erledigt 21.10.2026: Eigenentwicklung, Copyright-Kopf eingetragen) Urheberschaft von `Streaminghalterung.scad` verifizieren und per Header dokumentieren (oder durch eigenes Beispiel ersetzen).
 - [ ] **L-10:** `DocumentCodec.FORMAT` in `DocumentCodec.kt:26` auf `"paramworker-model"` umstellen.
 - [ ] **T-01 & T-02:** Bit-Packing-Kollision in `ShellFeature.innerElement` / `MirrorNaming` sowie fehlende `faceAliases` in `edgeFaceTags` / `edgesBetween` beheben.

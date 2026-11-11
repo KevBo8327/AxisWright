@@ -16,7 +16,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 
 /**
- * Anbieterkennzeichnung nach § 5 DDG, in der App (Internet nur für den Pro-Kauf über Google Play, ein Link allein wäre ohne Netz nicht erreichbar).
+ * Anbieterkennzeichnung nach § 5 DDG, in der App (die App arbeitet offline, ein Link allein wäre ohne Netz nicht erreichbar).
  * Platzhalter in eckigen Klammern vor der Veröffentlichung ersetzen – dieselben wie in docs/privacy/index.html; scripts/play-check.py
  * meldet sie, solange sie stehen.
  */
@@ -44,7 +44,6 @@ internal fun ImprintDialog(onDismiss: () -> Unit) {
                 Text(stringResource(R.string.legal_liability_text), style = body)
                 Heading(stringResource(R.string.legal_privacy_heading))
                 Text(stringResource(R.string.legal_privacy_text), style = body)
-                Text(stringResource(R.string.legal_privacy_purchase), style = body)
                 Text(stringResource(R.string.legal_privacy_feedback), style = body)
                 Text(stringResource(R.string.legal_privacy_full, Imprint.PRIVACY_URL), style = body)
             }

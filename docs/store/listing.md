@@ -20,17 +20,19 @@ Parametrische 3D-Konstruktion auf dem Tablet: skizzieren, bemaßen, drucken.
 ParamWorker ist ein parametrisches CAD-Programm für Android-Tablets und -Smartphones. Sie zeichnen eine Skizze, bemaßen sie und machen daraus ein Bauteil – mit echter, exakter Geometrie, die sich jederzeit über ihre Maße ändern lässt. Alles läuft direkt auf dem Gerät: ohne Konto, ohne Cloud, ohne eigene Server.
 
 SKIZZIEREN
-• Linie, Rechteck (Ecke, Mitte, 3 Punkte), Kreis (Mitte, 2 oder 3 Punkte, tangential), Bogen, Langloch, Vieleck
-• Kürzen, Verlängern, Versatz und Ecken runden
+• Linie, Rechteck (Ecke, Mitte, 3 Punkte), Kreis (Mitte, 2 oder 3 Punkte, tangential), Bogen, Langloch, Vieleck, Text als Skizzenelement (Gravur/erhaben)
+• Kürzen, Verlängern, Versatz, Ecken runden sowie Verschieben, Drehen, Skalieren und Kopieren der Auswahl
 • 16 geometrische Bedingungen (parallel, senkrecht, tangential, symmetrisch, konzentrisch …) und 8 Maßarten
 • Der Löser zeigt, ob die Skizze vollständig bestimmt ist – ändern Sie ein Maß, passt sich alles an
 • Muster in der Skizze, deren Anzahl sich später ändern lässt
 
 KÖRPER
-• Extrudieren und Abtragen, Drehen, Bohrungen
+• Extrusion (Hinzufügen, Abtragen, Schnittmenge; zwei Seiten mit verschiedenen Längen, bis Fläche), Drehen
+• Bohrungen mit Senkung/Kegelsenkung und Normgrößen M3–M10
 • Verrunden und Anfasen von Kanten, Aushöhlen zur Schale
 • Reihen-, Raster- und Kreismuster, Spiegeln
 • Skizzen auf Körperflächen und Arbeitsebenen; Körperkanten in die Skizze projizieren
+• Schnittansicht zur Prüfung von Hohlräumen und Innengeometrie
 • Der Modellaufbau bleibt als Verlauf erhalten: Jeder Schritt ist änderbar, das Modell baut sich neu auf
 
 PARAMETER UND MESSEN
@@ -49,13 +51,13 @@ FÜR FINGER, STIFT UND MAUS
 • Tablet- und Smartphone-Layout, helles und dunkles Design
 
 IHRE DATEN BLEIBEN BEI IHNEN
-Internet nur für den Kauf von Pro über Google Play – keine Werbung, kein Tracking, Ihre Projekte bleiben auf Ihrem Gerät.
+Vollständig offline: keine Internetverbindung, keine Werbung, kein Tracking – Ihre Projekte bleiben auf Ihrem Gerät.
+
+ParamWorker ist freie Open-Source-Software (GPL-3.0-or-later). Alle Funktionen sind ohne Einschränkungen oder Abos für alle frei nutzbar.
 
 Hinweis: ParamWorker ist ein Konstruktionswerkzeug. Prüfen Sie Maße und Festigkeit Ihrer Teile vor der Fertigung selbst; für sicherheitsrelevante Bauteile ist die App nicht vorgesehen.
 
 Der Geometriekern ist Open CASCADE Technology. ParamWorker befindet sich in aktiver Entwicklung – Rückmeldungen sind sehr willkommen.
-
-In der Testphase sind alle Funktionen frei. Später bleibt das gesamte Modellieren kostenlos; STEP- und 3MF-Export sowie die Parameter-Tabelle werden Teil von „Pro“ (einmaliger Kauf, kein Abo).
 
 ## English
 
@@ -70,17 +72,19 @@ Parametric 3D design on your tablet: sketch, dimension, print.
 ParamWorker is a parametric CAD app for Android tablets and phones. Draw a sketch, add dimensions and turn it into a part – with real, exact geometry that you can change at any time through its dimensions. Everything runs on your device: no account, no cloud, no servers of our own.
 
 SKETCHING
-• Line, rectangle (corner, centre, 3 points), circle (centre, 2 or 3 points, tangent), arc, slot, polygon
-• Trim, extend, offset and round corners
+• Line, rectangle (corner, centre, 3 points), circle (centre, 2 or 3 points, tangent), arc, slot, polygon, text as sketch element (engraving/embossed)
+• Trim, extend, offset, round corners, plus move, rotate, scale and copy selection
 • 16 geometric constraints (parallel, perpendicular, tangent, symmetric, concentric …) and 8 kinds of dimensions
 • The solver shows whether the sketch is fully defined – change a dimension and everything follows
 • Sketch patterns whose count you can change later
 
 SOLIDS
-• Extrude and cut, revolve, holes
+• Extrude (add, cut, intersect; two sides with different lengths, up to face), revolve
+• Holes with counterbore/countersink and standard sizes M3–M10
 • Fillet and chamfer edges, shell into a hollow part
 • Linear, grid and circular patterns, mirror
 • Sketches on faces and work planes; project edges into a sketch
+• Section view to inspect interior geometry and cavities
 • The model history is kept: every step stays editable and the model rebuilds itself
 
 PARAMETERS AND MEASURING
@@ -99,13 +103,13 @@ FOR FINGER, PEN AND MOUSE
 • Tablet and phone layouts, light and dark theme
 
 YOUR DATA STAYS WITH YOU
-Internet only for buying Pro via Google Play – no ads, no tracking, your projects stay on your device.
+Completely offline: no internet connection, no ads, no tracking – your projects stay on your device.
+
+ParamWorker is free open-source software (GPL-3.0-or-later). All features are freely available without paywalls or subscriptions.
 
 Note: ParamWorker is a design tool. Check the dimensions and strength of your parts yourself before manufacturing; the app is not intended for safety-critical components.
 
 The geometry kernel is Open CASCADE Technology. ParamWorker is in active development – feedback is very welcome.
-
-During testing, all features are free. Later, all modelling stays free; STEP and 3MF export and the parameter table become part of "Pro" (one-time purchase, no subscription).
 
 ## Grafiken
 

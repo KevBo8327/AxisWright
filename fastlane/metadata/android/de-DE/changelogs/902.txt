@@ -1,0 +1,1 @@
+Erste F-Droid-Veröffentlichung als freie Open-Source-Software (GPL-3.0-or-later). Alle Funktionen sind ohne Einschränkungen frei nutzbar.

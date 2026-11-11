@@ -37,7 +37,7 @@ jobs:
           java-version: 21
       - uses: gradle/actions/setup-gradle@v4
       - name: Tests
-        run: ./gradlew test testDebugUnitTest --continue
+        run: ./gradlew test testPlayDebugUnitTest testFossDebugUnitTest --continue
       - name: Testberichte hochladen
         if: failure()
         uses: actions/upload-artifact@v4
@@ -99,11 +99,11 @@ jobs:
           path: third_party/occt-android-shared/arm64-v8a
           key: occt-${{ env.OCCT_TAG }}-arm64-v8a-${{ hashFiles('scripts/build-occt.ps1') }}
           fail-on-cache-miss: true
-      - name: Debug-APK und Release-AAB
-        run: ./gradlew :app:assembleDebug :app:bundleRelease -PallowDebugSignedRelease=true
-      - name: APK hochladen
+      - name: Debug-APKs und Release-AAB
+        run: ./gradlew :app:assemblePlayDebug :app:assembleFossDebug :app:bundlePlayRelease -PallowDebugSignedRelease=true
+      - name: APKs hochladen
         uses: actions/upload-artifact@v4
         with:
-          name: paramworker-debug-apk
-          path: app/build/outputs/apk/debug/*.apk
+          name: paramworker-debug-apks
+          path: app/build/outputs/apk/*/*/*.apk
           retention-days: 14

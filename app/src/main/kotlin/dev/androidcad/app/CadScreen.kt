@@ -270,7 +270,7 @@ internal fun ScriptTopBar(hub: ProjectHub) {
         Box {
             TextButton(onClick = { menu = true }, modifier = Modifier.semantics { contentDescription = moreOptions }) { Text("⋮") }
             DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
-                DropdownMenuItem(text = { Text(stringResource(R.string.script_export_3mf)) }, trailingIcon = { ProMark() }, onClick = { menu = false; if (Pro.allows()) threeMfExporter.launch("${state.project.name.ifBlank { res.getString(R.string.script_file_default_model) }}.3mf") }, enabled = state.mesh?.isEmpty == false)
+                DropdownMenuItem(text = { Text(stringResource(R.string.script_export_3mf)) }, onClick = { menu = false; threeMfExporter.launch("${state.project.name.ifBlank { res.getString(R.string.script_file_default_model) }}.3mf") }, enabled = state.mesh?.isEmpty == false)
                 DropdownMenuItem(text = { Text(stringResource(R.string.script_export_source)) }, onClick = { menu = false; scadExporter.launch("${state.project.name.ifBlank { res.getString(R.string.script_file_default_project) }}.scad") })
                 DropdownMenuItem(text = { Text(stringResource(R.string.script_to_model_editor)) }, onClick = { menu = false; hub.switchTo(ProjectKind.MODEL) })
             }

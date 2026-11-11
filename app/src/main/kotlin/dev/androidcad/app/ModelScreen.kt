@@ -224,7 +224,7 @@ private fun ModelTopBar(hub: ProjectHub, compact: Boolean) {
         }
         ActionButton(CadIcon.UNDO, stringResource(R.string.model_undo), enabled = state.canUndo, onClick = state::undo)
         ActionButton(CadIcon.REDO, stringResource(R.string.model_redo), enabled = state.canRedo, onClick = state::redo)
-        TextButton(onClick = { if (Pro.allows()) state.parametersOpen = true }) { Text(stringResource(R.string.common_parameters)); ProMark() }
+        TextButton(onClick = { state.parametersOpen = true }) { Text(stringResource(R.string.common_parameters)) }
         if (state.parametersOpen) ParameterDialog(state) { state.parametersOpen = false }
         if (!compact) TextButton(onClick = { exporter.launch("${state.projectName}.stl") }, enabled = out?.mesh != null) { Text(stringResource(R.string.model_export_stl)) }
         val moreOptions = stringResource(R.string.common_more_options)
@@ -237,8 +237,8 @@ private fun ModelTopBar(hub: ProjectHub, compact: Boolean) {
                     }
                     DropdownMenuItem(text = { Text(stringResource(R.string.model_export_stl)) }, onClick = { menu = false; exporter.launch("${state.projectName}.stl") }, enabled = out?.mesh != null)
                 }
-                DropdownMenuItem(text = { Text(stringResource(R.string.model_export_step)) }, trailingIcon = { ProMark() }, onClick = { menu = false; if (Pro.allows()) stepExporter.launch("${state.projectName}.step") }, enabled = out?.body != null)
-                DropdownMenuItem(text = { Text(stringResource(R.string.model_export_3mf)) }, trailingIcon = { ProMark() }, onClick = { menu = false; if (Pro.allows()) threeMfExporter.launch("${state.projectName}.3mf") }, enabled = out?.mesh != null)
+                DropdownMenuItem(text = { Text(stringResource(R.string.model_export_step)) }, onClick = { menu = false; stepExporter.launch("${state.projectName}.step") }, enabled = out?.body != null)
+                DropdownMenuItem(text = { Text(stringResource(R.string.model_export_3mf)) }, onClick = { menu = false; threeMfExporter.launch("${state.projectName}.3mf") }, enabled = out?.mesh != null)
                 DropdownMenuItem(text = { Text(stringResource(R.string.model_export_project)) }, onClick = { menu = false; projectExporter.launch("${state.projectName}.paramworker.json") })
                 DropdownMenuItem(text = { Text(stringResource(R.string.model_to_script)) }, onClick = { menu = false; hub.switchTo(ProjectKind.SCRIPT) })
             }
