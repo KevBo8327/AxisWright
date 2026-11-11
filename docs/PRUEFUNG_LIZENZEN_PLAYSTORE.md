@@ -1,4 +1,4 @@
-# Prüfung: Lizenzen und Google-Play-Vorgaben (ParamWorker 0.9.0-beta, Stand 18.10.2026 / aktualisiert 11.11.2026)
+# Prüfung: Lizenzen und Google-Play-Vorgaben (AxisWright 0.9.0-beta, Stand 18.10.2026 / aktualisiert 11.11.2026)
 
 Anlass: Die App wird im Play Store und über FOSS-Kanäle kostenlos und werbefrei als freie Open-Source-Software bereitgestellt.
 Geprüft wurden alle Bestandteile, die im Release-Paket landen, und die Vorgaben von Google Play, soweit sie sich am Paket,
@@ -14,7 +14,7 @@ Automatischer Test: `python scripts/play-check.py` (nach `./gradlew :app:bundleR
 | Freier Vertrieb erlaubt? | **Ja.** Alle Fremdlizenzen erlauben Vertrieb; eigener Code steht unter GPL-3.0-or-later. |
 | Lizenzpflichten erfüllt? | **Ja, nach den Korrekturen vom 18.10.2026** (5 fehlende Hinweise ergänzt, LGPL-Quelltextangebot statt Verweis auf den privaten Quelltext). |
 | Technische Play-Vorgaben | **Erfüllt** (targetSdk 36, 64 Bit, 16-KB-Seiten, keine Berechtigungen (weder Internet noch Billing, siehe B1), nicht debuggable, Größe). |
-| Offen beim Entwickler | Upload-Schlüssel, Datenschutzerklärung ausfüllen + veröffentlichen, Play-Console-Formulare, Händlerstatus/Impressum, Herkunft des Beispiels „Streaminghalterung“ (erledigt 21.10.2026: Eigenentwicklung); Markenprüfung „ParamWorker“ (erledigt 22.10.2026, keine Treffer in Klasse 9/42). |
+| Offen beim Entwickler | Upload-Schlüssel, Datenschutzerklärung ausfüllen + veröffentlichen, Play-Console-Formulare, Händlerstatus/Impressum, Herkunft des Beispiels „Streaminghalterung“ (erledigt 21.10.2026: Eigenentwicklung); Markenprüfung „AxisWright“ (erledigt 22.10.2026, keine Treffer in Klasse 9/42). |
 
 ---
 
@@ -69,7 +69,7 @@ Alle Lizenztexte liegen in `app/src/main/assets/licenses/` und sind in der App u
 - **Beispiele:** `Box.scad` ist eigener Inhalt. `Streaminghalterung.scad`: eigene Konstruktion (bestätigt 21.10.2026), Copyright-Kopf in der Datei.
   Stammt die Konstruktion von Thingiverse, Printables o. Ä., gilt deren Lizenz (oft CC BY-NC – dann **nicht** in einer verkauften App
   erlaubt). Ist sie eigene Arbeit oder mit einem KI-Werkzeug selbst erstellt, ist sie unproblematisch. ⚠️
-- **App-Name „ParamWorker“:** Websuche ohne Treffer in Software/CAD; Registerprüfung DPMA, EUIPO und WIPO am 22.10.2026 durch dich:
+- **App-Name „AxisWright“:** Websuche ohne Treffer in Software/CAD; Registerprüfung DPMA, EUIPO und WIPO am 22.10.2026 durch dich:
   keine Treffer in Klasse 9 oder 42. ✓
 - **Eigenes Repository:** privat (GitHub antwortet ohne Anmeldung mit 404). Gut so – ein öffentliches Repository ohne Lizenz wäre zwar
   rechtlich geschützt, ließe aber jeden die App selbst bauen. ✅
@@ -82,7 +82,7 @@ Alle Lizenztexte liegen in `app/src/main/assets/licenses/` und sind in der App u
 
 | Prüfung | Ergebnis |
 |---|---|
-| Paketname `io.github.kevbo8327.paramworker`, versionCode 900 | ✅ |
+| Paketname `io.github.kevbo8327.axiswright`, versionCode 900 | ✅ |
 | targetSdk 36 (Pflicht für neue Apps ab 31.08.2026: 36) | ✅ |
 | Berechtigungen: Keine Nutzerberechtigungen, weder Internet noch Billing (vollständig entfernt). Keine Laufzeitberechtigungen. | ✅ (Stand 11.11.2026) |
 | 64-Bit-Pflicht (arm64-v8a, x86_64) | ✅ |

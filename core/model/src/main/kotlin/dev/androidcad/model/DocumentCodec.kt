@@ -23,10 +23,10 @@ import dev.androidcad.sketch.Vec2
  * Extrusionsparametern. Versioniert, damit spätere Features (Bohrung, Verrundung …) alte Dateien nicht entwerten.
  */
 object DocumentCodec {
-    const val FORMAT = "paramworker-model"
+    const val FORMAT = "axiswright-model"
 
-    /** Namen des Formats aus früheren App-Namen („Android CAD“, „Partwright“); solche Dateien bleiben lesbar und werden beim Speichern umgeschrieben. */
-    private val LEGACY_FORMATS = setOf("androidcad-model", "partwright-model")
+    /** Namen des Formats aus früheren App-Namen („Android CAD“, „Partwright“, „ParamWorker“); solche Dateien bleiben lesbar und werden beim Speichern umgeschrieben. */
+    private val LEGACY_FORMATS = setOf("androidcad-model", "partwright-model", "paramworker-model")
 
     /** Sieht [text] wie eine Modelldatei aus (Import: Modell oder OpenSCAD-Skript)? Ob sie gültig ist, prüft erst [decode]. */
     fun looksLikeModel(text: String): Boolean = text.contains("\"format\"") && (text.contains(FORMAT) || LEGACY_FORMATS.any { text.contains(it) })

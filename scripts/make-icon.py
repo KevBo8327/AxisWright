@@ -1,12 +1,12 @@
 """
-Erzeugt App-Icon, Startbildschirm-Motiv und Store-Grafiken von ParamWorker aus EINER Formenliste:
+Erzeugt App-Icon, Startbildschirm-Motiv und Store-Grafiken von AxisWright aus EINER Formenliste:
 
 - app/src/main/res/drawable/ic_launcher_{background,foreground,monochrome}.xml  (adaptives Vektor-Icon, 108 × 108)
 - app/src/main/res/mipmap-anydpi-v26/ic_launcher{,_round}.xml
 - docs/store/icon-512.png        (Play-Store-Symbol, 512 × 512, randlos ohne Rundung/Schatten – Google maskiert selbst)
 - docs/store/feature-graphic.png (Play-Store-Grafik, 1024 × 500)
 - app/src/main/res/drawable/ic_splash.xml        (Startbildschirm: detailliertere Fassung des Motivs)
-- app/src/main/res/drawable/splash_branding.xml  (Startbildschirm ab Android 12: Schriftzug PARAMWORKER, 200 × 80 dp)
+- app/src/main/res/drawable/splash_branding.xml  (Startbildschirm ab Android 12: Schriftzug AXISWRIGHT, 200 × 80 dp)
 
 Motiv (Stil „Blaupause“): Auf einer leuchtend türkisen Skizzenfläche steht ein blauer Block mit Tasche; ein orangefarbener
 Extrusionspfeil steigt auf – Skizze → Körper, der Kern der App. Hintergrund: Marineblau mit grobem Raster.
@@ -120,7 +120,7 @@ def detail_shapes():
         ("fill", arrow(), ARROW, 1.0), ("fill", arrow_light(), ARROW_LIGHT, 0.55),
     ]
 
-# ---- Schriftzug PARAMWORKER (eigene geometrische Linienschrift – keine fremde Schriftart nötig) -------------
+# ---- Schriftzug AXISWRIGHT (eigene geometrische Linienschrift – keine fremde Schriftart nötig) -------------
 CAP, LW = 10.0, 6.4                            # Versalhöhe, Buchstabenbreite (Einheiten)
 def _arc(cx, cy, rx, ry, a0, a1, n=10):
     return [(cx + rx * math.cos(math.radians(a0 + (a1 - a0) * i / n)), cy + ry * math.sin(math.radians(a0 + (a1 - a0) * i / n))) for i in range(n + 1)]
@@ -137,12 +137,17 @@ GLYPHS = {
     "O": [_arc(3.3, 5, 3.3, 5, 0, 360, 32)],
     "K": [[(0, 0), (0, CAP)], [(LW, 0), (0, 6.2)], [(2.3, 4.5), (LW, CAP)]],
     "E": [[(5.8, 0), (0, 0), (0, CAP), (5.8, CAP)], [(0, 5), (4.8, 5)]],
+    "X": [[(0, 0), (LW, CAP)], [(0, CAP), (LW, 0)]],
+    "S": [_arc(3.2, 2.4, 3.1, 2.4, -25, -247.4, 8) + _arc(3.2, 7.6, 3.1, 2.4, -67.4, 155, 8)],
 }
 WIDTH = {"W": 8.4, "I": 0.0, "M": 7.6, "E": 5.8}
 TRACK = 2.9                                    # Laufweite zwischen Buchstaben
-KERN = {("P", "A"): -0.9, ("R", "A"): -0.6, ("A", "M"): -0.3, ("M", "W"): -0.2, ("W", "O"): -0.5, ("O", "R"): -0.1, ("R", "K"): -0.2, ("K", "E"): -0.4, ("E", "R"): -0.1}   # Unterschneidung je Paar
+KERN = {
+    ("P", "A"): -0.9, ("R", "A"): -0.6, ("A", "M"): -0.3, ("M", "W"): -0.2, ("W", "O"): -0.5, ("O", "R"): -0.1, ("R", "K"): -0.2, ("K", "E"): -0.4, ("E", "R"): -0.1,
+    ("A", "X"): -0.4, ("X", "I"): -0.3, ("I", "S"): -0.2, ("S", "W"): -0.3, ("W", "R"): -0.5, ("R", "I"): -0.2, ("I", "G"): -0.2, ("G", "H"): -0.1, ("H", "T"): -0.4
+}
 
-def wordmark(text="PARAMWORKER"):
+def wordmark(text="AXISWRIGHT"):
     """Linienzüge des Schriftzugs (Einheiten, oben links = 0,0) und seine Breite."""
     lines, x = [], 0.0
     for i, ch in enumerate(text):

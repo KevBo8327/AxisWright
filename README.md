@@ -1,13 +1,13 @@
-# ParamWorker
+# AxisWright
 
 [Deutsch](#deutsch) | [English](#english)
 
 ---
 
 <a name="deutsch"></a>
-# ParamWorker (Deutsch)
+# AxisWright (Deutsch)
 
-ParamWorker ist ein freies, quelloffenes (GPL-3.0-or-later) parametrisches 3D-CAD-Programm für Android-Tablets, Smartphones und Chromebooks. Es kombiniert exakte B-Rep-Geometrie auf Basis von Open CASCADE Technology mit einer modernen Touch- und Stiftbedienung sowie einem optionalen OpenSCAD-kompatiblen Skript-Editor mit Manifold-Geometriekern.
+AxisWright ist ein freies, quelloffenes (GPL-3.0-or-later) parametrisches 3D-CAD-Programm für Android-Tablets, Smartphones und Chromebooks. Es kombiniert exakte B-Rep-Geometrie auf Basis von Open CASCADE Technology mit einer modernen Touch- und Stiftbedienung sowie einem optionalen OpenSCAD-kompatiblen Skript-Editor mit Manifold-Geometriekern.
 
 Die App arbeitet vollständig **offline**: ohne Benutzerkonto, ohne Cloud-Zwang, ohne Werbung, ohne Tracking und ohne Internetberechtigung.
 
@@ -40,18 +40,18 @@ Die App arbeitet vollständig **offline**: ohne Benutzerkonto, ohne Cloud-Zwang,
 - **Austausch & Export:**
   - Export als STEP (exakte B-Rep-Geometrie für andere CAD-Programme).
   - Export als STL und 3MF für den 3D-Druck.
-  - Projektdateien (`.paramworker.json`) exportieren und importieren.
+  - Projektdateien (`.axiswright.json`) exportieren und importieren.
   - Integrierter Skript-Editor für OpenSCAD-Dateien mit Customizer-Schiebereglern.
 
 ## Lizenz
 
-ParamWorker ist freie Software unter der **GNU General Public License v3.0 oder höher (GPL-3.0-or-later)**.
+AxisWright ist freie Software unter der **GNU General Public License v3.0 oder höher (GPL-3.0-or-later)**.
 Copyright © 2026 Kevin Bodenstein.
 
 Vollständiger Lizenztext: siehe [LICENSE](LICENSE).
 
 Eingebundene Fremdbibliotheken:
-- **Open CASCADE Technology (OCCT)** 7.9.3: LGPL 2.1 mit Open-CASCADE-Ausnahme. Da der Quelltext und die Build-Skripte von ParamWorker öffentlich sind, ist das Neu-Linken und Austauschen der Bibliotheken nach LGPL 2.1 § 6 uneingeschränkt möglich.
+- **Open CASCADE Technology (OCCT)** 7.9.3: LGPL 2.1 mit Open-CASCADE-Ausnahme. Da der Quelltext und die Build-Skripte von AxisWright öffentlich sind, ist das Neu-Linken und Austauschen der Bibliotheken nach LGPL 2.1 § 6 uneingeschränkt möglich.
 - **Manifold** (Apache 2.0) und **Clipper2** (Boost Software License 1.0).
 - **Haze**, **AndroidX**, **Kotlin** (Apache 2.0).
 
@@ -101,20 +101,20 @@ Beiträge zur Weiterentwicklung sind herzlich willkommen!
 
 ## Spenden
 
-ParamWorker ist komplett kostenlos, werbefrei und ohne Abos. Wenn dir das Projekt gefällt und du die Weiterentwicklung unterstützen möchtest, freuen wir uns über eine freiwillige Spende:
+AxisWright ist komplett kostenlos, werbefrei und ohne Abos. Wenn dir das Projekt gefällt und du die Weiterentwicklung unterstützen möchtest, freuen wir uns über eine freiwillige Spende:
 - **Liberapay:** [https://liberapay.com/PLACEHOLDER](https://liberapay.com/PLACEHOLDER)
 - **GitHub Sponsors:** [https://github.com/sponsors/PLACEHOLDER](https://github.com/sponsors/PLACEHOLDER)
 
 ## Marke
 
-Name und Logo ParamWorker sind Kennzeichen von Kevin Bodenstein (nicht eingetragen) und nicht Teil der GPL-Lizenz. Details und Richtlinien für Forks findest du in [TRADEMARK.md](TRADEMARK.md).
+Name und Logo AxisWright sind Kennzeichen von Kevin Bodenstein (nicht eingetragen) und nicht Teil der GPL-Lizenz. Details und Richtlinien für Forks findest du in [TRADEMARK.md](TRADEMARK.md).
 
 ---
 
 <a name="english"></a>
-# ParamWorker (English)
+# AxisWright (English)
 
-ParamWorker is a free and open-source (GPL-3.0-or-later) parametric 3D CAD application designed for Android tablets, smartphones, and Chromebooks. It provides exact B-rep geometry powered by Open CASCADE Technology, tailored for touch, pen/stylus, and mouse interactions, alongside an optional OpenSCAD-compatible script editor powered by Manifold.
+AxisWright is a free and open-source (GPL-3.0-or-later) parametric 3D CAD application designed for Android tablets, smartphones, and Chromebooks. It provides exact B-rep geometry powered by Open CASCADE Technology, tailored for touch, pen/stylus, and mouse interactions, alongside an optional OpenSCAD-compatible script editor powered by Manifold.
 
 The app works entirely **offline**: no user accounts, no cloud sync required, no ads, no telemetry/tracking, and no internet permission.
 
@@ -147,18 +147,18 @@ The app works entirely **offline**: no user accounts, no cloud sync required, no
 - **Exchange & Export:**
   - Export STEP files (exact B-rep geometry for standard CAD applications).
   - Export STL and 3MF files for 3D printing.
-  - Export and import project files (`.paramworker.json`).
+  - Export and import project files (`.axiswright.json`).
   - Integrated script editor for OpenSCAD files with Customizer parameter sliders.
 
 ## License
 
-ParamWorker is free software licensed under the **GNU General Public License v3.0 or later (GPL-3.0-or-later)**.
+AxisWright is free software licensed under the **GNU General Public License v3.0 or later (GPL-3.0-or-later)**.
 Copyright © 2026 Kevin Bodenstein.
 
 See the full license text in [LICENSE](LICENSE).
 
 Third-party libraries:
-- **Open CASCADE Technology (OCCT)** 7.9.3: LGPL 2.1 with Open CASCADE exception. Since ParamWorker's source code and build scripts are publicly available, relinking and replacing the libraries under LGPL 2.1 § 6 is fully supported.
+- **Open CASCADE Technology (OCCT)** 7.9.3: LGPL 2.1 with Open CASCADE exception. Since AxisWright's source code and build scripts are publicly available, relinking and replacing the libraries under LGPL 2.1 § 6 is fully supported.
 - **Manifold** (Apache 2.0) and **Clipper2** (Boost Software License 1.0).
 - **Haze**, **AndroidX**, **Kotlin** (Apache 2.0).
 
@@ -208,10 +208,10 @@ Contributions are warmly welcome!
 
 ## Donations
 
-ParamWorker is completely free, ad-free, and has no paywalls or subscriptions. If you enjoy the app and want to support ongoing development, consider a voluntary donation:
+AxisWright is completely free, ad-free, and has no paywalls or subscriptions. If you enjoy the app and want to support ongoing development, consider a voluntary donation:
 - **Liberapay:** [https://liberapay.com/PLACEHOLDER](https://liberapay.com/PLACEHOLDER)
 - **GitHub Sponsors:** [https://github.com/sponsors/PLACEHOLDER](https://github.com/sponsors/PLACEHOLDER)
 
 ## Trademark
 
-The name and logo ParamWorker are unregistered trademarks of Kevin Bodenstein and are not covered by the GPL-3.0 license. For guidance on naming forks, see [TRADEMARK.md](TRADEMARK.md).
+The name and logo AxisWright are unregistered trademarks of Kevin Bodenstein and are not covered by the GPL-3.0 license. For guidance on naming forks, see [TRADEMARK.md](TRADEMARK.md).

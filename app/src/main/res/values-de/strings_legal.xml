@@ -6,9 +6,9 @@
     <string name="legal_imprint_info">Angaben gemäß § 5 DDG</string>
     <string name="legal_imprint_contact">%1$s\n%2$s\nTelefon: %3$s\nE-Mail: %4$s</string>
     <string name="legal_liability_heading">Haftung</string>
-    <string name="legal_liability_text">ParamWorker ist ein Werkzeug zum Konstruieren. Prüfen Sie Maße, Toleranzen und Festigkeit Ihrer Teile vor der Fertigung selbst; für sicherheitsrelevante Bauteile ist die App nicht vorgesehen. Die gesetzliche Haftung bei Vorsatz, grober Fahrlässigkeit und für Schäden an Leben, Körper oder Gesundheit bleibt unberührt.</string>
+    <string name="legal_liability_text">AxisWright ist ein Werkzeug zum Konstruieren. Prüfen Sie Maße, Toleranzen und Festigkeit Ihrer Teile vor der Fertigung selbst; für sicherheitsrelevante Bauteile ist die App nicht vorgesehen. Die gesetzliche Haftung bei Vorsatz, grober Fahrlässigkeit und für Schäden an Leben, Körper oder Gesundheit bleibt unberührt.</string>
     <string name="legal_privacy_heading">Datenschutz</string>
-    <string name="legal_privacy_text">ParamWorker hat keine eigenen Server, keine Werbung, keine Analyse- oder Tracking-Werkzeuge und kein Benutzerkonto. Die App stellt keine Internetverbindung her. Ihre Projekte verlassen das Gerät nicht, außer Sie exportieren oder teilen sie. Sie werden lokal gespeichert; Android kann sie abhängig von Ihren Systemeinstellungen in einer Gerätesicherung sichern. Beim Feedback öffnet sich Ihr E-Mail-Programm.</string>
+    <string name="legal_privacy_text">AxisWright hat keine eigenen Server, keine Werbung, keine Analyse- oder Tracking-Werkzeuge und kein Benutzerkonto. Die App stellt keine Internetverbindung her. Ihre Projekte verlassen das Gerät nicht, außer Sie exportieren oder teilen sie. Sie werden lokal gespeichert; Android kann sie abhängig von Ihren Systemeinstellungen in einer Gerätesicherung sichern. Beim Feedback öffnet sich Ihr E-Mail-Programm.</string>
     <string name="legal_privacy_feedback">„Feedback senden“ öffnet nur Ihr E-Mail-Programm mit einer vorbereiteten Nachricht (App-Version, Gerät, Android-Version); gesendet wird sie erst, wenn Sie sie selbst abschicken.</string>
     <string name="legal_privacy_full">Vollständige Datenschutzerklärung: %1$s</string>
 
@@ -21,7 +21,7 @@
     <string name="legal_source_code_link">Quellcode</string>
 
     <!-- Lizenzen: Eigener Code -->
-    <string name="legal_app_name">ParamWorker</string>
+    <string name="legal_app_name">AxisWright</string>
     <string name="legal_app_use">Parametrische 3D-CAD-App für Android</string>
     <string name="legal_app_license">GNU GPL 3.0 or later (GPL-3.0-or-later) · © 2026 Kevin Bodenstein</string>
     <string name="legal_app_source">Quellcode</string>
@@ -30,7 +30,7 @@
     <string name="legal_lib_occt_use">Geometriekern (B-Rep: Körper, Flächen, Kanten, Verrundungen)</string>
     <string name="legal_lib_occt_license">GNU LGPL 2.1 mit Open-CASCADE-Ausnahme</string>
     <string name="legal_lib_occt_source">https://github.com/Open-Cascade-SAS/OCCT (Tag V7_9_3)</string>
-    <string name="legal_lib_occt_note">Als getrennte Bibliotheken (libTK*.so) mitgeliefert. Da ParamWorker unter der GPL-3.0-or-later Open Source ist, sind der vollständige Quelltext der App und die Build-Skripte (scripts/build-occt.ps1) öffentlich verfügbar, sodass OpenCascade gegen selbst erstellte Versionen ausgetauscht und neu gelinkt werden kann (LGPL 2.1 § 6). Enthält DELABELLA (MIT), flex (BSD), strtod von David M. Gay/Lucent und Unicode-Code (Unicode, Inc.).</string>
+    <string name="legal_lib_occt_note">Als getrennte Bibliotheken (libTK*.so) mitgeliefert. Da AxisWright unter der GPL-3.0-or-later Open Source ist, sind der vollständige Quelltext der App und die Build-Skripte (scripts/build-occt.ps1) öffentlich verfügbar, sodass OpenCascade gegen selbst erstellte Versionen ausgetauscht und neu gelinkt werden kann (LGPL 2.1 § 6). Enthält DELABELLA (MIT), flex (BSD), strtod von David M. Gay/Lucent und Unicode-Code (Unicode, Inc.).</string>
 
     <string name="legal_lib_manifold_use">Körperberechnung im Skript-Editor (OpenSCAD)</string>
     <string name="legal_lib_manifold_note">Enthält Code aus NVIDIA PhysX (BSD 3-Clause), musl/FreeBSD msun und eine SVD-Routine (MIT).</string>

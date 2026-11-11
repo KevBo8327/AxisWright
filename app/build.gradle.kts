@@ -8,7 +8,7 @@ plugins {
 /*
  * Signatur des Release-Builds: Der Upload-Schlüssel liegt NICHT im Repository. `keystore.properties` im Projektordner
  * (ebenfalls nicht eingecheckt) nennt ihn:
- *   storeFile=C:/Pfad/zu/paramworker-upload.jks
+ *   storeFile=C:/Pfad/zu/axiswright-upload.jks
  *   storePassword=…
  *   keyAlias=upload
  *   keyPassword=…
@@ -36,7 +36,7 @@ android {
 
     defaultConfig {
         // endgültige App-Kennung im Play Store (nach dem ersten Upload nicht mehr änderbar); der Code-Namespace bleibt dev.androidcad
-        applicationId = "io.github.kevbo8327.paramworker"
+        applicationId = "io.github.kevbo8327.axiswright"
         minSdk = 26
         targetSdk = 36
         // versionCode = Major·1000 + Minor·100 + Patch (0.9.0 → 900, 1.0.0 → 1000); jeder Upload in Play braucht einen höheren Wert

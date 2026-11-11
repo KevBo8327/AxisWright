@@ -269,7 +269,7 @@ internal fun rememberImporter(hub: ProjectHub): () -> Unit {
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) scope.launch {
             val text = withContext(Dispatchers.IO) { context.contentResolver.openInputStream(uri)?.use { it.readBytes().toString(Charsets.UTF_8) } }
-            if (text != null) hub.import(displayName(context, uri)?.removeSuffix(".paramworker")?.removeSuffix(".partwright") ?: defaultName, text)
+            if (text != null) hub.import(displayName(context, uri)?.removeSuffix(".axiswright")?.removeSuffix(".paramworker")?.removeSuffix(".partwright") ?: defaultName, text)
         }
     }
     return { launcher.launch(arrayOf("*/*")) }
@@ -286,10 +286,10 @@ private const val FEEDBACK_ADDRESS = "kb-it-services@outlook.de"
 /** Öffnet das E-Mail-Programm mit Adresse, Betreff und Version/Gerät (hilft beim Nachstellen); ohne E-Mail-App ein Hinweis mit der Adresse. */
 private fun sendFeedback(context: Context) {
     val version = runCatching { context.packageManager.getPackageInfo(context.packageName, 0).versionName }.getOrNull() ?: "?"
-    val body = "\n\n---\nParamWorker $version · ${Build.MANUFACTURER} ${Build.MODEL} · Android ${Build.VERSION.RELEASE}"
+    val body = "\n\n---\nAxisWright $version · ${Build.MANUFACTURER} ${Build.MODEL} · Android ${Build.VERSION.RELEASE}"
     val intent = Intent(Intent.ACTION_SENDTO, Uri.parse("mailto:")).apply {
         putExtra(Intent.EXTRA_EMAIL, arrayOf(FEEDBACK_ADDRESS))
-        putExtra(Intent.EXTRA_SUBJECT, "ParamWorker $version – Feedback")
+        putExtra(Intent.EXTRA_SUBJECT, "AxisWright $version – Feedback")
         putExtra(Intent.EXTRA_TEXT, body)
     }
     try {

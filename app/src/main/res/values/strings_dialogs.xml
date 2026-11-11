@@ -5,8 +5,8 @@
     <string name="export_failed">Export failed: %1$s</string>
 
     <!-- Hilfe -->
-    <string name="help_version">ParamWorker %1$s</string>
-    <string name="help_title_welcome">Welcome to ParamWorker</string>
+    <string name="help_version">AxisWright %1$s</string>
+    <string name="help_title_welcome">Welcome to AxisWright</string>
     <string name="help_title">Help</string>
     <string name="help_open_example">Open example</string>
     <string name="help_start_empty">Start empty</string>

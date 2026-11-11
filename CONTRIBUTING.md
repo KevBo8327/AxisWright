@@ -1,4 +1,4 @@
-# Mitwirken an ParamWorker / Contributing to ParamWorker
+# Mitwirken an AxisWright / Contributing to AxisWright
 
 [Deutsch](#deutsch) | [English](#english)
 
@@ -7,7 +7,7 @@
 <a name="deutsch"></a>
 ## Deutsch
 
-Wir freuen uns über Beiträge zu ParamWorker! Als freies Open-Source-Projekt (GPL-3.0-or-later) lebt ParamWorker von der Gemeinschaft.
+Wir freuen uns über Beiträge zu AxisWright! Als freies Open-Source-Projekt (GPL-3.0-or-later) lebt AxisWright von der Gemeinschaft.
 
 ### 1. Rechtliche Voraussetzung: CLA
 Vor dem Zusammenführen von Beiträgen ist die Zustimmung zu unserer [Individual Contributor License Agreement (CLA.md)](CLA.md) erforderlich. In Pull-Request-Vorlagen gibt es dafür ein Bestätigungshäkchen. Beachte auch den [Verhaltenskodex (CODE_OF_CONDUCT.md)](CODE_OF_CONDUCT.md) und die [Markenrichtlinie (TRADEMARK.md)](TRADEMARK.md).
@@ -38,7 +38,7 @@ Vor jedem Commit oder Pull Request müssen die JVM- und Lint-Tests bestanden wer
 
 ### 4. Code-Stil & Richtlinien
 - **Sprachen & Übersetzung:** Alle sichtbaren Texte müssen zweisprachig sein: Englisch als Standard in `app/src/main/res/values/strings*.xml`, Deutsch in `values-de/`. Fehlende Übersetzungen führen zu Lint-Fehlern (`MissingTranslation`).
-- **Offline & Datenschutz:** ParamWorker stellt keine Internetverbindungen her. Füge keine Bibliotheken ein, die Netzwerkzugriff erfordern oder die `INTERNET`-Berechtigung ins Manifest einbringen.
+- **Offline & Datenschutz:** AxisWright stellt keine Internetverbindungen her. Füge keine Bibliotheken ein, die Netzwerkzugriff erfordern oder die `INTERNET`-Berechtigung ins Manifest einbringen.
 - **Komponenten:** Nutze vorhandene UI-Muster (Jetpack Compose, Material 3, schwebende Leisten mit Glas-Optik).
 
 ### 5. Commit-Regeln
@@ -57,7 +57,7 @@ Vor jedem Commit oder Pull Request müssen die JVM- und Lint-Tests bestanden wer
 <a name="english"></a>
 ## English
 
-We welcome contributions to ParamWorker! As a free and open-source project (GPL-3.0-or-later), ParamWorker thrives on community involvement.
+We welcome contributions to AxisWright! As a free and open-source project (GPL-3.0-or-later), AxisWright thrives on community involvement.
 
 ### 1. Legal Prerequisite: CLA
 Before any contribution can be merged, agreement to our [Individual Contributor License Agreement (CLA.md)](CLA.md) is required. The pull request template includes a checkbox for this purpose. Please also review our [Code of Conduct (CODE_OF_CONDUCT.md)](CODE_OF_CONDUCT.md) and [Trademark Policy (TRADEMARK.md)](TRADEMARK.md).
@@ -88,7 +88,7 @@ All unit and lint tests must pass before submitting contributions:
 
 ### 4. Code Style & Architecture
 - **Localization:** All user-facing strings must be localized: English default in `app/src/main/res/values/strings*.xml` and German in `values-de/`. Missing translations will trigger lint errors (`MissingTranslation`).
-- **Offline & Privacy:** ParamWorker does not make any internet connections. Do not include libraries or dependencies that require network access or pull in the `INTERNET` permission.
+- **Offline & Privacy:** AxisWright does not make any internet connections. Do not include libraries or dependencies that require network access or pull in the `INTERNET` permission.
 - **UI Architecture:** Use modern Jetpack Compose, Material 3, and established project patterns.
 
 ### 5. Commit Guidelines

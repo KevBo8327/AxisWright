@@ -66,7 +66,7 @@ class SketchTextTest {
     @Test
     fun codecRoundTripAndBackwardCompatibility() {
         val s = Sketch()
-        val t1 = s.addText(10.0, 20.0, "ParamWorker", 10.0, 0.0)
+        val t1 = s.addText(10.0, 20.0, "AxisWright", 10.0, 0.0)
         val t2 = s.addText(30.0, 40.0, "CAD", 6.0, 45.0, construction = true)
 
         val json = SketchCodec.toJson(s)

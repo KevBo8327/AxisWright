@@ -6,9 +6,9 @@
     <string name="legal_imprint_info">Information pursuant to § 5 DDG (German version is legally authoritative)</string>
     <string name="legal_imprint_contact">%1$s\n%2$s\nPhone: %3$s\nEmail: %4$s</string>
     <string name="legal_liability_heading">Liability</string>
-    <string name="legal_liability_text">ParamWorker is a design tool. Check the dimensions, tolerances and strength of your parts yourself before manufacturing; the app is not intended for safety-critical components. Statutory liability for intent, gross negligence and injury to life, body or health remains unaffected.</string>
+    <string name="legal_liability_text">AxisWright is a design tool. Check the dimensions, tolerances and strength of your parts yourself before manufacturing; the app is not intended for safety-critical components. Statutory liability for intent, gross negligence and injury to life, body or health remains unaffected.</string>
     <string name="legal_privacy_heading">Privacy</string>
-    <string name="legal_privacy_text">ParamWorker has no servers of its own, no ads, no analytics or tracking tools and no user account. The app makes no internet connections. Your projects do not leave the device unless you export or share them. They are stored locally; depending on your system settings, Android may include them in a device backup. Feedback opens your email app.</string>
+    <string name="legal_privacy_text">AxisWright has no servers of its own, no ads, no analytics or tracking tools and no user account. The app makes no internet connections. Your projects do not leave the device unless you export or share them. They are stored locally; depending on your system settings, Android may include them in a device backup. Feedback opens your email app.</string>
     <string name="legal_privacy_feedback">“Send feedback” only opens your email app with a prepared message (app version, device, Android version); nothing is sent until you send it yourself.</string>
     <string name="legal_privacy_full">Full privacy policy: %1$s</string>
 
@@ -21,7 +21,7 @@
     <string name="legal_source_code_link">Source code</string>
 
     <!-- Lizenzen: Eigener Code -->
-    <string name="legal_app_name" translatable="false">ParamWorker</string>
+    <string name="legal_app_name" translatable="false">AxisWright</string>
     <string name="legal_app_use">Parametric 3D CAD app for Android</string>
     <string name="legal_app_license" translatable="false">GNU GPL 3.0 or later (GPL-3.0-or-later) · © 2026 Kevin Bodenstein</string>
     <string name="legal_app_source">Source code</string>
@@ -31,7 +31,7 @@
     <string name="legal_lib_occt_use">Geometry kernel (B-rep: bodies, faces, edges, fillets)</string>
     <string name="legal_lib_occt_license">GNU LGPL 2.1 with Open CASCADE exception</string>
     <string name="legal_lib_occt_source">https://github.com/Open-Cascade-SAS/OCCT (tag V7_9_3)</string>
-    <string name="legal_lib_occt_note">Shipped as separate libraries (libTK*.so). Because ParamWorker is open source under GPL-3.0-or-later, the full source code of the app and build scripts (scripts/build-occt.ps1) are publicly available, allowing OpenCascade to be replaced with custom versions and relinked (LGPL 2.1 § 6). Contains DELABELLA (MIT), flex (BSD), strtod by David M. Gay/Lucent and Unicode code (Unicode, Inc.).</string>
+    <string name="legal_lib_occt_note">Shipped as separate libraries (libTK*.so). Because AxisWright is open source under GPL-3.0-or-later, the full source code of the app and build scripts (scripts/build-occt.ps1) are publicly available, allowing OpenCascade to be replaced with custom versions and relinked (LGPL 2.1 § 6). Contains DELABELLA (MIT), flex (BSD), strtod by David M. Gay/Lucent and Unicode code (Unicode, Inc.).</string>
 
     <string name="legal_lib_manifold_name" translatable="false">Manifold 3</string>
     <string name="legal_lib_manifold_use">Solid computation in the script editor (OpenSCAD)</string>

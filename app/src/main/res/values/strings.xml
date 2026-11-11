@@ -5,7 +5,7 @@
   Hier nur App-Name und gemeinsame Wörter, die in mehreren Bereichen vorkommen.
 -->
 <resources>
-    <string name="app_name" translatable="false">ParamWorker</string>
+    <string name="app_name" translatable="false">AxisWright</string>
 
     <!-- Grundname neuer Modelle: „Model 1“, „Model 2“ … -->
     <string name="model_default_name">Model</string>
