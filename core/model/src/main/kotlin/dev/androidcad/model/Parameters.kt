@@ -24,8 +24,9 @@ sealed interface ValueRef {
 
     /**
      * Der Hauptwert des Features [feature]: Länge einer Extrusion, Winkel einer Drehung, Wandstärke einer Schale, Größe einer
-     * Verrundung/Fase, Durchmesser einer Bohrung. Vorzeichen (Richtung) bleiben erhalten, der Ausdruck gibt den Betrag.
-     * [index] unterscheidet Werte eines Features (0 = Hauptwert, 1 = zweite Länge einer Extrusion).
+     * Verrundung/Fase, Durchmesser/Tiefe einer Bohrung, Abstand/Winkel eines Musters sowie Abstand/Winkel einer Arbeitsebene.
+     * Vorzeichen (Richtung) bleiben bei Extrusion/Drehung erhalten; [index] unterscheidet mehrere Werte eines Features
+     * (0 = Hauptwert, 1 = zweite Länge einer Extrusion, zweiter Abstand eines Musters oder Tiefe einer Bohrung).
      */
     data class FeatureValue(val feature: FeatureId, val index: Int = 0) : ValueRef
 }
@@ -33,9 +34,40 @@ sealed interface ValueRef {
 /** Ergebnis von [Document.applyParameters]: die Werte der Parameter und Fehler je Parameter bzw. Ausdruck. */
 class ParameterResult(val values: Map<String, Double>, val errors: List<Msg>)
 
-/** Eine reine Zahl mit Dezimalkomma („2,5“) als Zahl lesen; in Formeln trennt das Komma Argumente (`max(a, b)`) und bleibt. */
-internal fun decimalComma(expression: String): String =
-    if (Regex("""\s*[+-]?\d+,\d+\s*""").matches(expression)) expression.replace(',', '.') else expression
+/**
+ * Wandelt Dezimalkommas („2,5“, „wand * 1,5“) in Dezimalpunkte um. Kommas in Funktionsaufrufen (`max(a, b)`) und Listen
+ * (`[1, 2]`) sowie in Zeichenketten bleiben als Trennzeichen erhalten.
+ */
+fun decimalComma(expression: String): String {
+    if (',' !in expression) return expression
+    val out = StringBuilder(expression.length)
+    val argStack = ArrayList<Boolean>()
+    var inString = false
+    var lastSig = '\u0000'
+    for (i in expression.indices) {
+        val c = expression[i]
+        if (inString) {
+            out.append(c)
+            if (c == '"' && (i == 0 || expression[i - 1] != '\\')) inString = false
+            continue
+        }
+        when {
+            c == '"' -> { inString = true; out.append(c) }
+            c == '(' -> {
+                argStack.add(lastSig.isLetterOrDigit() || lastSig == '_' || lastSig == '$')
+                out.append(c)
+            }
+            c == '[' -> { argStack.add(true); out.append(c) }
+            c == ')' || c == ']' -> { if (argStack.isNotEmpty()) argStack.removeAt(argStack.lastIndex); out.append(c) }
+            c == ',' && argStack.lastOrNull() != true &&
+                i > 0 && expression[i - 1].isDigit() &&
+                i + 1 < expression.length && expression[i + 1].isDigit() -> out.append('.')
+            else -> out.append(c)
+        }
+        if (!c.isWhitespace()) lastSig = c
+    }
+    return out.toString()
+}
 
 /** Werte der Parameter der Reihe nach; ein fehlerhafter Parameter fehlt in [ParameterResult.values], spätere können weiterrechnen. */
 internal fun evaluateParameters(parameters: List<Parameter>): ParameterResult {
@@ -72,7 +104,26 @@ internal fun Document.applyValue(ref: ValueRef, v: Double): Msg? {
             is RevolveFeature -> if (v > 0 && v <= 360) update(f.copy(angle = signed(f.angle))) else return Msg(ModelText.REVOLVE_ANGLE_RANGE)
             is ShellFeature -> if (v > 0) update(f.copy(thickness = v)) else return Msg(ModelText.THICKNESS_NOT_POSITIVE)
             is FilletFeature -> if (v > 0) update(f.copy(size = v)) else return Msg(ModelText.SIZE_NOT_POSITIVE)
-            is HoleFeature -> if (v > 0) update(f.copy(diameter = v)) else return Msg(ModelText.DIAMETER_NOT_POSITIVE)
+            is HoleFeature -> if (ref.index == 1) {
+                if (v > 0) update(f.copy(depth = v)) else return Msg(ModelText.DEPTH_NOT_POSITIVE)
+            } else {
+                if (v > 0) update(f.copy(diameter = v)) else return Msg(ModelText.DIAMETER_NOT_POSITIVE)
+            }
+            is PatternFeature -> when (val k = f.kind) {
+                is PatternKind.Linear -> if (ref.index == 1 && k.direction2 != null) {
+                    if (v.isFinite() && v != 0.0) update(f.copy(kind = k.copy(spacing2 = v))) else return Msg(ModelText.SPACING2_ZERO)
+                } else {
+                    if (v.isFinite() && v != 0.0) update(f.copy(kind = k.copy(spacing = v))) else return Msg(ModelText.SPACING_ZERO)
+                }
+                is PatternKind.Circular -> if (v.isFinite() && v != 0.0 && kotlin.math.abs(v) <= 360.0) {
+                    update(f.copy(kind = k.copy(angle = v)))
+                } else return Msg(ModelText.ANGLE_RANGE_360)
+                is PatternKind.Mirror -> return null
+            }
+            is PlaneFeature -> when (val d = f.def) {
+                is PlaneDef.Offset -> if (v.isFinite()) update(f.copy(def = d.copy(distance = v))) else return Msg(ModelText.DISTANCE_INVALID)
+                is PlaneDef.AtEdge -> if (v.isFinite() && kotlin.math.abs(v) < 180.0) update(f.copy(def = d.copy(angle = v))) else return Msg(ModelText.PLANE_ANGLE_RANGE)
+            }
             else -> return null
         }
     }

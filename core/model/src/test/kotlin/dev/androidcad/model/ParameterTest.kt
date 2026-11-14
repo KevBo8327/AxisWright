@@ -123,4 +123,52 @@ class ParameterTest {
         p.doc.setParameters(listOf(Parameter("ok", "1")))
         assertFailsWith<JsonException> { DocumentCodec.decode(DocumentCodec.encode(p.doc).replace("\"ok\"", "\"1x\"")) }
     }
+
+    @Test
+    fun decimalCommaWorksInBoundExpressionsAndFormulas() {
+        val p = plate()
+        p.doc.setParameters(listOf(Parameter("wand", "2,5"), Parameter("doppel", "wand * 1,5")))
+        p.doc.bind(ValueRef.Dim(p.sketch.id, p.width), "wand * 1,5 + 2,5")
+        p.doc.bind(ValueRef.FeatureValue(p.extrude.id), "2,5")
+        val r = p.doc.applyParameters()
+        assertTrue(r.errors.isEmpty(), r.errors.toString())
+        assertEquals(3.75, r.values["doppel"])
+        assertEquals(6.25, p.widthValue())
+        assertEquals(-2.5, (p.doc.feature(p.extrude.id) as ExtrudeFeature).distance)
+    }
+
+    @Test
+    fun patternPlaneAndHoleDepthCanBeDrivenByParameters() {
+        val p = plate()
+        val patLin = p.doc.addPattern(
+            "Raster",
+            p.extrude.id,
+            PatternKind.Linear(Vec3(1.0, 0.0, 0.0), 3, 15.0, direction2 = Vec3(0.0, 1.0, 0.0), count2 = 2, spacing2 = 10.0),
+        )
+        val patCirc = p.doc.addPattern("Kreis", p.extrude.id, PatternKind.Circular(Vec3(0.0, 0.0, 0.0), Vec3(0.0, 0.0, 1.0), 4, 180.0))
+        val top = FaceRef(p.extrude.id, FaceRole.TOP)
+        val planeOffset = p.doc.addPlane("Versatz", PlaneDef.Offset(top, 5.0), Workplane.XY)
+        val edge = EdgeRef.of(top, FaceRef(p.extrude.id, FaceRole.SIDE, 1))
+        val planeEdge = p.doc.addPlane("Kante", PlaneDef.AtEdge(top, edge, 30.0), Workplane.XY)
+        val hole = p.doc.addHole("Sackloch", top, 10.0, 10.0, 0.0, 6.0, depth = 4.0)
+
+        p.doc.setParameters(listOf(Parameter("s", "22,5"), Parameter("w", "45")))
+        p.doc.bind(ValueRef.FeatureValue(patLin.id, 0), "s")
+        p.doc.bind(ValueRef.FeatureValue(patLin.id, 1), "s * 2")
+        p.doc.bind(ValueRef.FeatureValue(patCirc.id), "w * 2")
+        p.doc.bind(ValueRef.FeatureValue(planeOffset.id), "-s")
+        p.doc.bind(ValueRef.FeatureValue(planeEdge.id), "w")
+        p.doc.bind(ValueRef.FeatureValue(hole.id, 1), "12,5")
+
+        val r = p.doc.applyParameters()
+        assertTrue(r.errors.isEmpty(), r.errors.toString())
+        val lin = (p.doc.feature(patLin.id) as PatternFeature).kind as PatternKind.Linear
+        assertEquals(22.5, lin.spacing)
+        assertEquals(45.0, lin.spacing2)
+        val circ = (p.doc.feature(patCirc.id) as PatternFeature).kind as PatternKind.Circular
+        assertEquals(90.0, circ.angle)
+        assertEquals(-22.5, ((p.doc.feature(planeOffset.id) as PlaneFeature).def as PlaneDef.Offset).distance)
+        assertEquals(45.0, ((p.doc.feature(planeEdge.id) as PlaneFeature).def as PlaneDef.AtEdge).angle)
+        assertEquals(12.5, (p.doc.feature(hole.id) as HoleFeature).depth)
+    }
 }
