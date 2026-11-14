@@ -1377,7 +1377,7 @@ class WorkspaceState(
 
     /** Wert eines Ausdrucks mit den aktuellen Parametern; `null` mit Meldung in [error], wenn er nicht aufgeht. */
     fun evaluate(expression: String): Double? = try {
-        dev.androidcad.lang.CadLang.evalNumber(expression, doc.parameterValues().values)
+        dev.androidcad.lang.CadLang.evalNumber(dev.androidcad.model.decimalComma(expression), doc.parameterValues().values)
     } catch (_: dev.androidcad.lang.CadLangException) {
         null
     }

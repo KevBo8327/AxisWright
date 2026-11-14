@@ -81,7 +81,7 @@ class SplitTest {
         assertTrue(s.circleIds.isEmpty())
         assertEquals(2, s.arcIds.size)
         val lower = s.arcIds.single { s.point(s.arc(it).start).x < 0 } // von links gegen den Uhrzeigersinn nach rechts
-        assertTrue(s.constraintEntries.any { it.constraint == TangentLineRound(t, lower) })
+        assertTrue(s.constraintEntries.any { (it.constraint as? TangentLineRound)?.let { k -> k.line == t && k.round == lower } == true })
         assertTrue(s.constraintEntries.any { it.constraint is DiameterDim })
         s.solved()
         val r = s.regions()

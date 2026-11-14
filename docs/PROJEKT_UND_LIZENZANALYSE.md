@@ -367,10 +367,10 @@ Bei der Überprüfung aller 62 `.so`-Bibliotheken in `app-release.apk` und der e
 - [ ] **L-10:** `DocumentCodec.FORMAT` in `DocumentCodec.kt:26` auf `"paramworker-model"` umstellen.
 - [x] **T-01 & T-02:** (geprüft 14.11.2026: bereits behoben durch `5f1b86d` — `MirrorNaming` streut Elemente `>= 2^25`, `PatternGeometry.copyTag` gibt `0L` zurück, `edgesBetween` nutzt `hasName` inkl. `faceAliases` seit `81aa90e`, `EdgeProjection` löst Zweitnamen auf; Zusatztests für Muster+Schale+Spiegelung+Verrundung und beidseitige Zweitnamen ergänzt) Bit-Packing-Kollision in `ShellFeature.innerElement` / `MirrorNaming` sowie fehlende `faceAliases` in `edgeFaceTags` / `edgesBetween` beheben.
 - [ ] **T-04:** Null-Checks nach allen JNI-Allokationen in `cadbrep.cpp` und `cadgeom.cpp` ergänzen.
-- [ ] **T-08 & T-11:** Slider-Undo-Flutung in `Workspace.kt` abstellen und `decimalComma()` in `Document.applyParameters()` / `WorkspaceState.evaluate()` ergänzen.
+- [ ] **T-08 & T-11:** (T-11 erledigt 14.11.2026: `decimalComma()` inkl. Formeln in `Document.applyParameters()` und `WorkspaceState.evaluate()` sowie Pattern-/Plane-/Hole.depth-Bindung ergänzt; T-08 offen für S3) Slider-Undo-Flutung in `Workspace.kt` abstellen und `decimalComma()` in `Document.applyParameters()` / `WorkspaceState.evaluate()` ergänzen.
 
 ### Kurzfristig (für Version 1.0)
 - [ ] **T-03 & T-13:** `BrepShape`-Lifecycle synchronisieren, Zwischen-Shapes in `Document.build()` schließen, `STEPControl_Writer` per Mutex schützen und `translate(0,0,0)` beim Export echt kopieren.
-- [ ] **T-05 & T-06:** `placementFreedom()` aus dem UI-Render-Pass (`statusText()`) entfernen und über den Nullraum berechnen; QR-Zerlegung statt $J^T J$-Jacobi; `AngleDim`-Sprungstelle glätten.
-- [ ] **T-07:** Planare Regionen-Erkennung in `Regions.kt` für geteilte Kanten (Knotengrad $\ge 3$) erweitern.
+- [ ] **T-05 & T-06:** (T-05 & T-06 numerisch erledigt 14.11.2026: glattes `TangentLineRound` mit `side`, analytische `AngleDim`-Jacobi-Zeile, QR mit Spaltenpivotisierung statt $J^T J$-Jacobi; `placementFreedom()`-UI-Caching offen für S3) `placementFreedom()` aus dem UI-Render-Pass (`statusText()`) entfernen und über den Nullraum berechnen; QR-Zerlegung statt $J^T J$-Jacobi; `AngleDim`-Sprungstelle glätten.
+- [x] **T-07:** (erledigt 14.11.2026: planare Verzweigung bereits in 5f1b86d behoben, dünne konzentrische Ringe über exakte Windungszahl in `Regions.kt` behoben) Planare Regionen-Erkennung in `Regions.kt` für geteilte Kanten (Knotengrad $\ge 3$) erweitern.
 - [ ] **T-09 & T-14:** Prefix-Caching für `Document.build()` einführen und `onStop()`-Speichern vom Main-Thread entkoppeln.

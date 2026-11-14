@@ -251,6 +251,26 @@ class DragAndRegionsTest {
         near(800.0, s.regions().regions.single().area, 1e-6)
     }
 
+    @Test
+    fun thinConcentricRingIsRecognizedAsOneRegionWithHole() {
+        val s = Sketch()
+        s.addCircle(0.0, 0.0, 100.0)
+        val rIn = 99.95
+        val angle = PI / 64 // genau zwischen zwei Ecken des 64-Ecks
+        val c = s.addPoint(0.0, 0.0)
+        val p1 = s.addPoint(rIn * kotlin.math.cos(angle), rIn * kotlin.math.sin(angle))
+        val p2 = s.addPoint(-rIn * kotlin.math.cos(angle), -rIn * kotlin.math.sin(angle))
+        s.addArc(c, p1, p2)
+        s.addArc(c, p2, p1)
+        val res = s.regions()
+        assertEquals(1, res.regions.size, "dünner Ring muss 1 Region mit 1 Loch sein, war: ${res.regions.size}")
+        assertEquals(1, res.regions[0].holes.size)
+        near(PI * (100.0 * 100.0 - rIn * rIn), res.regions[0].area, 1e-6)
+
+        val picked = s.regionAt(99.975 * kotlin.math.cos(angle), 99.975 * kotlin.math.sin(angle))
+        assertTrue(picked != null, "Punkt im dünnen Ring zwischen 64-Eck-Stützpunkten muss gefunden werden")
+    }
+
     private fun assertClosed(loop: Loop) {
         fun start(s: LoopSegment): Vec2 = when (s) {
             is LoopSegment.Line -> Vec2(s.x1, s.y1)

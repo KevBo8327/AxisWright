@@ -280,8 +280,12 @@ public class Sketch {
             }
             require(ok) { "Constraint verweist auf ein nicht existierendes Element: $r" }
         }
+        val stored = if (constraint is TangentLineRound && constraint.side == 0) {
+            val d = signedDistance(centerOf(constraint.round), constraint.line)
+            constraint.copy(side = if (d < 0) -1 else 1)
+        } else constraint
         val id = nextId++
-        constraints[id] = constraint
+        constraints[id] = stored
         return ConstraintId(id)
     }
 
@@ -330,6 +334,9 @@ public class Sketch {
         val side = if (signed < 0) -1 else 1
         return add(PointLineDistanceDim(p, line, value ?: abs(signed), side))
     }
+
+    /** Tangente zwischen Linie und Kreis/Bogen; die Seite der Linie ergibt sich aus der Zeichnung. */
+    public fun addTangent(line: LineId, round: RoundId): ConstraintId = add(TangentLineRound(line, round))
 
     /** Tangente zwischen zwei Kreisen/Bögen; „innen/außen“ und Radienverhältnis ergeben sich aus der Zeichnung. */
     public fun addTangent(a: RoundId, b: RoundId): ConstraintId {

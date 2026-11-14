@@ -14,8 +14,15 @@ internal fun interface ResidualFn {
 /**
  * Eine Gruppe von [count] Gleichungen `f(x) = 0`, die nur von den Variablen [vars] abhängen.
  * [owner] = Constraint-ID (>0) bzw. negativ für interne Gleichungen (z. B. Bogen-Konsistenz).
+ * Optional liefert [jac] die analytische Jacobi-Zeile(n) (`count × vars.size`, zeilenweise).
  */
-internal class Eq(val owner: Int, vars: IntArray, val count: Int, val fn: ResidualFn) {
+internal class Eq(
+    val owner: Int,
+    vars: IntArray,
+    val count: Int,
+    val jac: ((DoubleArray, DoubleArray) -> Unit)? = null,
+    val fn: ResidualFn,
+) {
     /** Eindeutige Variablenindizes (doppelte würden bei der numerischen Ableitung doppelt zählen). */
     val vars: IntArray = vars.distinct().toIntArray()
 }
@@ -117,7 +124,7 @@ private fun touchPoint(sketch: Sketch, candidates: List<PointId>, rounds: List<R
 }
 
 private fun compileConstraint(sketch: Sketch, map: VarMap, owner: Int, c: Constraint): List<Eq> {
-    fun eq(vars: IntArray, count: Int, fn: ResidualFn) = listOf(Eq(owner, vars, count, fn))
+    fun eq(vars: IntArray, count: Int, fn: ResidualFn) = listOf(Eq(owner, vars, count, fn = fn))
 
     return when (c) {
         is Coincident -> {
@@ -214,9 +221,10 @@ private fun compileConstraint(sketch: Sketch, map: VarMap, owner: Int, c: Constr
                 })
             }
             val ax = map.x(l.p1); val ay = map.y(l.p1); val bx = map.x(l.p2); val by = map.y(l.p2)
+            val side = if (c.side != 0) c.side else if (sketch.signedDistance(sketch.centerOf(c.round), c.line) < 0) -1 else 1
             eq(intArrayOf(ax, ay, bx, by) + r.vars, 1) { x, o, k ->
                 val dx = x[bx] - x[ax]; val dy = x[by] - x[ay]
-                val dist = abs(dx * (x[r.cy] - x[ay]) - dy * (x[r.cx] - x[ax])) / max(hypot(dx, dy), EPS)
+                val dist = side * (dx * (x[r.cy] - x[ay]) - dy * (x[r.cx] - x[ax])) / max(hypot(dx, dy), EPS)
                 o[k] = dist - r.radius(x)
             }
         }
@@ -315,10 +323,33 @@ private fun compileConstraint(sketch: Sketch, map: VarMap, owner: Int, c: Constr
             val a1x = map.x(la.p1); val a1y = map.y(la.p1); val a2x = map.x(la.p2); val a2y = map.y(la.p2)
             val b1x = map.x(lb.p1); val b1y = map.y(lb.p1); val b2x = map.x(lb.p2); val b2y = map.y(lb.p2)
             val target = Math.toRadians(c.value)
-            eq(intArrayOf(a1x, a1y, a2x, a2y, b1x, b1y, b2x, b2y), 1) { x, o, k ->
-                val d1x = x[a2x] - x[a1x]; val d1y = x[a2y] - x[a1y]; val d2x = x[b2x] - x[b1x]; val d2y = x[b2y] - x[b1y]
-                o[k] = wrapAngle(atan2(d1x * d2y - d1y * d2x, d1x * d2x + d1y * d2y) - target)
-            }
+            val scale = minOf(100.0, max(1.0, minOf(sketch.length(c.a), sketch.length(c.b))))
+            val vars = intArrayOf(a1x, a1y, a2x, a2y, b1x, b1y, b2x, b2y).distinct().toIntArray()
+            val ia1x = vars.indexOf(a1x); val ia1y = vars.indexOf(a1y)
+            val ia2x = vars.indexOf(a2x); val ia2y = vars.indexOf(a2y)
+            val ib1x = vars.indexOf(b1x); val ib1y = vars.indexOf(b1y)
+            val ib2x = vars.indexOf(b2x); val ib2y = vars.indexOf(b2y)
+            listOf(Eq(
+                owner = owner,
+                vars = vars,
+                count = 1,
+                jac = { x, out ->
+                    java.util.Arrays.fill(out, 0, vars.size, 0.0)
+                    val d1x = x[a2x] - x[a1x]; val d1y = x[a2y] - x[a1y]
+                    val d2x = x[b2x] - x[b1x]; val d2y = x[b2y] - x[b1y]
+                    val s1 = scale / max(d1x * d1x + d1y * d1y, EPS * EPS)
+                    val s2 = scale / max(d2x * d2x + d2y * d2y, EPS * EPS)
+                    out[ia1x] -= d1y * s1; out[ia2x] += d1y * s1
+                    out[ia1y] += d1x * s1; out[ia2y] -= d1x * s1
+                    out[ib1x] += d2y * s2; out[ib2x] -= d2y * s2
+                    out[ib1y] -= d2x * s2; out[ib2y] += d2x * s2
+                },
+                fn = { x, o, k ->
+                    val d1x = x[a2x] - x[a1x]; val d1y = x[a2y] - x[a1y]
+                    val d2x = x[b2x] - x[b1x]; val d2y = x[b2y] - x[b1y]
+                    o[k] = scale * wrapAngle(atan2(d1x * d2y - d1y * d2x, d1x * d2x + d1y * d2y) - target)
+                },
+            ))
         }
     }
 }

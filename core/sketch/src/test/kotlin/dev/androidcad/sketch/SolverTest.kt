@@ -314,4 +314,73 @@ class SolverTest {
         assertEquals(Vec2(1.0, 2.0), s.point(p))
         assertEquals(s.constraintEntries.size, c.constraintEntries.size)
     }
+
+    @Test
+    fun tangentLineRoundSolvesFromCenterOnLineAndKeepsSide() {
+        // Kreismittelpunkt startet exakt auf der Geraden (Knickstelle von abs(...))
+        val s = Sketch()
+        val p1 = s.addPoint(0.0, 0.0); val p2 = s.addPoint(50.0, 0.0)
+        val line = s.addLine(p1, p2)
+        s.add(Fixed(p1, 0.0, 0.0)); s.add(Fixed(p2, 50.0, 0.0))
+        val center = s.addPoint(25.0, 0.0)
+        val circle = s.addCircle(center, 5.0)
+        s.add(Fixed(center, 25.0, null))
+        s.add(TangentLineRound(line, circle))
+        s.add(RadiusDim(circle, 7.0))
+        val res = s.solve()
+        assertTrue(res.isSolved, res.toString())
+        near(7.0, abs(s.point(center).y))
+
+        // Seite beim Anlegen festhalten: bewegt sich die Linie hinter den Mittelpunkt, bleibt der Kreis auf derselben Seite (+y)
+        val s2 = Sketch()
+        val q1 = s2.addPoint(0.0, 0.0); val q2 = s2.addPoint(50.0, 0.0)
+        val l2 = s2.addLine(q1, q2)
+        val f1 = s2.add(Fixed(q1, 0.0, 0.0)); val f2 = s2.add(Fixed(q2, 50.0, 0.0))
+        val c2 = s2.addPoint(25.0, 4.0)
+        val circle2 = s2.addCircle(c2, 5.0)
+        s2.add(Fixed(c2, 25.0, null))
+        s2.add(TangentLineRound(l2, circle2))
+        s2.add(RadiusDim(circle2, 5.0))
+        assertTrue(s2.solve().isSolved)
+        s2.at(c2, 25.0, 5.0)
+
+        s2.replace(f1, Fixed(q1, 0.0, 6.0))
+        s2.replace(f2, Fixed(q2, 50.0, 6.0))
+        assertTrue(s2.solve().isSolved)
+        s2.at(c2, 25.0, 11.0)
+    }
+
+    @Test
+    fun angleDimNearPiConvergesWithoutBranchCutSpike() {
+        val s = Sketch()
+        val a = s.addPoint(0.0, 0.0); val b = s.addPoint(10.0, 0.0)
+        val l1 = s.addLine(a, b)
+        s.add(Fixed(a, 0.0, 0.0)); s.add(Fixed(b, 10.0, 0.0))
+        val c = s.addPoint(0.0, 0.0); val d = s.addPoint(-10.0, 1e-7)
+        val l2 = s.addLine(c, d)
+        s.add(Coincident(a, c))
+        s.add(LengthDim(l2, 10.0))
+        s.add(AngleDim(l1, l2, 0.0))
+        val res = s.solve()
+        assertTrue(res.isSolved, res.toString())
+        assertEquals(0, res.degreesOfFreedom)
+        s.at(d, 10.0, 0.0, tol = 1e-6)
+    }
+
+    @Test
+    fun illConditionedSystemKeepsAccurateDofWithoutSquaringConditionNumber() {
+        val s = Sketch()
+        val p1 = s.addPoint(0.0, 0.0); val p2 = s.addPoint(1e5, 0.0)
+        val l1 = s.addLine(p1, p2)
+        s.add(Fixed(p1, 0.0, 0.0))
+        s.add(Fixed(p2, 1e5, null))
+        val p3 = s.addPoint(0.0, 10.0); val p4 = s.addPoint(10.0, 10.0)
+        val l2 = s.addLine(p3, p4)
+        s.add(Fixed(p3, 0.0, 10.0))
+        s.add(Fixed(p4, 10.0, 10.0))
+        s.add(Parallel(l1, l2))
+        val res = s.solve()
+        assertTrue(res.isSolved, res.toString())
+        assertEquals(0, res.degreesOfFreedom, "p2.y ist durch Parallelität eindeutig bestimmt")
+    }
 }

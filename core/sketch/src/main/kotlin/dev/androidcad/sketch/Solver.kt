@@ -46,8 +46,13 @@ public data class SolveResult(
 
 internal class LmResult(val converged: Boolean, val iterations: Int)
 
-/** Numerische Jacobi-Matrix eines Gleichungsblocks (zentrale Differenzen), `count × vars.size`, zeilenweise. */
+/** Jacobi-Matrix eines Gleichungsblocks (analytisch falls vorhanden, sonst zentrale Differenzen), `count × vars.size`, zeilenweise. */
 internal fun jacobianBlock(e: Eq, x: DoubleArray, out: DoubleArray, plus: DoubleArray, minus: DoubleArray) {
+    val analytic = e.jac
+    if (analytic != null) {
+        analytic(x, out)
+        return
+    }
     val k = e.vars.size
     for (vi in 0 until k) {
         val idx = e.vars[vi]
@@ -203,24 +208,10 @@ internal fun analyze(sys: CompiledSystem, x: DoubleArray): Analysis {
         off += e.count
     }
 
-    // JᵀJ → Eigenzerlegung → Rang und Nullraum
-    val jtj = DoubleArray(n * n)
-    for (row in 0 until m) {
-        for (i in 0 until n) {
-            val ji = jac[row * n + i]
-            if (ji == 0.0) continue
-            for (j in 0 until n) jtj[i * n + j] += ji * jac[row * n + j]
-        }
-    }
-    val eig = jacobiEigen(jtj, n)
-    val maxEig = eig.values.maxOrNull() ?: 0.0
-    val nullTol = 1e-9 * max(1.0, maxEig)
-    val rank = eig.values.count { it > nullTol }
-    val determined = BooleanArray(n) { i ->
-        var p = 0.0
-        for (k in 0 until n) if (eig.values[k] <= nullTol) p += eig.vec(i, k) * eig.vec(i, k)
-        p < 1e-6
-    }
+    // Spaltenpivotierte QR direkt auf J → Rang und Nullraum (ohne Quadrierung der Kondition)
+    val qr = qrNullspace(jac, m, n)
+    val rank = qr.rank
+    val determined = qr.determined
 
     // überflüssige Constraints: Zeilen der Reihe nach gegen eine orthonormale Basis prüfen.
     // Ein Constraint gilt nur dann als überflüssig, wenn **alle** seine Zeilen von früheren abhängen

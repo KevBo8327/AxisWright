@@ -103,7 +103,7 @@ class Document {
             if (!exists) continue
             live[ref] = expr
             try {
-                applyValue(ref, dev.androidcad.lang.CadLang.evalNumber(expr, result.values))?.let { errors += Msg(ModelText.EXPRESSION_VALUE_ERROR, expr, it) }
+                applyValue(ref, dev.androidcad.lang.CadLang.evalNumber(decimalComma(expr), result.values))?.let { errors += Msg(ModelText.EXPRESSION_VALUE_ERROR, expr, it) }
             } catch (e: dev.androidcad.lang.CadLangException) {
                 errors += Msg(ModelText.EXPRESSION_ERROR, e.msg)
             }
