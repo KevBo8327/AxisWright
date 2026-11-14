@@ -7,6 +7,7 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
@@ -22,6 +23,8 @@ import dev.androidcad.viewport.FaceHit
 import dev.androidcad.viewport.FacePicker
 import dev.androidcad.viewport.OrthoCamera
 import dev.androidcad.viewport.SceneFrame
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import javax.microedition.khronos.egl.EGLConfig
@@ -240,25 +243,7 @@ internal class MeshRenderer : GLSurfaceView.Renderer {
         meshPositions = mesh.positions
     }
 
-    private fun link(vs: String, fs: String): Int {
-        fun compile(type: Int, src: String): Int {
-            val s = GLES30.glCreateShader(type)
-            GLES30.glShaderSource(s, src)
-            GLES30.glCompileShader(s)
-            val ok = IntArray(1)
-            GLES30.glGetShaderiv(s, GLES30.GL_COMPILE_STATUS, ok, 0)
-            check(ok[0] != 0) { "Shader: " + GLES30.glGetShaderInfoLog(s) }
-            return s
-        }
-        val p = GLES30.glCreateProgram()
-        GLES30.glAttachShader(p, compile(GLES30.GL_VERTEX_SHADER, vs))
-        GLES30.glAttachShader(p, compile(GLES30.GL_FRAGMENT_SHADER, fs))
-        GLES30.glLinkProgram(p)
-        val ok = IntArray(1)
-        GLES30.glGetProgramiv(p, GLES30.GL_LINK_STATUS, ok, 0)
-        check(ok[0] != 0) { "Programm: " + GLES30.glGetProgramInfoLog(p) }
-        return p
-    }
+    private fun link(vs: String, fs: String): Int = linkShaderProgram(AndroidShaderGl, vs, fs)
 
     private companion object {
         const val GRADIENT_VERTEX = """#version 300 es
@@ -312,6 +297,104 @@ void main() {
     }
 }
 
+/** Minimaler OpenGL-ES-Ausschnitt zum Kompilieren und Linken von Shadern (im JVM-Test ersetzbar). */
+internal interface ShaderGl {
+    fun createShader(type: Int): Int
+    fun shaderSource(shader: Int, source: String)
+    fun compileShader(shader: Int)
+    fun getShaderStatus(shader: Int): Int
+    fun getShaderLog(shader: Int): String
+    fun deleteShader(shader: Int)
+    fun createProgram(): Int
+    fun attachShader(program: Int, shader: Int)
+    fun linkProgram(program: Int)
+    fun detachShader(program: Int, shader: Int)
+    fun getProgramStatus(program: Int): Int
+    fun getProgramLog(program: Int): String
+    fun deleteProgram(program: Int)
+}
+
+private object AndroidShaderGl : ShaderGl {
+    private fun status(fn: (Int, Int, IntArray, Int) -> Unit, obj: Int, pname: Int): Int {
+        val ok = IntArray(1)
+        fn(obj, pname, ok, 0)
+        return ok[0]
+    }
+
+    override fun createShader(type: Int): Int = GLES30.glCreateShader(type)
+    override fun shaderSource(shader: Int, source: String) = GLES30.glShaderSource(shader, source)
+    override fun compileShader(shader: Int) = GLES30.glCompileShader(shader)
+    override fun getShaderStatus(shader: Int): Int = status(GLES30::glGetShaderiv, shader, GLES30.GL_COMPILE_STATUS)
+    override fun getShaderLog(shader: Int): String = GLES30.glGetShaderInfoLog(shader)
+    override fun deleteShader(shader: Int) = GLES30.glDeleteShader(shader)
+    override fun createProgram(): Int = GLES30.glCreateProgram()
+    override fun attachShader(program: Int, shader: Int) = GLES30.glAttachShader(program, shader)
+    override fun linkProgram(program: Int) = GLES30.glLinkProgram(program)
+    override fun detachShader(program: Int, shader: Int) = GLES30.glDetachShader(program, shader)
+    override fun getProgramStatus(program: Int): Int = status(GLES30::glGetProgramiv, program, GLES30.GL_LINK_STATUS)
+    override fun getProgramLog(program: Int): String = GLES30.glGetProgramInfoLog(program)
+    override fun deleteProgram(program: Int) = GLES30.glDeleteProgram(program)
+}
+
+internal fun linkShaderProgram(gl: ShaderGl, vs: String, fs: String): Int {
+    fun compile(type: Int, src: String): Int {
+        val s = gl.createShader(type)
+        gl.shaderSource(s, src)
+        gl.compileShader(s)
+        if (gl.getShaderStatus(s) == 0) {
+            val log = gl.getShaderLog(s)
+            gl.deleteShader(s)
+            error("Shader: $log")
+        }
+        return s
+    }
+    var vShader = 0
+    var fShader = 0
+    var p = 0
+    try {
+        vShader = compile(GLES30.GL_VERTEX_SHADER, vs)
+        fShader = compile(GLES30.GL_FRAGMENT_SHADER, fs)
+        p = gl.createProgram()
+        gl.attachShader(p, vShader)
+        gl.attachShader(p, fShader)
+        gl.linkProgram(p)
+        gl.detachShader(p, vShader)
+        gl.detachShader(p, fShader)
+        gl.deleteShader(vShader); vShader = 0
+        gl.deleteShader(fShader); fShader = 0
+        if (gl.getProgramStatus(p) == 0) {
+            val log = gl.getProgramLog(p)
+            gl.deleteProgram(p); p = 0
+            error("Programm: $log")
+        }
+        val linked = p
+        p = 0
+        return linked
+    } finally {
+        if (vShader != 0) gl.deleteShader(vShader)
+        if (fShader != 0) gl.deleteShader(fShader)
+        if (p != 0) gl.deleteProgram(p)
+    }
+}
+
+/** Hält die Szenen-Hüllkugel pro Netz/Skizzenlinien-Stand vor, statt sie bei jedem Tipp neu zu berechnen. */
+internal class SceneFrameCache(private val compute: (FloatArray, FloatArray?) -> SceneFrame = SceneFrame::of) {
+    private var lastMesh: Mesh? = null
+    private var lastSketchLines: FloatArray? = null
+    private var cached: SceneFrame? = null
+
+    @Synchronized
+    fun get(mesh: Mesh, sketchLines: FloatArray?): SceneFrame {
+        val hit = cached
+        if (hit != null && mesh === lastMesh && sketchLines === lastSketchLines) return hit
+        val computed = compute(mesh.positions, sketchLines)
+        lastMesh = mesh
+        lastSketchLines = sketchLines
+        cached = computed
+        return computed
+    }
+}
+
 /** Kanten als Polylinien (für das Antippen): aufeinanderfolgende Punkte x y z …, je Kante [counts] Punkte. */
 internal class EdgePickData(val polylines: FloatArray, val counts: IntArray)
 
@@ -335,6 +418,11 @@ internal fun MeshViewport(
     pickFaces: FacePickData? = null, onPickFace: ((FaceHit?) -> Unit)? = null,
 ) {
     val renderer = remember { MeshRenderer() }
+    val frameCache = remember { SceneFrameCache() }
+    LaunchedEffect(mesh, sketchLines) {
+        val m = mesh ?: return@LaunchedEffect
+        withContext(Dispatchers.Default) { frameCache.get(m, sketchLines) }
+    }
     val currentOnPick by rememberUpdatedState(onPickEdge)
     val currentOnPickFace by rememberUpdatedState(onPickFace)
 
@@ -348,7 +436,7 @@ internal fun MeshViewport(
             .pointerInput(mesh, pickEdges, pickFaces, sketchLines, clipPlane) {
                 detectTapGestures { tap ->
                     val m = mesh ?: return@detectTapGestures
-                    val cam = OrthoCamera(camera.yaw, camera.pitch, camera.zoom, SceneFrame.of(m.positions, sketchLines), size.width, size.height)
+                    val cam = OrthoCamera(camera.yaw, camera.pitch, camera.zoom, frameCache.get(m, sketchLines), size.width, size.height)
                     // Kanten zuerst; mit beiden (Messen) trifft ein Tipp neben jede Kante die Fläche darunter
                     val edge = pickEdges?.let { EdgePicker.pick(cam, tap.x, tap.y, it.polylines, it.counts, m.positions, m.triangles, clipPlane = clipPlane) } ?: -1
                     if (pickEdges != null && (edge >= 0 || pickFaces == null)) {
