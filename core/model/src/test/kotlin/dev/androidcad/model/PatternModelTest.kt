@@ -92,6 +92,9 @@ class PatternModelTest {
         assertEquals(0L, PatternGeometry.copyTag(0L, pattern, 1))
         // höchste erlaubte Kopienzahl bleibt eindeutig
         assertTrue(PatternGeometry.copyTag(side.tag, pattern, PatternGeometry.MAX_COUNT) != 0L)
+        // zu große Elementnummern (z. B. Schalen-Innenflächen) werfen keine Exception, sondern bleiben unbenannt
+        val oversized = FaceRef(src, FaceRole.SIDE, 1L shl PatternGeometry.INSTANCE_SHIFT).tag
+        assertEquals(0L, PatternGeometry.copyTag(oversized, pattern, 1))
     }
 
     private class Fixture {

@@ -164,14 +164,18 @@ class EdgeProjectionTest {
         val rect = skB.sketch.addRectangle(40.0, 0.0, 60.0, 20.0)
         val b = doc.addExtrude("B", skB, 5.0)
         val topB = FaceRef(b.id, FaceRole.TOP)
-        val edge = EdgeRef.of(topB, FaceRef(b.id, FaceRole.SIDE, rect.edges[1].value))
+        val rightEdge = EdgeRef.of(topB, FaceRef(b.id, FaceRole.SIDE, rect.edges[1].value))
+        val frontEdge = EdgeRef.of(topB, FaceRef(b.id, FaceRole.SIDE, rect.edges[0].value))
         val sk = doc.addSketchOnFace("Auf B", topB, Workplane.XY)
-        doc.build().use { r -> assertEquals(1, doc.addProjections(sk.id, r.projectable.getValue(sk.id).filter { it.edge == edge })) }
-        // B so hoch wie A: die Deckflächen werden eine (Hauptname von A, B oben nur noch Zweitname)
+        doc.build().use { r ->
+            val wanted = r.projectable.getValue(sk.id).filter { it.edge == rightEdge || it.edge == frontEdge }
+            assertEquals(2, doc.addProjections(sk.id, wanted))
+        }
+        // B so hoch wie A: sowohl Deckfläche als auch Vorderseite werden mit A verschmolzen (beide Namen von B nur noch Zweitnamen)
         doc.update(b.copy(distance = 10.0))
         doc.build().use { r ->
             assertTrue(r.isOk, r.errors.toString())
-            assertEquals(listOf(edge), r.projected.getValue(sk.id).map { it.first.edge })
+            assertEquals(setOf(rightEdge, frontEdge), r.projected.getValue(sk.id).map { it.first.edge }.toSet())
             assertTrue(r.projectable.getValue(sk.id).isNotEmpty(), "die zusammengeführte Fläche bietet ihren Umriss an")
         }
     }

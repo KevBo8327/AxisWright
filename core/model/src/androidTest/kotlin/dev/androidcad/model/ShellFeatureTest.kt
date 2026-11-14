@@ -70,4 +70,33 @@ class ShellFeatureTest {
             assertTrue(abs(res.body!!.volume() - (walls + gain)) < 0.05, "Volumen ${res.body.volume()}")
         }
     }
+
+    @Test
+    fun innerFacesOfAPatternedAndMirroredShellAreNamedAndCanBeFilleted() {
+        val doc = Document()
+        val sk = doc.addSketch("Grundriss")
+        sk.sketch.addRectangle(0.0, 0.0, 50.0, 30.0)
+        val box = doc.addExtrude("Block", sk, 20.0)
+        val hole = doc.addHole("Bohrung", FaceRef(box.id, FaceRole.TOP), 15.0, 15.0, 20.0, 6.0)
+        val pattern = doc.addPattern("Reihe", hole.id, PatternKind.Linear(Vec3(1.0, 0.0, 0.0), 2, 20.0))
+        val shell = doc.addShell("Schale", listOf(FaceRef(box.id, FaceRole.TOP)), 2.0)
+        val mirror = doc.addMirrorBody("Spiegelung", Vec3(0.0, 0.0, 0.0), Vec3(1.0, 0.0, 0.0))
+        fun inner(ref: FaceRef) = FaceRef(shell.id, FaceRole.SIDE, ShellFeature.innerElement(ref.tag))
+        fun mirrored(ref: FaceRef) = FaceRef(mirror.id, ref.role, MirrorNaming.mirroredElement(ref))
+        val floor = mirrored(inner(FaceRef(box.id, FaceRole.BOTTOM)))
+        val holeSleeve = mirrored(inner(FaceRef(hole.id, FaceRole.SIDE, 1)))
+        val copySleeve = mirrored(inner(FaceRef(pattern.id, FaceRole.SIDE, PatternGeometry.copyElement(1, 1))))
+        doc.build().use { res ->
+            assertTrue(res.isOk, res.errors.toString())
+            assertEquals(1, res.faces(floor).size, "gespiegelter Innenboden")
+            assertEquals(1, res.faces(holeSleeve).size, "gespiegelte Innenhülse der Originalbohrung")
+            assertEquals(1, res.faces(copySleeve).size, "gespiegelte Innenhülse der Musterkopie")
+            assertEquals(3, setOf(floor, holeSleeve, copySleeve).size)
+        }
+        val round = doc.addFillet("Innenrundung", listOf(EdgeRef.of(floor, copySleeve)), 0.5)
+        doc.build().use { res ->
+            assertTrue(res.isOk, res.errors.toString())
+            assertEquals(1, res.faces(FaceRef(round.id, FaceRole.ROUND, 0)).size)
+        }
+    }
 }
