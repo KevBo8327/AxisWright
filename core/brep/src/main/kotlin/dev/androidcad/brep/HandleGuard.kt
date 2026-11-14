@@ -3,6 +3,7 @@ package dev.androidcad.brep
 import java.lang.ref.PhantomReference
 import java.lang.ref.ReferenceQueue
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.locks.ReentrantReadWriteLock
 
 /**
@@ -11,9 +12,15 @@ import java.util.concurrent.locks.ReentrantReadWriteLock
  */
 internal class HandleGuard(
     private val handle: Long,
+    private val lock: ReentrantReadWriteLock,
     private val releaser: (Long) -> Unit,
 ) {
-    private val lock = ReentrantReadWriteLock()
+    constructor(
+        handle: Long,
+        releaser: (Long) -> Unit,
+    ) : this(handle, ReentrantReadWriteLock(), releaser)
+
+    private val lockOrder = nextLockOrder.getAndIncrement()
     @Volatile private var closed = false
     private var ref: CleanableRef? = null
 
@@ -35,8 +42,15 @@ internal class HandleGuard(
     }
 
     inline fun <T> useWith(other: HandleGuard, block: (Long, Long) -> T): T {
-        val r1 = lock.readLock()
-        val r2 = other.lock.readLock()
+        if (this === other) {
+            return use { h -> block(h, h) }
+        }
+        // Feste globale Lock-Reihenfolge verhindert zyklische Deadlocks mit wartenden close()-Schreibern
+        val thisFirst = handle < other.handle || (handle == other.handle && lockOrder < other.lockOrder)
+        val first = if (thisFirst) this else other
+        val second = if (thisFirst) other else this
+        val r1 = first.lock.readLock()
+        val r2 = second.lock.readLock()
         r1.lock()
         try {
             r2.lock()
@@ -75,6 +89,7 @@ internal class HandleGuard(
     ) : PhantomReference<Any>(owner, queue)
 
     private companion object {
+        val nextLockOrder = AtomicLong(0L)
         val queue = ReferenceQueue<Any>()
         val activeRefs = ConcurrentHashMap.newKeySet<CleanableRef>()
 
