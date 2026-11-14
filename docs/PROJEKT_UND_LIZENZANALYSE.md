@@ -367,10 +367,11 @@ Bei der Überprüfung aller 62 `.so`-Bibliotheken in `app-release.apk` und der e
 - [ ] **L-10:** `DocumentCodec.FORMAT` in `DocumentCodec.kt:26` auf `"paramworker-model"` umstellen.
 - [ ] **T-01 & T-02:** Bit-Packing-Kollision in `ShellFeature.innerElement` / `MirrorNaming` sowie fehlende `faceAliases` in `edgeFaceTags` / `edgesBetween` beheben.
 - [ ] **T-04:** Null-Checks nach allen JNI-Allokationen in `cadbrep.cpp` und `cadgeom.cpp` ergänzen.
-- [ ] **T-08 & T-11:** Slider-Undo-Flutung in `Workspace.kt` abstellen und `decimalComma()` in `Document.applyParameters()` / `WorkspaceState.evaluate()` ergänzen.
+- [ ] **T-08 & T-11:** Slider-Undo-Flutung in `Workspace.kt` abstellen (T-08 erledigt 14.11.2026: ein Undo-Schritt pro Zug über `onSliderChange`/`finishSliderDrag`, `UndoHistory<Document>` mit strukturellem Vergleich und JSON-Kodierung auf `saveDispatcher`) und `decimalComma()` in `Document.applyParameters()` / `WorkspaceState.evaluate()` ergänzen.
 
 ### Kurzfristig (für Version 1.0)
 - [ ] **T-03 & T-13:** `BrepShape`-Lifecycle synchronisieren, Zwischen-Shapes in `Document.build()` schließen, `STEPControl_Writer` per Mutex schützen und `translate(0,0,0)` beim Export echt kopieren.
-- [ ] **T-05 & T-06:** `placementFreedom()` aus dem UI-Render-Pass (`statusText()`) entfernen und über den Nullraum berechnen; QR-Zerlegung statt $J^T J$-Jacobi; `AngleDim`-Sprungstelle glätten.
+- [ ] **T-05 & T-06:** `placementFreedom()` aus dem UI-Render-Pass (`statusText()`) entfernen und über den Nullraum berechnen; QR-Zerlegung statt $J^T J$-Jacobi; `AngleDim`-Sprungstelle glätten (T-06 UI-Teil erledigt 14.11.2026: `statusText()` und `placementFree()` in `SketchEditor.kt` pro `SolveResult` zwischengespeichert).
 - [ ] **T-07:** Planare Regionen-Erkennung in `Regions.kt` für geteilte Kanten (Knotengrad $\ge 3$) erweitern.
-- [ ] **T-09 & T-14:** Prefix-Caching für `Document.build()` einführen und `onStop()`-Speichern vom Main-Thread entkoppeln.
+- [ ] **T-09 & T-14:** Prefix-Caching für `Document.build()` einführen und `onStop()`-Speichern vom Main-Thread entkoppeln (T-14 erledigt 14.11.2026: asynchrone Sicherung über `SaveCoordinator` / `flushAsync()` in `ProjectHub.kt`, `MainActivity.kt`, `Workspace.kt`, `CadState.kt`).
+- [x] **T-16:** (erledigt 14.11.2026: Shader-Detach/Delete in `MeshViewport.kt`, `SceneFrameCache` für Taps, EGL-/GL-Fehlerabsicherung in `GlTextureView.kt`) Shader nach `glLinkProgram` freigeben, `SceneFrame` im Tap-Pfad zwischenspeichern und EGL-/GL-Fehler absichern.

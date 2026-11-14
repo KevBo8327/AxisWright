@@ -51,12 +51,14 @@ import dev.androidcad.model.SketchFeature
 import dev.androidcad.model.samples.PlateModel
 import dev.androidcad.model.worldSegments
 import dev.androidcad.project.ProjectInfo
+import dev.androidcad.sketch.Sketch
 import dev.androidcad.sketch.regions
 import dev.androidcad.sketchedit.SketchEditor
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -413,11 +415,16 @@ class WorkspaceState(
      */
     @Volatile private var editVersion = 0L
     @Volatile private var savedVersion = 0L
-    private val saveLock = Any()
+    internal val saveLock = Any()
     private val dirty: Boolean get() = editVersion != savedVersion
 
-    /** Rückgängig/Wiederholen im Modell: Momentaufnahmen des ganzen Dokuments (Speicherformat); ein neues Projekt beginnt neu. */
-    private var history = dev.androidcad.project.UndoHistory("")
+    /** Rückgängig/Wiederholen im Modell: Momentaufnahmen des ganzen Dokuments ([Document.snapshot]); ein neues Projekt beginnt neu. */
+    internal var clock: () -> Long = System::currentTimeMillis
+    internal var syncEncodeCount = 0
+        private set
+    private var inSliderDrag = false
+    private var sliderCallDepth = 0
+    private var history = dev.androidcad.project.UndoHistory(doc.snapshot(), clock = { clock() })
     var canUndo by mutableStateOf(false)
         private set
     var canRedo by mutableStateOf(false)
@@ -427,11 +434,15 @@ class WorkspaceState(
     @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
     private val buildDispatcher = Dispatchers.Default.limitedParallelism(1)
 
-    /** Ein Thread für das Schreiben der Modelldatei (Autosave). */
+    /** Ein Thread für das Schreiben der Modelldatei (Autosave), getrennt von der Vorschaubild-Erzeugung. */
     @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
     private val saveDispatcher = Dispatchers.IO.limitedParallelism(1)
 
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    private val thumbDispatcher = Dispatchers.IO.limitedParallelism(1)
+
     init {
+        SaveCoordinator.awaitPending()
         AndroidTextOutlines.init()
         val restored = session.restoreLast()
         adopt(restored?.document ?: doc)
@@ -466,41 +477,71 @@ class WorkspaceState(
      * Schritt). [record] = `false` für Änderungen, die der Aufbau nur nachführt (Ebenen, projizierte Kanten) – die rückgängig zu machen
      * wäre sinnlos, der nächste Aufbau stellte sie wieder her. Folgen mit gleichem [coalesceKey] (sonst: am selben Feature) werden ein Schritt.
      */
+    /**
+     * Führt eine Modelländerung während eines Slider-Ziehvorgangs aus; alle Ticks eines Zuges bis [finishSliderDrag]
+     * bilden unabhängig von der Ziehdauer genau einen Rückgängig-Schritt.
+     */
+    fun onSliderChange(block: () -> Unit) {
+        if (!inSliderDrag) history.breakCoalescing()
+        inSliderDrag = true
+        sliderCallDepth++
+        try {
+            block()
+        } finally {
+            sliderCallDepth--
+        }
+    }
+
+    /** Beendet einen Slider-Ziehvorgang (`onValueChangeFinished`), damit der nächste Zug oder Klick einen neuen Schritt beginnt. */
+    fun finishSliderDrag() {
+        inSliderDrag = false
+        history.breakCoalescing()
+    }
+
     private fun markDirty(record: Boolean = true, coalesceKey: Any? = selectedId) {
+        val fromSlider = sliderCallDepth > 0
+        if (!fromSlider && inSliderDrag) {
+            inSliderDrag = false
+            history.breakCoalescing()
+        }
         if (record) {
-            val text = DocumentCodec.encode(doc)
-            if (text != history.current) history.record(text, coalesceKey = coalesceKey)
+            val snap = doc.snapshot()
+            if (!sameDocument(snap, history.current)) {
+                history.record(snap, coalesceKey = coalesceKey, ignoreWindow = fromSlider)
+            }
             canUndo = history.canUndo; canRedo = history.canRedo
         }
         editVersion++
         saveJob?.cancel()
         saveJob = scope.launch {
             delay(AUTOSAVE_DELAY_MS)
-            // Das erste Speichern legt das Modell an (einmalig, ändert den Sitzungszustand) – das bleibt auf dem UI-Thread
-            val id = session.currentId ?: return@launch flush()
             val version = editVersion
-            val text = DocumentCodec.encode(doc) // auf dem UI-Thread: das Dokument ändert sich nur hier
+            val toSave = doc.snapshot() // auf dem UI-Thread nur schnelle Kopie; JSON-Kodierung und Schreiben auf saveDispatcher
             val result = withContext(saveDispatcher) {
                 runCatching {
                     synchronized(saveLock) {
                         // inzwischen hat flush() einen neueren Stand gesichert: dieser hier ist veraltet
                         if (version > savedVersion) {
-                            session.write(id, text)
+                            session.save(toSave)
                             savedVersion = version
                         }
                     }
                 }
             }
+            if (result.isSuccess && currentProjectId != session.currentId) syncProject(list = false)
             result.onFailure { notice = UiText.Res(R.string.ws_notice_save_failed, it.message.orEmpty()) }
         }
     }
 
     /**
-     * Sichert ausstehende Änderungen sofort und synchron (Aufruf aus `onStop`, bevor Android den Prozess beenden darf, und vor einem
-     * Projektwechsel). Ein gerade laufendes Autosave wird abgewartet.
+     * Sichert ausstehende Änderungen sofort und synchron (vor einem Projektwechsel).
+     * Wartet auf ein noch laufendes Autosave / [flushAsync].
      */
     fun flush() {
+        inSliderDrag = false
+        history.breakCoalescing()
         saveJob?.cancel()
+        SaveCoordinator.awaitPending()
         if (!dirty) return
         try {
             synchronized(saveLock) {
@@ -514,9 +555,38 @@ class WorkspaceState(
         }
     }
 
+    /**
+     * Stößt das Speichern sofort auf dem Hintergrund-Koordinator an, ohne den Main-Thread auf [saveLock] oder Festplatten-I/O
+     * warten zu lassen (für `onStop`). Überlebt ein anschließendes Abbrechen von [scope] (`onDestroy`).
+     */
+    fun flushAsync(): Job? {
+        inSliderDrag = false
+        history.breakCoalescing()
+        saveJob?.cancel()
+        if (!dirty) return null
+        val version = editVersion
+        val snap = doc.snapshot()
+        return SaveCoordinator.launch {
+            val result = runCatching {
+                synchronized(saveLock) {
+                    if (version > savedVersion) {
+                        session.save(snap)
+                        savedVersion = version
+                    }
+                }
+            }
+            if (!scope.isActive) return@launch
+            scope.launch {
+                if (result.isSuccess && currentProjectId != session.currentId) syncProject(list = false)
+                result.onFailure { notice = UiText.Res(R.string.ws_notice_save_failed, it.message.orEmpty()) }
+            }
+        }
+    }
+
     /** Verwirft ausstehende Änderungen als „gesichert“ (anderes Modell geöffnet, Modell gelöscht); ein laufendes Autosave entfällt. */
     private fun markClean() {
         saveJob?.cancel()
+        SaveCoordinator.awaitPending()
         synchronized(saveLock) { savedVersion = editVersion }
     }
 
@@ -534,7 +604,8 @@ class WorkspaceState(
     private fun adopt(newDoc: Document) {
         doc = newDoc
         if (doc.features.none { it is SketchFeature }) doc.addSketch("${string(R.string.ws_name_sketch)} 1")
-        history = dev.androidcad.project.UndoHistory(DocumentCodec.encode(doc))
+        inSliderDrag = false
+        history = dev.androidcad.project.UndoHistory(doc.snapshot(), clock = { clock() })
         canUndo = false; canRedo = false
         job?.cancel()
         thumbJob?.cancel() // sonst schriebe das Bild des vorigen Modells in den Ordner dieses (die ID wird erst beim Schreiben bestimmt)
@@ -550,14 +621,14 @@ class WorkspaceState(
     }
 
     /** Macht die letzte Änderung am Modell rückgängig (auch Änderungen an Skizzen, als ganzen Schritt). */
-    fun undo() { history.undo()?.let(::restore) }
+    fun undo() { inSliderDrag = false; history.undo()?.let(::restore) }
 
-    fun redo() { history.redo()?.let(::restore) }
+    fun redo() { inSliderDrag = false; history.redo()?.let(::restore) }
 
     /** Stellt einen Stand aus dem Verlauf wieder her: Auswahl und Ansicht bleiben, soweit es das gewählte Feature noch gibt. */
-    private fun restore(text: String) {
+    private fun restore(snap: Document) {
         val sel = selectedId
-        doc = DocumentCodec.decode(text) // stammt aus encode(): bleibt lesbar
+        doc = snap.snapshot()
         handle.replace(SketchEditor(doc.features.filterIsInstance<SketchFeature>().first().sketch)) // alter Editor zeigt auf die alte Skizze
         edgeMode = null; holeMode = null; shellMode = null; measureMode = null; planePick = false; faceSketchPick = false; extrudeFacePick = false; sectionView.pickingFace = false
         select(sel?.takeIf { id -> doc.features.any { it.id == id } } ?: doc.features.last().id)
@@ -608,7 +679,7 @@ class WorkspaceState(
      * Stand vor der Bearbeitung des gewählten Features (Momentaufnahme aus dem Verlauf beim Wählen; beim Anlegen ist das der Stand
      * ohne das neue Feature). ✕ ([cancelEdit]) kehrt dorthin zurück, ✓ ([closePanel]) behält die Änderungen.
      */
-    private var editStart: String? = null
+    private var editStart: Document? = null
 
     /** Läuft gerade die Bearbeitung eines Körper-Features (✓ übernehmen / ✕ verwerfen)? Skizzen bearbeitet man im Skizzenmodus. */
     val editing: Boolean
@@ -619,7 +690,9 @@ class WorkspaceState(
     fun cancelEdit() {
         val start = editStart
         editStart = null
-        if (start != null && start != DocumentCodec.encode(doc)) {
+        inSliderDrag = false
+        history.breakCoalescing()
+        if (start != null && !sameDocument(start, doc)) {
             restore(start)
             markDirty() // als Schritt im Verlauf: „Abbrechen“ lässt sich rückgängig machen
         }
@@ -629,6 +702,7 @@ class WorkspaceState(
     }
 
     fun closePanel() {
+        finishSliderDrag()
         when {
             edgeMode != null -> cancelEdgeMode()
             shellMode != null -> cancelShellMode()
@@ -642,6 +716,8 @@ class WorkspaceState(
     }
 
     fun select(id: FeatureId, openCard: Boolean = true) {
+        inSliderDrag = false
+        history.breakCoalescing()
         selectedId = id
         cardOpen = openCard
         editStart = history.current // ein anderes Feature wählen übernimmt die laufende Bearbeitung
@@ -725,7 +801,10 @@ class WorkspaceState(
     }
 
     /** Das aktuelle Modell als Datei-Inhalt (Projekt exportieren). */
-    fun exportText(): String = DocumentCodec.encode(doc)
+    fun exportText(): String {
+        syncEncodeCount++
+        return DocumentCodec.encode(doc)
+    }
 
     /**
      * Öffnet eine exportierte Modelldatei als neues Modell namens [name] (das aktuelle wird vorher gesichert). Unlesbare Dateien und
@@ -1782,7 +1861,7 @@ class WorkspaceState(
             delay(1500)
             // erst jetzt nach der ID fragen: ein neues Modell wird kurz nach dem ersten Aufbau angelegt (Autosave)
             val file = currentProjectId?.let { session.thumbnailFile(it) } ?: return@launch
-            withContext(saveDispatcher) { runCatching { writeThumbnail(mesh, file) } } // ein fehlendes Vorschaubild ist kein Fehler
+            withContext(thumbDispatcher) { runCatching { writeThumbnail(mesh, file) } } // ein fehlendes Vorschaubild ist kein Fehler
         }
     }
 
@@ -1853,6 +1932,41 @@ class WorkspaceState(
 }
 
 private const val AUTOSAVE_DELAY_MS = 700L
+
+/** Struktureller Vergleich zweier Dokument-Momentaufnahmen ohne JSON-Serialisierung auf dem UI-Thread. */
+private fun sameDocument(a: Document, b: Document): Boolean {
+    if (a === b) return true
+    if (a.parameters != b.parameters || a.bindings != b.bindings) return false
+    val fa = a.features; val fb = b.features
+    if (fa.size != fb.size) return false
+    for (i in fa.indices) {
+        val x = fa[i]; val y = fb[i]
+        val same = if (x is SketchFeature && y is SketchFeature) {
+            x.id == y.id && x.name == y.name && x.plane == y.plane && x.onFace == y.onFace &&
+                x.projections == y.projections && x.onPlane == y.onPlane && sameSketch(x.sketch, y.sketch)
+        } else {
+            x == y
+        }
+        if (!same) return false
+    }
+    return true
+}
+
+private fun sameSketch(a: Sketch, b: Sketch): Boolean {
+    if (a === b) return true
+    if (a.origin != b.origin) return false
+    val pIds = a.pointIds
+    if (pIds != b.pointIds || pIds.any { a.point(it) != b.point(it) }) return false
+    val lIds = a.lineIds
+    if (lIds != b.lineIds || lIds.any { a.line(it) != b.line(it) }) return false
+    val cIds = a.circleIds
+    if (cIds != b.circleIds || cIds.any { a.circle(it) != b.circle(it) }) return false
+    val aIds = a.arcIds
+    if (aIds != b.arcIds || aIds.any { a.arc(it) != b.arc(it) }) return false
+    val tIds = a.textIds
+    if (tIds != b.textIds || tIds.any { a.text(it) != b.text(it) }) return false
+    return a.standalonePointIds == b.standalonePointIds && a.constraintEntries == b.constraintEntries
+}
 
 /** Schlüssel für den Verlauf: Änderungen an der Parameter-Tabelle kurz hintereinander werden ein Rückgängig-Schritt. */
 private const val PARAMETER_EDIT = "parameters"

@@ -4,7 +4,43 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import dev.androidcad.project.ProjectInfo
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import java.io.File
+
+/**
+ * Prozessweiter Schreib-Koordinator für asynchrone `onStop`-Sicherungen: läuft außerhalb von `lifecycleScope`,
+ * damit ein schnelles `onDestroy` laufende Schreibvorgänge nicht abbricht.
+ */
+internal object SaveCoordinator {
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    private val dispatcher = Dispatchers.IO.limitedParallelism(1)
+    private val scope = CoroutineScope(SupervisorJob() + dispatcher)
+    private val pending = ArrayList<Job>()
+
+    fun launch(block: () -> Unit): Job {
+        val job = scope.launch { block() }
+        synchronized(pending) {
+            pending.removeAll { it.isCompleted }
+            pending += job
+        }
+        return job
+    }
+
+    /** Wartet auf laufende Hintergrund-Sicherungen (beim Öffnen/Projektwechsel, nie in `onStop`). */
+    fun awaitPending() {
+        val jobs = synchronized(pending) {
+            pending.removeAll { it.isCompleted }
+            pending.toList()
+        }
+        if (jobs.isEmpty()) return
+        runBlocking { jobs.forEach { it.join() } }
+    }
+}
 
 /** Art eines Projekts: parametrisches Modell (Skizze → Körper) oder OpenSCAD-Skript. */
 enum class ProjectKind(@androidx.annotation.StringRes val label: Int) { MODEL(R.string.start_kind_model), SCRIPT(R.string.start_kind_script) }
@@ -118,11 +154,14 @@ class ProjectHub(val workspace: WorkspaceState, val script: CadState, private va
     /** Liest die Projektlisten neu (beim Öffnen des Projektmenüs; das Autosave hält sie nicht laufend aktuell). */
     fun refreshProjects() = workspace.refreshProjects()
 
-    /** Sichert beide Editoren (z. B. in `onStop`). */
+    /** Sichert beide Editoren (z. B. vor einem Export oder synchronem Projektwechsel). */
     fun flush() {
         workspace.flush()
         script.flush()
     }
+
+    /** Stößt das Sichern beider Editoren im Hintergrund an (für `onStop`, blockiert den Main-Thread nicht). */
+    fun flushAsync(): List<Job> = listOfNotNull(workspace.flushAsync(), script.flushAsync())
 
     private fun flushActive() = if (active == ProjectKind.MODEL) workspace.flush() else script.flush()
 
