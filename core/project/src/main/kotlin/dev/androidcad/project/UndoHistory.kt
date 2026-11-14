@@ -28,10 +28,10 @@ public class UndoHistory<T>(
     public val canUndo: Boolean get() = index > 0
     public val canRedo: Boolean get() = index < entries.lastIndex
 
-    /** Zeichnet [state] als neuen aktuellen Zustand auf. */
-    public fun record(state: T, coalesceKey: Any? = null) {
+    /** Zeichnet [state] als neuen aktuellen Zustand auf. Mit [ignoreWindow] fasst ein laufender Ziehvorgang auch langsame Ticks zusammen. */
+    public fun record(state: T, coalesceKey: Any? = null, ignoreWindow: Boolean = false) {
         val now = clock()
-        val merge = coalesceKey != null && coalesceKey == lastKey && now - lastTime <= coalesceWindowMs && index > 0
+        val merge = coalesceKey != null && coalesceKey == lastKey && (ignoreWindow || now - lastTime <= coalesceWindowMs) && index > 0
         if (merge) {
             entries[index] = state
             // Redo-Zweig kann hier nicht existieren (Undo/Redo setzen lastKey zurück); sicherheitshalber kappen.

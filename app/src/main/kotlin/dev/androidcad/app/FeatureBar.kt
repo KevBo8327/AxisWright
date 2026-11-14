@@ -448,7 +448,12 @@ fun FeatureControls(state: WorkspaceState) {
             }
         } else if (shell != null) {
             val bound = ExprField(state, stringResource(R.string.feat_shell_thickness), shell.thickness, ValueRef.FeatureValue(shell.id)) { if (it > 0) state.updateShell(it) }
-            if (!bound) Slider(value = shell.thickness.toFloat().coerceIn(0.5f, 10f), onValueChange = { state.updateShell(Math.round(it * 2) / 2.0) }, valueRange = 0.5f..10f)
+            if (!bound) Slider(
+                value = shell.thickness.toFloat().coerceIn(0.5f, 10f),
+                onValueChange = { state.onSliderChange { state.updateShell(Math.round(it * 2) / 2.0) } },
+                onValueChangeFinished = state::finishSliderDrag,
+                valueRange = 0.5f..10f,
+            )
             Text(
                 pluralStringResource(R.plurals.feat_shell_open_info, shell.openFaces.size, shell.openFaces.size),
                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -475,7 +480,12 @@ fun FeatureControls(state: WorkspaceState) {
                 FilterChip(selected = fillet.kind == EdgeKind.CHAMFER, onClick = { state.updateFillet(fillet.size, EdgeKind.CHAMFER) }, label = { Text("◸ ${stringResource(R.string.feat_chamfer)}") })
             }
             val bound = ExprField(state, if (fillet.kind == EdgeKind.ROUND) stringResource(R.string.feat_fillet_radius) else stringResource(R.string.feat_chamfer_distance), fillet.size, ValueRef.FeatureValue(fillet.id)) { if (it > 0) state.updateFillet(it, fillet.kind) }
-            if (!bound) Slider(value = fillet.size.toFloat().coerceIn(0.5f, 20f), onValueChange = { state.updateFillet(Math.round(it * 2) / 2.0, fillet.kind) }, valueRange = 0.5f..20f)
+            if (!bound) Slider(
+                value = fillet.size.toFloat().coerceIn(0.5f, 20f),
+                onValueChange = { state.onSliderChange { state.updateFillet(Math.round(it * 2) / 2.0, fillet.kind) } },
+                onValueChangeFinished = state::finishSliderDrag,
+                valueRange = 0.5f..20f,
+            )
             Text(pluralStringResource(R.plurals.feat_fillet_edges_info, fillet.edges.size, fillet.edges.size), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         } else if (revolve != null) {
             RevolveControls(state, revolve)
@@ -551,10 +561,17 @@ fun FeatureControls(state: WorkspaceState) {
                 }
             } else {
                 val bound = ExprField(state, stringResource(R.string.feat_extrude_length), length, ValueRef.FeatureValue(ex.id)) { v -> if (v > 0) state.updateExtrusion(ex.copy(distance = if (reversed) -v else v)) }
-                if (!bound) Slider(value = length.toFloat().coerceIn(1f, 100f), onValueChange = { v ->
-                    val d = Math.round(v).toDouble().coerceAtLeast(1.0)
-                    state.updateExtrusion(ex.copy(distance = if (reversed) -d else d))
-                }, valueRange = 1f..100f)
+                if (!bound) Slider(
+                    value = length.toFloat().coerceIn(1f, 100f),
+                    onValueChange = { v ->
+                        state.onSliderChange {
+                            val d = Math.round(v).toDouble().coerceAtLeast(1.0)
+                            state.updateExtrusion(ex.copy(distance = if (reversed) -d else d))
+                        }
+                    },
+                    onValueChangeFinished = state::finishSliderDrag,
+                    valueRange = 1f..100f,
+                )
                 SwitchRow(stringResource(R.string.feat_symmetric), ex.symmetric) {
                     state.updateExtrusion(ex.copy(symmetric = it, distance2 = if (it) null else ex.distance2))
                 }
@@ -569,10 +586,17 @@ fun FeatureControls(state: WorkspaceState) {
                     val bound2 = ExprField(state, stringResource(R.string.feat_extrude_length2), d2, ValueRef.FeatureValue(ex.id, 1)) { v ->
                         if (v > 0) state.updateExtrusion(ex.copy(distance2 = v))
                     }
-                    if (!bound2) Slider(value = d2.toFloat().coerceIn(1f, 100f), onValueChange = { v ->
-                        val d = Math.round(v).toDouble().coerceAtLeast(1.0)
-                        state.updateExtrusion(ex.copy(distance2 = d))
-                    }, valueRange = 1f..100f)
+                    if (!bound2) Slider(
+                        value = d2.toFloat().coerceIn(1f, 100f),
+                        onValueChange = { v ->
+                            state.onSliderChange {
+                                val d = Math.round(v).toDouble().coerceAtLeast(1.0)
+                                state.updateExtrusion(ex.copy(distance2 = d))
+                            }
+                        },
+                        onValueChangeFinished = state::finishSliderDrag,
+                        valueRange = 1f..100f,
+                    )
                 }
             }
 
@@ -604,7 +628,12 @@ private fun RevolveControls(state: WorkspaceState, f: RevolveFeature) {
         if (f.axis is RevolveAxis.Line && f.axis !in lines) FilterChip(selected = true, onClick = {}, label = { Text(stringResource(R.string.feat_revolve_axis_line)) })
     }
     val bound = ExprField(state, stringResource(R.string.feat_revolve_angle), angle, ValueRef.FeatureValue(f.id)) { v -> if (v > 0 && v <= 360) state.updateRevolve(withAngle(v)) }
-    if (!bound) Slider(value = angle.toFloat().coerceIn(5f, 360f), onValueChange = { v -> state.updateRevolve(withAngle((Math.round(v / 5) * 5.0).coerceAtLeast(5.0))) }, valueRange = 5f..360f)
+    if (!bound) Slider(
+        value = angle.toFloat().coerceIn(5f, 360f),
+        onValueChange = { v -> state.onSliderChange { state.updateRevolve(withAngle((Math.round(v / 5) * 5.0).coerceAtLeast(5.0))) } },
+        onValueChangeFinished = state::finishSliderDrag,
+        valueRange = 5f..360f,
+    )
     if (angle < 360) {
         SwitchRow(stringResource(R.string.feat_symmetric), f.symmetric) { state.updateRevolve(f.copy(symmetric = it)) }
         SwitchRow(stringResource(R.string.feat_reversed), reversed) { state.updateRevolve(f.copy(angle = if (it) -angle else angle)) }
@@ -680,7 +709,7 @@ private fun PatternControls(state: WorkspaceState, p: PatternFeature) {
             val axis1 = k.direction.dominantAxis()
             val axis2 = k.direction2?.dominantAxis()
             AxisChips(stringResource(R.string.feat_pattern_direction), axis1, disabled = axis2) { state.updatePattern(k.copy(direction = axisVector(it))) }
-            CountSlider(k.count, 2..20) { state.updatePattern(k.copy(count = it)) }
+            CountSlider(state, k.count, 2..20) { state.updatePattern(k.copy(count = it)) }
             NumberField(stringResource(R.string.feat_pattern_spacing), k.spacing) { state.updatePattern(k.copy(spacing = it)) }
             if (state.canTwoWay(p)) {
                 SwitchRow(stringResource(R.string.feat_pattern_second_direction), k.direction2 != null) { on ->
@@ -689,7 +718,7 @@ private fun PatternControls(state: WorkspaceState, p: PatternFeature) {
             }
             if (axis2 != null) {
                 AxisChips(stringResource(R.string.feat_pattern_direction2), axis2, disabled = axis1) { state.updatePattern(k.copy(direction2 = axisVector(it))) }
-                CountSlider(k.count2, 2..20) { state.updatePattern(k.copy(count2 = it)) }
+                CountSlider(state, k.count2, 2..20) { state.updatePattern(k.copy(count2 = it)) }
                 NumberField(stringResource(R.string.feat_pattern_spacing2), k.spacing2) { state.updatePattern(k.copy(spacing2 = it)) }
                 if (k.count * k.count2 > PatternGeometry.MAX_COUNT) {
                     Text(stringResource(R.string.feat_pattern_max, PatternGeometry.MAX_COUNT), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
@@ -698,7 +727,7 @@ private fun PatternControls(state: WorkspaceState, p: PatternFeature) {
         }
         is PatternKind.Circular -> {
             AxisChips(stringResource(R.string.feat_pattern_rotation_axis), k.axis.dominantAxis()) { state.updatePattern(k.copy(axis = axisVector(it))) }
-            CountSlider(k.count, 2..24) { state.updatePattern(k.copy(count = it)) }
+            CountSlider(state, k.count, 2..24) { state.updatePattern(k.copy(count = it)) }
             Text(stringResource(R.string.feat_pattern_axis_point), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 for (i in 0..2) NumberField(stringResource(R.string.feat_coord_mm, AXIS_NAMES[i]), k.origin.component(i), Modifier.weight(1f)) { state.updatePattern(k.copy(origin = k.origin.with(i, it))) }
@@ -763,14 +792,17 @@ private fun AxisChips(title: String, selected: Int, disabled: Int? = null, onSel
 }
 
 @Composable
-private fun CountSlider(count: Int, range: IntRange, onChange: (Int) -> Unit) {
+private fun CountSlider(state: WorkspaceState, count: Int, range: IntRange, onChange: (Int) -> Unit) {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
         Text(stringResource(R.string.feat_count), Modifier.weight(1f))
         Text("$count", color = MaterialTheme.colorScheme.primary)
     }
     Slider(
         value = count.toFloat().coerceIn(range.first.toFloat(), range.last.toFloat()),
-        onValueChange = { onChange(Math.round(it)) }, valueRange = range.first.toFloat()..range.last.toFloat(), steps = range.last - range.first - 1,
+        onValueChange = { state.onSliderChange { onChange(Math.round(it)) } },
+        onValueChangeFinished = state::finishSliderDrag,
+        valueRange = range.first.toFloat()..range.last.toFloat(),
+        steps = range.last - range.first - 1,
     )
 }
 
@@ -1008,7 +1040,15 @@ private fun HoleControls(
                 Text(stringResource(R.string.feat_value_mm, formatValue(diameter)), color = MaterialTheme.colorScheme.primary)
             }
         }
-        Slider(value = diameter.toFloat().coerceIn(1f, 40f), onValueChange = { onDiameter(Math.round(it * 2) / 2.0) }, valueRange = 1f..40f)
+        Slider(
+            value = diameter.toFloat().coerceIn(1f, 40f),
+            onValueChange = {
+                val v = Math.round(it * 2) / 2.0
+                if (featureId != null) state.onSliderChange { onDiameter(v) } else onDiameter(v)
+            },
+            onValueChangeFinished = if (featureId != null) state::finishSliderDrag else null,
+            valueRange = 1f..40f,
+        )
     }
 
     // 4. Spezifische Felder je Art
@@ -1031,5 +1071,13 @@ private fun HoleControls(
         Box(Modifier.weight(1f))
         if (!through) Text(stringResource(R.string.feat_hole_depth_value, formatValue(depth)), color = MaterialTheme.colorScheme.primary)
     }
-    if (!through) Slider(value = depth.toFloat().coerceIn(1f, 100f), onValueChange = { onDepth(Math.round(it * 2) / 2.0) }, valueRange = 1f..100f)
+    if (!through) Slider(
+        value = depth.toFloat().coerceIn(1f, 100f),
+        onValueChange = {
+            val v = Math.round(it * 2) / 2.0
+            if (featureId != null) state.onSliderChange { onDepth(v) } else onDepth(v)
+        },
+        onValueChangeFinished = if (featureId != null) state::finishSliderDrag else null,
+        valueRange = 1f..100f,
+    )
 }

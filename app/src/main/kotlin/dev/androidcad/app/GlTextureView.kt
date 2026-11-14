@@ -55,15 +55,30 @@ internal class GlTextureView(context: Context, private val renderer: GLSurfaceVi
     override fun onSurfaceTextureAvailable(st: SurfaceTexture, w: Int, h: Int) {
         handler.post {
             if (!createEgl(st)) return@post
-            renderer.onSurfaceCreated(null, null)
-            renderer.onSurfaceChanged(null, w, h)
-            draw()
+            try {
+                renderer.onSurfaceCreated(null, null)
+                renderer.onSurfaceChanged(null, w, h)
+                draw()
+            } catch (e: RuntimeException) {
+                Log.e("GlTextureView", "GL-Fehler bei Surface-Erzeugung", e)
+                destroyEgl()
+            }
         }
     }
 
     override fun onSurfaceTextureSizeChanged(st: SurfaceTexture, w: Int, h: Int) {
         // zweimal: das erste Bild landet noch im Puffer der alten Größe (die neue gilt erst ab dem nächsten Puffer), sonst bliebe ein Rand leer
-        handler.post { if (surface != EGL14.EGL_NO_SURFACE) { renderer.onSurfaceChanged(null, w, h); draw(); draw() } }
+        handler.post {
+            if (surface == EGL14.EGL_NO_SURFACE) return@post
+            try {
+                renderer.onSurfaceChanged(null, w, h)
+                draw()
+                draw()
+            } catch (e: RuntimeException) {
+                Log.e("GlTextureView", "GL-Fehler bei Größenänderung", e)
+                destroyEgl()
+            }
+        }
     }
 
     // false: die Textur gibt der Render-Thread selbst frei, nach EGL – so muss der UI-Thread nicht auf ihn warten
@@ -77,12 +92,19 @@ internal class GlTextureView(context: Context, private val renderer: GLSurfaceVi
     private fun draw() {
         if (surface == EGL14.EGL_NO_SURFACE) return
         renderer.onDrawFrame(null)
-        EGL14.eglSwapBuffers(display, surface) // schlägt nur fehl, wenn die Fläche gerade verschwindet; dann kommt destroy ohnehin
+        if (!EGL14.eglSwapBuffers(display, surface)) {
+            val err = EGL14.eglGetError()
+            if (err == EGL14.EGL_CONTEXT_LOST) {
+                Log.e("GlTextureView", "eglSwapBuffers: EGL_CONTEXT_LOST")
+                destroyEgl()
+            }
+        }
     }
 
     private fun createEgl(st: SurfaceTexture): Boolean {
         destroyEgl()
         display = EGL14.eglGetDisplay(EGL14.EGL_DEFAULT_DISPLAY)
+        if (display == EGL14.EGL_NO_DISPLAY) return fail("eglGetDisplay")
         val version = IntArray(2)
         if (!EGL14.eglInitialize(display, version, 0, version, 1)) return fail("eglInitialize")
         val attribs = intArrayOf(
@@ -92,7 +114,7 @@ internal class GlTextureView(context: Context, private val renderer: GLSurfaceVi
         val configs = arrayOfNulls<EGLConfig>(1)
         val count = IntArray(1)
         if (!EGL14.eglChooseConfig(display, attribs, 0, configs, 0, 1, count, 0) || count[0] == 0) return fail("eglChooseConfig")
-        val config = configs[0]!!
+        val config = configs[0] ?: return fail("eglChooseConfig")
         eglContext = EGL14.eglCreateContext(display, config, EGL14.EGL_NO_CONTEXT, intArrayOf(EGL14.EGL_CONTEXT_CLIENT_VERSION, 3, EGL14.EGL_NONE), 0)
         if (eglContext == EGL14.EGL_NO_CONTEXT) return fail("eglCreateContext")
         surface = EGL14.eglCreateWindowSurface(display, config, st, intArrayOf(EGL14.EGL_NONE), 0)

@@ -54,6 +54,6 @@ class MainActivity : ComponentActivity() {
 
     override fun onStop() {
         super.onStop()
-        hub.flush() // ausstehende Änderungen sofort sichern, bevor Android den Prozess beenden darf
+        hub.flushAsync() // asynchrone Sicherung im Hintergrund statt Main-Thread-Blockade (SaveCoordinator überlebt onDestroy)
     }
 }

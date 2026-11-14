@@ -20,6 +20,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -85,10 +86,11 @@ class CadState(
     // nur unter saveLock – so überschreibt ein verspäteter Schreibvorgang im Hintergrund nie einen neueren, den flush() schon gesichert hat
     private var dirtyVersion = 0
     @Volatile private var savedVersion = 0
-    private val saveLock = Any()
+    internal val saveLock = Any()
     private lateinit var history: UndoHistory<Snapshot>
 
     init {
+        SaveCoordinator.awaitPending()
         val data = repo.lastOpenedId?.let(repo::load)
             ?: repo.list().firstNotNullOfOrNull { repo.load(it.id) }
             ?: repo.create(defaultName, defaultSource)
@@ -181,6 +183,7 @@ class CadState(
         val wasCurrent = id == project.id
         if (wasCurrent) {
             saveJob?.cancel()
+            SaveCoordinator.awaitPending()
             saveState = SaveState.SAVED
         } else flush()
         repo.delete(id)
@@ -237,13 +240,39 @@ class CadState(
         repo.load(info.id)?.let { it.source == defaultSource && it.overrides.isEmpty() } == true
     }
 
-    /** Schreibt ausstehende Änderungen sofort (synchron). Für `onStop` und Projektwechsel. */
+    /** Schreibt ausstehende Änderungen sofort (synchron). Für Projektwechsel. */
     fun flush() {
         saveJob?.cancel()
+        SaveCoordinator.awaitPending()
         if (saveState == SaveState.SAVED || project.id.isEmpty()) return
         runCatching { synchronized(saveLock) { repo.save(project.id, editor.text, overrides, project.name).also { savedVersion = dirtyVersion } } }
             .onSuccess { project = it; projects = listed(); saveState = SaveState.SAVED }
             .onFailure { saveState = SaveState.ERROR }
+    }
+
+    /** Schreibt ausstehende Änderungen im Hintergrund ohne Main-Thread-Blockade (für `onStop`). */
+    fun flushAsync(): Job? {
+        saveJob?.cancel()
+        if (saveState == SaveState.SAVED || project.id.isEmpty()) return null
+        val version = dirtyVersion
+        val id = project.id
+        val name = project.name
+        val text = editor.text
+        val ov = overrides
+        return SaveCoordinator.launch {
+            val result = runCatching { saveIfNewer(version, id, text, ov, name)?.let { it to listed() } }
+            if (!scope.isActive) return@launch
+            scope.launch {
+                result.onSuccess { res ->
+                    val (info, list) = res ?: return@onSuccess
+                    if (id == project.id) {
+                        project = info
+                        projects = list
+                        if (version == dirtyVersion) saveState = SaveState.SAVED
+                    }
+                }.onFailure { if (id == project.id) saveState = SaveState.ERROR }
+            }
+        }
     }
 
     /** Sichert [text] als Stand [version] – nur, wenn noch kein neuerer gesichert ist (sonst `null`). Für das Autosave im Hintergrund. */

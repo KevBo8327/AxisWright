@@ -83,6 +83,17 @@ class UndoHistoryTest {
     }
 
     @Test
+    fun ignoreWindowMergesAcrossSlowDrag() {
+        val h = history()
+        now = 0; h.record("b", "slider", ignoreWindow = true)
+        now = 2000; h.record("c", "slider", ignoreWindow = true)
+        now = 5000; h.record("d", "slider", ignoreWindow = true)
+        assertEquals("d", h.current)
+        assertEquals("a", h.undo())
+        assertFalse(h.canUndo)
+    }
+
+    @Test
     fun oldestStepsAreDroppedAtCapacity() {
         val h = history(max = 3)
         h.record("b"); h.record("c"); h.record("d")
