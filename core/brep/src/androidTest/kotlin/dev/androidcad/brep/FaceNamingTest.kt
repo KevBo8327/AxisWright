@@ -227,6 +227,10 @@ class FaceNamingTest {
                     val e = one.edgesBetween(TOP + 1000L, RIGHT + 1000L)
                     assertEquals(1, e.size)
                     assertEquals(e, one.edgesBetween(TOP, RIGHT + 1000L))
+                    // Kante zwischen zwei Flächen, deren Namen beide als Zweitnamen vorliegen (Deckfläche + Vorderseite)
+                    val frontAliasEdge = one.edgesBetween(TOP + 1000L, FRONT + 1000L)
+                    assertEquals(1, frontAliasEdge.size)
+                    assertEquals(one.edgesBetween(TOP, FRONT), frontAliasEdge)
                     // Zweitnamen überstehen weitere Operationen (Verrundung) und das Umbenennen
                     one.fillet(e, 2.0).use { f ->
                         assertEquals(1, f.facesWithTag(TOP + 1000L).size)

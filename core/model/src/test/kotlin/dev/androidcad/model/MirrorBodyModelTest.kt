@@ -70,6 +70,51 @@ class MirrorBodyModelTest {
     }
 
     @Test
+    fun patternedAndNestedShellInnerFacesStayNamedDistinctAndRoundTripAfterMirror() {
+        val src = FeatureId(3); val row = FeatureId(4); val grid = FeatureId(5)
+        val shell = FeatureId(6); val mirror = FeatureId(7); val mirror2 = FeatureId(8)
+        val kind2d = PatternKind.Linear(Vec3(1.0, 0.0, 0.0), 4, 10.0, Vec3(0.0, 1.0, 0.0), 3, 10.0)
+        val outerTags = buildList {
+            for (elem in 1L..5L) add(FaceRef(src, FaceRole.SIDE, elem).tag)
+            for (inst in PatternGeometry.instances(kind2d)) {
+                add(PatternGeometry.copyTag(FaceRef(src, FaceRole.TOP).tag, row, inst))
+                for (elem in 1L..5L) add(PatternGeometry.copyTag(FaceRef(src, FaceRole.SIDE, elem).tag, row, inst))
+            }
+            for (k in 1..3) {
+                val base = PatternGeometry.copyTag(FaceRef(src, FaceRole.SIDE, 2).tag, row, k)
+                add(PatternGeometry.nestedCopyTag(base, grid, 2))
+            }
+        }
+        val innerTags = outerTags.map { FaceRef(shell, FaceRole.SIDE, ShellFeature.innerElement(it)).tag }
+        val mirroredOnce = innerTags.map { MirrorNaming.mirrorTag(it, mirror) }
+        val mirroredTwice = mirroredOnce.map { MirrorNaming.mirrorTag(it, mirror2) }
+        assertTrue(innerTags.none { it == 0L })
+        assertTrue(mirroredOnce.none { it == 0L })
+        assertTrue(mirroredTwice.none { it == 0L })
+        assertEquals(outerTags.size, mirroredOnce.toSet().size)
+        assertEquals(outerTags.size, mirroredTwice.toSet().size)
+
+        // Durchgängige Referenzierung Muster -> Schale -> Spiegelung -> Verrundung übersteht Speichern und Laden
+        val doc = Document()
+        val sk = doc.addSketch("Grundriss")
+        sk.sketch.addRectangle(0.0, 0.0, 50.0, 30.0)
+        val box = doc.addExtrude("Block", sk, 20.0)
+        val hole = doc.addHole("Bohrung", FaceRef(box.id, FaceRole.TOP), 15.0, 15.0, 20.0, 6.0)
+        val pat = doc.addPattern("Muster", hole.id, PatternKind.Linear(Vec3(1.0, 0.0, 0.0), 2, 20.0))
+        val sh = doc.addShell("Schale", listOf(FaceRef(box.id, FaceRole.TOP)), 2.0)
+        val mb = doc.addMirrorBody("Spiegelung", Vec3(0.0, 0.0, 0.0), Vec3(1.0, 0.0, 0.0))
+        fun inner(ref: FaceRef) = FaceRef(sh.id, FaceRole.SIDE, ShellFeature.innerElement(ref.tag))
+        fun mirrored(ref: FaceRef) = FaceRef(mb.id, ref.role, MirrorNaming.mirroredElement(ref))
+        val edge = EdgeRef.of(
+            mirrored(inner(FaceRef(box.id, FaceRole.BOTTOM))),
+            mirrored(inner(FaceRef(pat.id, FaceRole.SIDE, PatternGeometry.copyElement(1, 1)))),
+        )
+        val fillet = doc.addFillet("Innen", listOf(edge), 0.5)
+        val loaded = DocumentCodec.decode(DocumentCodec.encode(doc))
+        assertEquals(listOf(edge), (loaded.feature(fillet.id) as FilletFeature).edges)
+    }
+
+    @Test
     fun aDatumPlaneMirrorIsRemovedWithItsPlaneAndRoundTrips() {
         val doc = Document()
         val plate = doc.addExtrude("Platte", doc.addSketch("Platte"), 8.0)

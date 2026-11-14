@@ -365,7 +365,7 @@ Bei der Überprüfung aller 62 `.so`-Bibliotheken in `app-release.apk` und der e
 - [x] **L-03:** (erledigt 11.11.2026 durch Open-Source-Freigabe unter GPL-3.0-or-later: Quelltext der App und Build-Skripte sind öffentlich, Neu-Linken nach LGPL 2.1 § 6 uneingeschränkt möglich)
 - [x] **L-07:** (erledigt 21.10.2026: Eigenentwicklung, Copyright-Kopf eingetragen) Urheberschaft von `Streaminghalterung.scad` verifizieren und per Header dokumentieren (oder durch eigenes Beispiel ersetzen).
 - [ ] **L-10:** `DocumentCodec.FORMAT` in `DocumentCodec.kt:26` auf `"paramworker-model"` umstellen.
-- [ ] **T-01 & T-02:** Bit-Packing-Kollision in `ShellFeature.innerElement` / `MirrorNaming` sowie fehlende `faceAliases` in `edgeFaceTags` / `edgesBetween` beheben.
+- [x] **T-01 & T-02:** (geprüft 14.11.2026: bereits behoben durch `5f1b86d` — `MirrorNaming` streut Elemente `>= 2^25`, `PatternGeometry.copyTag` gibt `0L` zurück, `edgesBetween` nutzt `hasName` inkl. `faceAliases` seit `81aa90e`, `EdgeProjection` löst Zweitnamen auf; Zusatztests für Muster+Schale+Spiegelung+Verrundung und beidseitige Zweitnamen ergänzt) Bit-Packing-Kollision in `ShellFeature.innerElement` / `MirrorNaming` sowie fehlende `faceAliases` in `edgeFaceTags` / `edgesBetween` beheben.
 - [ ] **T-04:** Null-Checks nach allen JNI-Allokationen in `cadbrep.cpp` und `cadgeom.cpp` ergänzen.
 - [ ] **T-08 & T-11:** Slider-Undo-Flutung in `Workspace.kt` abstellen und `decimalComma()` in `Document.applyParameters()` / `WorkspaceState.evaluate()` ergänzen.
 
