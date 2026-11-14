@@ -416,7 +416,10 @@ fun FeatureControls(state: WorkspaceState) {
                 },
                 onDiameter = { state.updateHole(diameter = it) },
                 onDepth = { state.updateHole(depth = it) },
-                onThrough = { isThrough -> state.updateHole(depth = if (isThrough) null else (h.depth ?: 10.0)) },
+                onThrough = { isThrough ->
+                    if (isThrough) state.setBinding(ValueRef.FeatureValue(h.id, 1), null)
+                    state.updateHole(depth = if (isThrough) null else (h.depth ?: 10.0))
+                },
                 onCounterboreDiameter = { state.updateHole(counterboreDiameter = it) },
                 onCounterboreDepth = { state.updateHole(counterboreDepth = it) },
                 onCountersinkDiameter = { state.updateHole(countersinkDiameter = it) },
@@ -652,19 +655,25 @@ private fun DatumControls(state: WorkspaceState, p: PlaneFeature) {
     val edges = state.planeEdgeOptions(def.face)
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         FilterChip(selected = def is PlaneDef.Offset, onClick = {
-            state.updateDatum(PlaneDef.Offset(def.face, (def as? PlaneDef.Offset)?.distance ?: 10.0))
+            if (def !is PlaneDef.Offset) {
+                state.setBinding(ValueRef.FeatureValue(p.id), null)
+                state.updateDatum(PlaneDef.Offset(def.face, 10.0))
+            }
         }, label = { Text(stringResource(R.string.feat_datum_offset)) })
         FilterChip(selected = def is PlaneDef.AtEdge, onClick = {
             if (def !is PlaneDef.AtEdge) {
                 if (edges.isEmpty()) state.notice = UiText.Res(R.string.feat_datum_no_edge)
-                else state.updateDatum(PlaneDef.AtEdge(def.face, edges.first(), 30.0))
+                else {
+                    state.setBinding(ValueRef.FeatureValue(p.id), null)
+                    state.updateDatum(PlaneDef.AtEdge(def.face, edges.first(), 30.0))
+                }
             }
         }, label = { Text(stringResource(R.string.feat_datum_at_edge)) })
     }
     when (def) {
-        is PlaneDef.Offset -> NumberField(stringResource(R.string.feat_datum_distance), def.distance) { state.updateDatum(def.copy(distance = it)) }
+        is PlaneDef.Offset -> ExprField(state, stringResource(R.string.feat_datum_distance), def.distance, ValueRef.FeatureValue(p.id)) { state.updateDatum(def.copy(distance = it)) }
         is PlaneDef.AtEdge -> {
-            NumberField(stringResource(R.string.feat_datum_angle), def.angle) { state.updateDatum(def.copy(angle = it)) }
+            ExprField(state, stringResource(R.string.feat_datum_angle), def.angle, ValueRef.FeatureValue(p.id)) { state.updateDatum(def.copy(angle = it)) }
             val i = edges.indexOf(def.edge)
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Text(
@@ -710,16 +719,17 @@ private fun PatternControls(state: WorkspaceState, p: PatternFeature) {
             val axis2 = k.direction2?.dominantAxis()
             AxisChips(stringResource(R.string.feat_pattern_direction), axis1, disabled = axis2) { state.updatePattern(k.copy(direction = axisVector(it))) }
             CountSlider(state, k.count, 2..20) { state.updatePattern(k.copy(count = it)) }
-            NumberField(stringResource(R.string.feat_pattern_spacing), k.spacing) { state.updatePattern(k.copy(spacing = it)) }
+            ExprField(state, stringResource(R.string.feat_pattern_spacing), k.spacing, ValueRef.FeatureValue(p.id)) { state.updatePattern(k.copy(spacing = it)) }
             if (state.canTwoWay(p)) {
                 SwitchRow(stringResource(R.string.feat_pattern_second_direction), k.direction2 != null) { on ->
+                    if (!on) state.setBinding(ValueRef.FeatureValue(p.id, 1), null)
                     state.updatePattern(if (on) k.copy(direction2 = axisVector(if (axis1 == 0) 1 else 0), spacing2 = k.spacing) else k.copy(direction2 = null))
                 }
             }
             if (axis2 != null) {
                 AxisChips(stringResource(R.string.feat_pattern_direction2), axis2, disabled = axis1) { state.updatePattern(k.copy(direction2 = axisVector(it))) }
                 CountSlider(state, k.count2, 2..20) { state.updatePattern(k.copy(count2 = it)) }
-                NumberField(stringResource(R.string.feat_pattern_spacing2), k.spacing2) { state.updatePattern(k.copy(spacing2 = it)) }
+                ExprField(state, stringResource(R.string.feat_pattern_spacing2), k.spacing2, ValueRef.FeatureValue(p.id, 1)) { state.updatePattern(k.copy(spacing2 = it)) }
                 if (k.count * k.count2 > PatternGeometry.MAX_COUNT) {
                     Text(stringResource(R.string.feat_pattern_max, PatternGeometry.MAX_COUNT), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
                 }
@@ -732,7 +742,7 @@ private fun PatternControls(state: WorkspaceState, p: PatternFeature) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 for (i in 0..2) NumberField(stringResource(R.string.feat_coord_mm, AXIS_NAMES[i]), k.origin.component(i), Modifier.weight(1f)) { state.updatePattern(k.copy(origin = k.origin.with(i, it))) }
             }
-            NumberField(stringResource(R.string.feat_pattern_circular_angle), k.angle) { state.updatePattern(k.copy(angle = it)) }
+            ExprField(state, stringResource(R.string.feat_pattern_circular_angle), k.angle, ValueRef.FeatureValue(p.id)) { state.updatePattern(k.copy(angle = it)) }
         }
         is PatternKind.Mirror -> {
             val axis = k.normal.dominantAxis()
@@ -1069,15 +1079,20 @@ private fun HoleControls(
         Text(stringResource(R.string.feat_hole_through))
         Switch(through, onThrough)
         Box(Modifier.weight(1f))
-        if (!through) Text(stringResource(R.string.feat_hole_depth_value, formatValue(depth)), color = MaterialTheme.colorScheme.primary)
+        if (!through && featureId == null) Text(stringResource(R.string.feat_hole_depth_value, formatValue(depth)), color = MaterialTheme.colorScheme.primary)
     }
-    if (!through) Slider(
-        value = depth.toFloat().coerceIn(1f, 100f),
-        onValueChange = {
-            val v = Math.round(it * 2) / 2.0
-            if (featureId != null) state.onSliderChange { onDepth(v) } else onDepth(v)
-        },
-        onValueChangeFinished = if (featureId != null) state::finishSliderDrag else null,
-        valueRange = 1f..100f,
-    )
+    if (!through) {
+        val depthBound = featureId != null && ExprField(state, stringResource(R.string.feat_hole_depth), depth, ValueRef.FeatureValue(featureId, 1)) { v ->
+            if (v > 0) onDepth(v)
+        }
+        if (!depthBound) Slider(
+            value = depth.toFloat().coerceIn(1f, 100f),
+            onValueChange = {
+                val v = Math.round(it * 2) / 2.0
+                if (featureId != null) state.onSliderChange { onDepth(v) } else onDepth(v)
+            },
+            onValueChangeFinished = if (featureId != null) state::finishSliderDrag else null,
+            valueRange = 1f..100f,
+        )
+    }
 }

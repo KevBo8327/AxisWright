@@ -39,6 +39,7 @@
     <string name="feat_hole_fixed">Position and face stay fixed; to move it, delete it and place a new one.</string>
     <string name="feat_hole_diameter">Diameter</string>
     <string name="feat_hole_through">Through all</string>
+    <string name="feat_hole_depth">Depth (mm)</string>
     <string name="feat_hole_depth_value">Depth %1$s mm</string>
     <string name="feat_hole_kind_simple">Simple</string>
     <string name="feat_hole_kind_counterbore">Counterbore</string>

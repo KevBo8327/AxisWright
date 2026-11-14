@@ -39,6 +39,7 @@
     <string name="feat_hole_fixed">Position und Fläche bleiben fest; zum Verschieben löschen und neu setzen.</string>
     <string name="feat_hole_diameter">Durchmesser</string>
     <string name="feat_hole_through">Durchgehend</string>
+    <string name="feat_hole_depth">Tiefe (mm)</string>
     <string name="feat_hole_depth_value">Tiefe %1$s mm</string>
     <string name="feat_hole_kind_simple">Einfach</string>
     <string name="feat_hole_kind_counterbore">Senkung</string>
