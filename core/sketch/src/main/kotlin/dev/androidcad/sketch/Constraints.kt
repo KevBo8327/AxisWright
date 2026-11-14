@@ -90,8 +90,11 @@ public data class Concentric(val a: RoundId, val b: RoundId) : Constraint {
     override val refs: List<Any> get() = listOf(a, b)
 }
 
-/** Linie berührt Kreis/Bogen (Abstand Mittelpunkt–Gerade = Radius). */
-public data class TangentLineRound(val line: LineId, val round: RoundId) : Constraint {
+/**
+ * Linie berührt Kreis/Bogen (Abstand Mittelpunkt–Gerade = Radius).
+ * [side] (±1) hält die Seite der Geraden fest, auf der der Mittelpunkt liegt (0 = beim Anlegen aus der Lage bestimmen).
+ */
+public data class TangentLineRound(val line: LineId, val round: RoundId, val side: Int = 0) : Constraint {
     override val refs: List<Any> get() = listOf(line, round)
 }
 
