@@ -131,4 +131,33 @@ class PlacementEditorTest {
         near(60.0, s.point(r.corners[0]).x); near(100.0, s.point(r.corners[2]).x)
         assertTrue(hole.value > 0)
     }
+
+    @Test
+    fun statusTextIsCachedAcrossRepeatedRenderPassesWithoutSketchChanges() {
+        val s = Sketch()
+        sized(s)
+        val e = editor(s)
+        val first = e.statusText()
+        assertEquals(Msg(EditText.STATUS_POSITION_FREE), first)
+        assertEquals(1, e.placementComputations)
+        assertEquals(1, e.statusTextComputations)
+
+        // Mehrere Render-Pässe (Hover, Werkzeugwechsel, Auswahl aufheben) ohne Skizzenänderung
+        repeat(5) {
+            e.hover(Vec2(10.0, 10.0))
+            assertEquals(first, e.statusText())
+        }
+        e.setTool(Tool.LINE)
+        e.setTool(Tool.SELECT)
+        e.clearSelection()
+        assertEquals(first, e.statusText())
+        assertEquals(1, e.placementComputations, "placementFreedom darf ohne Skizzenänderung nicht neu laufen")
+        assertEquals(1, e.statusTextComputations, "statusText darf ohne Skizzenänderung nicht neu berechnet werden")
+
+        // Erst nach einer echten Skizzenänderung wird der Statustext einmal neu bestimmt
+        e.selectAll()
+        e.requestAction(ActionKind.ORIGIN_CENTER)
+        assertEquals(Msg(EditText.STATUS_FULLY_CONSTRAINED), e.statusText())
+        assertEquals(2, e.statusTextComputations)
+    }
 }

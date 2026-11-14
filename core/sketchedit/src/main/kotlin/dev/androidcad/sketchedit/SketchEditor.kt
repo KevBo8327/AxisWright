@@ -1892,11 +1892,21 @@ public class SketchEditor(public val sketch: Sketch) {
 
     private var placementFor: SolveResult? = null
     private var placementValue: Int? = null
+    private var statusTextFor: SolveResult? = null
+    private var statusTextValue: Msg? = null
+    internal var placementComputations: Int = 0
+        private set
+    internal var statusTextComputations: Int = 0
+        private set
 
     /** Siehe [SketchOps.placementFreedom]; je Lösungsstand nur einmal berechnet. */
     private fun placementFree(): Int? {
         val s = status ?: return null
-        if (placementFor !== s) { placementFor = s; placementValue = SketchOps.placementFreedom(sketch, s.degreesOfFreedom) }
+        if (placementFor !== s) {
+            placementFor = s
+            placementComputations++
+            placementValue = SketchOps.placementFreedom(sketch, s.degreesOfFreedom)
+        }
         return placementValue
     }
 
@@ -1915,10 +1925,12 @@ public class SketchEditor(public val sketch: Sketch) {
         return Sel.L(id)
     }
 
-    /** Kurzer Statustext für die Statuszeile; `null`, wenn es nichts zu melden gibt. */
+    /** Kurzer Statustext für die Statuszeile (je Lösungsstand zwischengespeichert); `null`, wenn es nichts zu melden gibt. */
     public fun statusText(): Msg? {
         val s = status ?: return null
-        return when {
+        if (statusTextFor === s) return statusTextValue
+        statusTextComputations++
+        val msg = when {
             !s.isSolved -> Msg(EditText.STATUS_CONFLICT)
             s.degreesOfFreedom == 0 -> Msg(EditText.STATUS_FULLY_CONSTRAINED)
             s.degreesOfFreedom < 0 -> null
@@ -1926,6 +1938,9 @@ public class SketchEditor(public val sketch: Sketch) {
             placementFree() == 3 -> Msg(EditText.STATUS_POSITION_ROTATION_FREE)
             else -> Msg(EditText.STATUS_DOF, s.degreesOfFreedom)
         }
+        statusTextFor = s
+        statusTextValue = msg
+        return msg
     }
 
     private fun changed() {
