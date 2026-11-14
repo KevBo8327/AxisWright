@@ -53,6 +53,7 @@ import dev.androidcad.model.worldSegments
 import dev.androidcad.project.ProjectInfo
 import dev.androidcad.sketch.regions
 import dev.androidcad.sketchedit.SketchEditor
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -336,6 +337,7 @@ class WorkspaceState(
 
     /** Ersetzt das Aufbau-Ergebnis und gibt den Körper des alten frei. Messungen beziehen sich auf den alten Körper und beginnen neu. */
     private fun replaceOutput(new: ModelOutput?) {
+        measureJob?.cancel()
         val old = output
         output = new
         if (old?.body !== new?.body) old?.body?.close()
@@ -404,8 +406,10 @@ class WorkspaceState(
     var notice by mutableStateOf<UiText?>(null)
 
     private var job: Job? = null
+    private var measureJob: Job? = null
     private var cameraJob: Job? = null
     private var saveJob: Job? = null
+    internal var measureDispatcher: CoroutineDispatcher = Dispatchers.Default
 
     /**
      * Stand der Bearbeitung: [editVersion] zählt jede Änderung, [savedVersion] ist der zuletzt gesicherte Stand. Beide werden nur unter
@@ -1402,6 +1406,7 @@ class WorkspaceState(
     /** Schaltet den Messmodus ein: Kanten oder Flächen antippen (höchstens zwei). */
     fun startMeasure() {
         if (output?.body == null) return
+        measureJob?.cancel()
         planePick = false
         edgeMode = null
         holeMode = null
@@ -1413,25 +1418,59 @@ class WorkspaceState(
     }
 
     fun cancelMeasure() {
+        measureJob?.cancel()
         measureMode = null
         refreshHighlight()
     }
 
-    /** Nimmt [p] zur Messung (erneut tippen hebt die Wahl auf; ein drittes Teil ersetzt das älteste) und rechnet neu. */
+    internal fun setMeasureStateForTest(out: ModelOutput, picks: List<BrepShape.Part>) {
+        output = out
+        measureMode = MeasureMode(picks)
+    }
+
+    /** Nimmt [p] zur Messung (erneut tippen hebt die Wahl auf; ein drittes Teil ersetzt das älteste) und rechnet im Hintergrund neu. */
     private fun addMeasure(p: BrepShape.Part) {
         val m = measureMode ?: return
         val picks = if (p in m.picks) m.picks - p else (m.picks + p).takeLast(2)
-        measureMode = try {
-            measure(picks)
-        } catch (e: dev.androidcad.brep.BrepException) {
-            MeasureMode(picks, listOf(UiText.Res(R.string.ws_measure_failed, UiText.Core(e.msg))))
-        }
+        val out = output ?: return
+        measureJob?.cancel()
+        measureMode = MeasureMode(picks)
         refreshHighlight()
+        if (out.body != null && picks.isNotEmpty()) launchMeasure(out, picks)
     }
 
-    private fun measure(picks: List<BrepShape.Part>): MeasureMode {
-        val out = output ?: return MeasureMode(picks)
-        val body = out.body ?: return MeasureMode(picks)
+    internal fun launchMeasure(
+        out: ModelOutput,
+        picks: List<BrepShape.Part>,
+        faceArea: (Int) -> Double = { out.body!!.faceArea(it) },
+        distance: (BrepShape.Part, BrepShape.Part) -> BrepShape.Distance = { a, b -> out.body!!.distance(a, b) },
+    ): Job {
+        measureJob?.cancel()
+        val job = scope.launch {
+            val result = withContext(measureDispatcher) {
+                try {
+                    measure(out, picks, faceArea, distance)
+                } catch (e: dev.androidcad.brep.BrepException) {
+                    MeasureMode(picks, listOf(UiText.Res(R.string.ws_measure_failed, UiText.Core(e.msg))))
+                } catch (_: IllegalStateException) {
+                    null // Körper wurde zwischenzeitlich freigegeben
+                }
+            }
+            if (result != null && output === out && measureMode?.picks == picks) {
+                measureMode = result
+                refreshHighlight()
+            }
+        }
+        measureJob = job
+        return job
+    }
+
+    private fun measure(
+        out: ModelOutput,
+        picks: List<BrepShape.Part>,
+        faceArea: (Int) -> Double,
+        distance: (BrepShape.Part, BrepShape.Part) -> BrepShape.Distance,
+    ): MeasureMode {
         fun v(t: Triple<Double, Double, Double>) = Vec3(t.first, t.second, t.third)
         fun line(p: BrepShape.Part) = (p as? BrepShape.Part.Edge)?.let { out.edgeInfos.getOrNull(it.id - 1) }?.takeIf { it.isLine }
             ?.let { v(it.end) + v(it.start) * -1.0 }
@@ -1442,13 +1481,13 @@ class WorkspaceState(
                     if (e.isCircle) UiText.Res(R.string.ws_measure_edge_circle, e.length, e.radius, 2 * e.radius)
                     else UiText.Res(R.string.ws_measure_edge_line, e.length)
                 } ?: UiText.Res(R.string.ws_measure_edge)
-                is BrepShape.Part.Face -> UiText.Res(if (normal(p) == null) R.string.ws_measure_face_curved else R.string.ws_measure_face, body.faceArea(p.id))
+                is BrepShape.Part.Face -> UiText.Res(if (normal(p) == null) R.string.ws_measure_face_curved else R.string.ws_measure_face, faceArea(p.id))
             }
         }.toMutableList()
         var segment: FloatArray? = null
         if (picks.size == 2) {
             val (a, b) = picks
-            val d = body.distance(a, b)
+            val d = distance(a, b)
             lines += UiText.Res(R.string.ws_measure_distance, d.value)
             if (d.value > 1e-9) segment = floatArrayOf(
                 d.onA.first.toFloat(), d.onA.second.toFloat(), d.onA.third.toFloat(), d.onB.first.toFloat(), d.onB.second.toFloat(), d.onB.third.toFloat(),

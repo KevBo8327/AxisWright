@@ -17,6 +17,7 @@ internal object NativeBrep {
     @JvmStatic external fun fillet(h: Long, edgeIds: IntArray, edgeTags: LongArray, radius: Double, kind: Int): Long
     @JvmStatic external fun shell(h: Long, faceIds: IntArray, thickness: Double, innerTags: LongArray): Long
     @JvmStatic external fun translate(h: Long, x: Double, y: Double, z: Double): Long
+    @JvmStatic external fun copy(h: Long): Long
     @JvmStatic external fun transform(h: Long, m: DoubleArray): Long
     @JvmStatic external fun mirror(h: Long, plane: DoubleArray): Long
     @JvmStatic external fun retag(h: Long, tags: LongArray, aliasPairs: LongArray): Long
@@ -89,11 +90,11 @@ class BrepMesh(
 
 /**
  * Ein B-Rep-Körper (OpenCascade `TopoDS_Shape`) hinter einem nativen Handle. Unveränderlich: jede
- * Operation liefert einen neuen Körper. [close] gibt den nativen Speicher frei; `finalize` fängt
- * vergessene Aufrufe ab (`java.lang.ref.Cleaner` gibt es auf Android erst ab API 33).
+ * Operation liefert einen neuen Körper. [close] gibt den nativen Speicher thread-sicher frei; ein
+ * [HandleGuard] per `PhantomReference` fängt vergessene Aufrufe ohne `finalize` ab.
  */
-class BrepShape private constructor(private val handle: Long) : AutoCloseable {
-    @Volatile private var closed = false
+class BrepShape private constructor(handle: Long) : AutoCloseable {
+    private val guard = HandleGuard(handle, NativeBrep::release).also { it.register(this) }
 
     val faceCount: Int get() = counts()[0]
     val edgeCount: Int get() = counts()[1]
@@ -110,23 +111,26 @@ class BrepShape private constructor(private val handle: Long) : AutoCloseable {
     fun distance(a: Part, b: Part): Distance {
         fun kind(p: Part) = if (p is Part.Face) 0 else 1
         fun id(p: Part) = when (p) { is Part.Face -> p.id; is Part.Edge -> p.id }
-        val d = call { NativeBrep.distance(handle, kind(a), id(a), kind(b), id(b)) }
+        val d = call { h -> NativeBrep.distance(h, kind(a), id(a), kind(b), id(b)) }
         return Distance(d[0], Triple(d[1], d[2], d[3]), Triple(d[4], d[5], d[6]))
     }
 
     /** Schreibt den Körper als STEP-Datei (exakte Geometrie, Millimeter) – zum Austausch mit anderer CAD-Software. */
-    fun writeStep(file: java.io.File) = call { NativeBrep.writeStep(handle, file.absolutePath) }
+    fun writeStep(file: java.io.File) = call { h -> NativeBrep.writeStep(h, file.absolutePath) }
 
     /** Flächeninhalt der Fläche [id] in mm². */
-    fun faceArea(id: Int): Double = call { NativeBrep.faceArea(handle, id) }
+    fun faceArea(id: Int): Double = call { h -> NativeBrep.faceArea(h, id) }
 
     /** Volumen in mm³ (exakt aus der B-Rep-Geometrie, nicht aus dem Netz). */
-    fun volume(): Double = call { NativeBrep.volume(handle) }
+    fun volume(): Double = call { h -> NativeBrep.volume(h) }
 
     /** Achsparallele Hüllbox `{xmin, ymin, zmin, xmax, ymax, zmax}` in mm (kann etwas größer als der Körper sein). */
-    fun bounds(): DoubleArray = call { NativeBrep.bounds(handle) }
+    fun bounds(): DoubleArray = call { h -> NativeBrep.bounds(h) }
 
-    fun translate(x: Double, y: Double, z: Double): BrepShape = wrap { NativeBrep.translate(handle, x, y, z) }
+    /** Tiefe Kopie des Körpers samt Geometrie und Flächennamen (unabhängig vom Lebenszyklus des Originals). */
+    fun copy(): BrepShape = wrap { h -> NativeBrep.copy(h) }
+
+    fun translate(x: Double, y: Double, z: Double): BrepShape = wrap { h -> NativeBrep.translate(h, x, y, z) }
 
     /**
      * Starre Bewegung mit der 3×4-Matrix `[R | t]` (zeilenweise, 12 Werte): zuerst Drehung `R`, dann Verschiebung `t`.
@@ -135,7 +139,7 @@ class BrepShape private constructor(private val handle: Long) : AutoCloseable {
     fun transform(matrix3x4: DoubleArray): BrepShape {
         require(matrix3x4.size == 12) { "3x4-Matrix erwartet (12 Werte)" }
         if (!isRigid(matrix3x4)) throw BrepException(Msg(BrepText.NOT_RIGID_TRANSFORM))
-        return wrap { NativeBrep.transform(handle, matrix3x4) }
+        return wrap { h -> NativeBrep.transform(h, matrix3x4) }
     }
 
     /**
@@ -144,22 +148,23 @@ class BrepShape private constructor(private val handle: Long) : AutoCloseable {
      */
     fun mirror(px: Double, py: Double, pz: Double, nx: Double, ny: Double, nz: Double): BrepShape {
         require(nx * nx + ny * ny + nz * nz > 1e-18) { "Spiegelebene braucht eine Normale" }
-        return wrap { NativeBrep.mirror(handle, doubleArrayOf(px, py, pz, nx, ny, nz)) }
+        return wrap { h -> NativeBrep.mirror(h, doubleArrayOf(px, py, pz, nx, ny, nz)) }
     }
 
     /**
      * Derselbe Körper mit anderen Flächennamen: [map] bekommt jeden alten Namen einer Fläche – Haupt- wie Zweitnamen, 0 = unbenannt –
      * und liefert den neuen (0 = Name fällt weg).
      */
-    fun retag(map: (Long) -> Long): BrepShape {
-        val tags = faceTags().map(map).toLongArray()
-        val old = call { NativeBrep.faceAliases(handle) }
+    fun retag(map: (Long) -> Long): BrepShape = wrap { h ->
+        val rawTags = NativeBrep.faceTags(h)
+        val tags = LongArray(rawTags.size) { map(rawTags[it]) }
+        val old = NativeBrep.faceAliases(h)
         val pairs = ArrayList<Long>(old.size)
         for (i in 0 until old.size / 2) {
             val t = map(old[2 * i + 1])
             if (t != 0L) { pairs += old[2 * i]; pairs += t }
         }
-        return wrap { NativeBrep.retag(handle, tags, pairs.toLongArray()) }
+        NativeBrep.retag(h, tags, pairs.toLongArray())
     }
 
     /**
@@ -167,11 +172,11 @@ class BrepShape private constructor(private val handle: Long) : AutoCloseable {
      * bleibt eine Naht). Die neue Fläche trägt den kleinsten beteiligten Namen (das älteste Feature) als Hauptnamen, die übrigen als
      * Zweitnamen: [facesWithTag] und [edgesBetween] finden sie unter jedem davon.
      */
-    fun unifyFaces(): BrepShape = wrap { NativeBrep.unifyFaces(handle) }
+    fun unifyFaces(): BrepShape = wrap { h -> NativeBrep.unifyFaces(h) }
 
     /** Zweitnamen je Fläche (Flächen-ID → Namen), nur Flächen mit Zweitnamen. */
     fun faceAliases(): Map<Int, List<Long>> {
-        val t = call { NativeBrep.faceAliases(handle) }
+        val t = call { h -> NativeBrep.faceAliases(h) }
         return (0 until t.size / 2).groupBy({ t[2 * it].toInt() }, { t[2 * it + 1] })
     }
 
@@ -194,14 +199,24 @@ class BrepShape private constructor(private val handle: Long) : AutoCloseable {
      * Aushöhlen: entfernt die Flächen [openFaces] (IDs) und lässt eine Wand der Stärke [thickness] mm nach innen stehen. Verbleibende
      * Flächen behalten ihre Namen; die Innenfläche zu einer Fläche mit Hauptnamen `t` heißt [innerTag]`(t)` (0 = unbenannt).
      */
-    fun shell(openFaces: Collection<Int>, thickness: Double, innerTag: (Long) -> Long = { 0L }): BrepShape {
-        val pairs = faceTags().filter { it != 0L }.distinct().flatMap { listOf(it, innerTag(it)) }.toLongArray()
-        return wrap { NativeBrep.shell(handle, openFaces.toIntArray(), thickness, pairs) }
+    fun shell(openFaces: Collection<Int>, thickness: Double, innerTag: (Long) -> Long = { 0L }): BrepShape = wrap { h ->
+        val pairs = NativeBrep.faceTags(h).filter { it != 0L }.distinct().flatMap { listOf(it, innerTag(it)) }.toLongArray()
+        NativeBrep.shell(h, openFaces.toIntArray(), thickness, pairs)
     }
 
-    infix fun union(other: BrepShape): BrepShape = wrap { NativeBrep.boolean(handle, other.handle, 0) }
-    infix fun cut(other: BrepShape): BrepShape = wrap { NativeBrep.boolean(handle, other.handle, 1) }
-    infix fun intersect(other: BrepShape): BrepShape = wrap { NativeBrep.boolean(handle, other.handle, 2) }
+    private fun booleanOp(other: BrepShape, op: Int): BrepShape = BrepShape(
+        guard.useWith(other.guard) { a, b ->
+            try {
+                NativeBrep.boolean(a, b, op)
+            } catch (e: IllegalStateException) {
+                throw BrepException(if (e.message.isNullOrBlank()) Msg(BrepText.BREP_ERROR) else Msg(BrepText.BREP_ERROR_DETAIL, e.message!!), e)
+            }
+        }
+    )
+
+    infix fun union(other: BrepShape): BrepShape = booleanOp(other, 0)
+    infix fun cut(other: BrepShape): BrepShape = booleanOp(other, 1)
+    infix fun intersect(other: BrepShape): BrepShape = booleanOp(other, 2)
 
     /**
      * Rundet die Kanten mit den IDs [edgeIds] mit [radius] ab. Mit [faceTags] (je Kante ein Name, gleiche Reihenfolge) erhalten
@@ -209,13 +224,13 @@ class BrepShape private constructor(private val handle: Long) : AutoCloseable {
      */
     fun fillet(edgeIds: Collection<Int>, radius: Double, faceTags: Collection<Long> = emptyList()): BrepShape {
         require(faceTags.isEmpty() || faceTags.size == edgeIds.size) { "Je Kante genau ein Name" }
-        return wrap { NativeBrep.fillet(handle, edgeIds.toIntArray(), faceTags.toLongArray(), radius, 0) }
+        return wrap { h -> NativeBrep.fillet(h, edgeIds.toIntArray(), faceTags.toLongArray(), radius, 0) }
     }
 
     /** Fase mit symmetrischem [distance] auf den Kanten mit den IDs [edgeIds]; [faceTags] wie bei [fillet]. */
     fun chamfer(edgeIds: Collection<Int>, distance: Double, faceTags: Collection<Long> = emptyList()): BrepShape {
         require(faceTags.isEmpty() || faceTags.size == edgeIds.size) { "Je Kante genau ein Name" }
-        return wrap { NativeBrep.fillet(handle, edgeIds.toIntArray(), faceTags.toLongArray(), distance, 1) }
+        return wrap { h -> NativeBrep.fillet(h, edgeIds.toIntArray(), faceTags.toLongArray(), distance, 1) }
     }
 
     /**
@@ -223,7 +238,7 @@ class BrepShape private constructor(private val handle: Long) : AutoCloseable {
      * Ein Name 0 heißt: die Nachbarfläche hat keinen Namen.
      */
     fun edgeFaceTags(): List<Pair<Long, Long>> {
-        val t = call { NativeBrep.edgeFaceTags(handle) }
+        val t = call { h -> NativeBrep.edgeFaceTags(h) }
         return (0 until t.size / 2).map { t[2 * it] to t[2 * it + 1] }
     }
 
@@ -234,14 +249,14 @@ class BrepShape private constructor(private val handle: Long) : AutoCloseable {
      * Die Namen werden beim Extrudieren vergeben und über Boolesche Operationen, Transformationen und Verrundungen
      * mitgeführt; die IDs selbst sind dagegen nur innerhalb eines Körpers gültig und ändern sich bei jedem Neuaufbau.
      */
-    fun faceTags(): LongArray = call { NativeBrep.faceTags(handle) }
+    fun faceTags(): LongArray = call { h -> NativeBrep.faceTags(h) }
 
     /**
      * Ebenengeometrie je Fläche (Element `i` ↔ Flächen-ID `i + 1`); `null` für gekrümmte Flächen. Die Normale zeigt aus dem
      * Körper heraus.
      */
     fun planarFaces(): List<PlanarFace?> {
-        val d = call { NativeBrep.faceGeometry(handle) }
+        val d = call { h -> NativeBrep.faceGeometry(h) }
         return (0 until d.size / 7).map { i ->
             val o = 7 * i
             if (d[o] == 0.0) null else PlanarFace(Triple(d[o + 1], d[o + 2], d[o + 3]), Triple(d[o + 4], d[o + 5], d[o + 6]))
@@ -249,7 +264,7 @@ class BrepShape private constructor(private val handle: Long) : AutoCloseable {
     }
 
     /** IDs aller Flächen mit dem Haupt- oder Zweitnamen [tag] (leer, wenn es sie nicht mehr gibt). */
-    fun facesWithTag(tag: Long): List<Int> = if (tag == 0L) emptyList() else call { NativeBrep.facesWithTag(handle, tag) }.toList()
+    fun facesWithTag(tag: Long): List<Int> = if (tag == 0L) emptyList() else call { h -> NativeBrep.facesWithTag(h, tag) }.toList()
 
     /**
      * IDs aller Kanten, an denen die Flächen mit den Namen [a] und [b] aufeinandertreffen (Reihenfolge egal; `a == b` findet
@@ -257,10 +272,10 @@ class BrepShape private constructor(private val handle: Long) : AutoCloseable {
      * Nachbarflächen benennen, ohne selbst einen Namen zu brauchen.
      */
     fun edgesBetween(a: Long, b: Long): List<Int> =
-        if (a == 0L || b == 0L) emptyList() else call { NativeBrep.edgesBetween(handle, a, b) }.toList()
+        if (a == 0L || b == 0L) emptyList() else call { h -> NativeBrep.edgesBetween(h, a, b) }.toList()
 
     fun edges(): List<EdgeInfo> {
-        val d = call { NativeBrep.edgeInfo(handle) }
+        val d = call { h -> NativeBrep.edgeInfo(h) }
         return (0 until d.size / 13).map { i ->
             val o = 13 * i
             val type = d[o + 8].toInt()
@@ -278,32 +293,23 @@ class BrepShape private constructor(private val handle: Long) : AutoCloseable {
      * @param angularDeflection größter Winkel zwischen benachbarten Facetten in Radiant
      */
     fun tessellate(linearDeflection: Double = 0.1, angularDeflection: Double = 0.5): BrepMesh {
-        val r = call { NativeBrep.tessellate(handle, linearDeflection, angularDeflection) }
+        val r = call { h -> NativeBrep.tessellate(h, linearDeflection, angularDeflection) }
         return BrepMesh(r[0] as FloatArray, r[1] as IntArray, r[2] as IntArray, r[3] as FloatArray, r[4] as IntArray, r[5] as IntArray)
     }
 
-    override fun close() {
-        if (!closed) {
-            closed = true
-            NativeBrep.release(handle)
-        }
-    }
+    override fun close() = guard.close()
 
-    @Suppress("unused", "ProtectedInFinal")
-    protected fun finalize() = close()
+    private fun counts() = call { h -> NativeBrep.counts(h) }
 
-    private fun counts() = call { NativeBrep.counts(handle) }
-
-    private inline fun <T> call(block: () -> T): T {
-        check(!closed) { "Körper wurde bereits freigegeben" }
-        return try {
-            block()
+    private inline fun <T> call(block: (Long) -> T): T = guard.use { h ->
+        try {
+            block(h)
         } catch (e: IllegalStateException) {
             throw BrepException(if (e.message.isNullOrBlank()) Msg(BrepText.BREP_ERROR) else Msg(BrepText.BREP_ERROR_DETAIL, e.message!!), e)
         }
     }
 
-    private inline fun wrap(block: () -> Long): BrepShape = BrepShape(call(block))
+    private inline fun wrap(block: (Long) -> Long): BrepShape = BrepShape(call(block))
 
     companion object {
         /**
