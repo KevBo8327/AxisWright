@@ -106,8 +106,8 @@ public fun Sketch.regions(tolerance: Double = 1e-6, textOutlines: TextOutlines? 
     val problems = ArrayList<Msg>()
     val loops = ArrayList<Loop>()
     val samples = ArrayList<List<Vec2>>()
-    // Außengrenze einer verzweigten Komponente (Index in loops) → ihre Teilflächen mit Stützpunkten
-    val parts = HashMap<Int, List<Pair<Loop, List<Vec2>>>>()
+    // Außengrenze einer verzweigten Komponente (Index in loops) → ihre Teilflächen
+    val parts = HashMap<Int, List<Loop>>()
 
     fun segment(ei: Int, forward: Boolean): LoopSegment {
         val e = edges[ei]
@@ -130,7 +130,7 @@ public fun Sketch.regions(tolerance: Double = 1e-6, textOutlines: TextOutlines? 
                 if (fwd) atan2(rx, -ry) to 1 / r else atan2(-rx, ry) to -1 / r
             }
         }
-        return (if (ang > PI - 1e-9) ang - 2 * PI else ang) to k
+        return (if (ang > PI - 1e-6) ang - 2 * PI else ang) to k
     }
 
     /**
@@ -149,7 +149,7 @@ public fun Sketch.regions(tolerance: Double = 1e-6, textOutlines: TextOutlines? 
             val out = HashMap<Int, MutableList<Int>>()
             for (e in live) for (h in intArrayOf(2 * e, 2 * e + 1)) out.getOrPut(from(h)) { ArrayList() } += h
             // gleiche Richtung (Linie mit tangentialem Bogen): der stärker links gekrümmte liegt weiter gegen den Uhrzeigersinn
-            for (l in out.values) l.sortWith(compareBy({ Math.round(leave(it).first * 1e9) }, { leave(it).second }))
+            for (l in out.values) l.sortWith(compareBy({ Math.round(leave(it).first * 1e7) }, { leave(it).second }))
             val face = HashMap<Int, Int>()
             val cycles = ArrayList<List<Int>>()
             for (h0 in out.values.flatten()) {
@@ -175,7 +175,7 @@ public fun Sketch.regions(tolerance: Double = 1e-6, textOutlines: TextOutlines? 
                 if (inner.size == 1) { loops += Loop(inner[0].first, inner[0].second); samples += sample(inner[0].first); continue }
                 loops += Loop(outside.first, -outside.second)
                 samples += sample(outside.first)
-                parts[loops.lastIndex] = inner.map { Loop(it.first, it.second) to sample(it.first) }
+                parts[loops.lastIndex] = inner.map { Loop(it.first, it.second) }
             }
             return
         }
@@ -284,7 +284,7 @@ public fun Sketch.regions(tolerance: Double = 1e-6, textOutlines: TextOutlines? 
         var best = -1
         for (j in loops.indices) {
             if (i == j || loops[j].area <= loops[i].area) continue
-            if (contains(samples[j], samples[i]) && (best == -1 || loops[j].area < loops[best].area)) best = j
+            if (contains(loops[j], samples[i]) && (best == -1 || loops[j].area < loops[best].area)) best = j
         }
         parent[i] = best
     }
@@ -294,7 +294,7 @@ public fun Sketch.regions(tolerance: Double = 1e-6, textOutlines: TextOutlines? 
         .flatMap { o ->
             val holes = loops.indices.filter { parent[it] == o && depth(it) % 2 == 1 }
             // Teilflächen einer verzweigten Kontur: jedes Loch gehört zu der Teilfläche, in der es liegt
-            parts[o]?.map { (f, fs) -> Region(f, holes.filter { contains(fs, samples[it]) }.map { loops[it] }) }
+            parts[o]?.map { f -> Region(f, holes.filter { contains(f, samples[it]) }.map { loops[it] }) }
                 ?: listOf(Region(loops[o], holes.map { loops[it] }))
         }
         .sortedByDescending { it.outer.area }
@@ -303,7 +303,7 @@ public fun Sketch.regions(tolerance: Double = 1e-6, textOutlines: TextOutlines? 
 
 /** `true`, wenn (x, y) innerhalb der Außenkontur und außerhalb aller Löcher liegt. */
 public fun Region.contains(x: Double, y: Double): Boolean =
-    inside(sample(outer.segments), x, y) && holes.none { inside(sample(it.segments), x, y) }
+    inside(outer, x, y) && holes.none { inside(it, x, y) }
 
 /**
  * Die innerste Region, die (x, y) enthält. Ein Auswahlpunkt bleibt stabil, wenn Maße die Skizze verändern –
@@ -348,16 +348,51 @@ private fun signedArea(segs: List<LoopSegment>): Double {
     return a / 2
 }
 
-private fun inside(poly: List<Vec2>, x: Double, y: Double): Boolean {
-    var c = false
-    var j = poly.size - 1
-    for (i in poly.indices) {
-        val pi = poly[i]; val pj = poly[j]
-        if ((pi.y > y) != (pj.y > y) && x < (pj.x - pi.x) * (y - pi.y) / (pj.y - pi.y) + pi.x) c = !c
-        j = i
+/** Exakte Punkt-in-Kontur-Prüfung per Windungszahl (inkl. Kreisbögen ohne 64-Eck-Abweichung). */
+private fun inside(loop: Loop, x: Double, y: Double): Boolean {
+    val segs = loop.segments
+    if (segs.size == 1 && segs[0] is LoopSegment.Circle) {
+        val c = segs[0] as LoopSegment.Circle
+        return hypot(x - c.cx, y - c.cy) < c.r
     }
-    return c
+    var winding = 0.0
+    fun chordAngle(x1: Double, y1: Double, x2: Double, y2: Double): Double {
+        val ux = x1 - x; val uy = y1 - y
+        val vx = x2 - x; val vy = y2 - y
+        return atan2(ux * vy - uy * vx, ux * vx + uy * vy)
+    }
+    fun arcWinding(x1: Double, y1: Double, x2: Double, y2: Double, cx: Double, cy: Double, r: Double, ccw: Boolean): Double {
+        val ux = x1 - x; val uy = y1 - y
+        val vx = x2 - x; val vy = y2 - y
+        val cross = ux * vy - uy * vx
+        val dot = ux * vx + uy * vy
+        val inDisk = hypot(x - cx, y - cy) < r
+        if (cross == 0.0 && dot < 0.0 && inDisk) return if (ccw) PI else -PI
+        var w = atan2(cross, dot)
+        if (inDisk && (if (ccw) cross < 0.0 else cross > 0.0)) w += if (ccw) 2 * PI else -2 * PI
+        return w
+    }
+    for (s in segs) when (s) {
+        is LoopSegment.Line -> winding += chordAngle(s.x1, s.y1, s.x2, s.y2)
+        is LoopSegment.Circle -> if (hypot(x - s.cx, y - s.cy) < s.r) winding += 2 * PI
+        is LoopSegment.Arc -> {
+            val r = hypot(s.x1 - s.cx, s.y1 - s.cy)
+            val a0 = atan2(s.y1 - s.cy, s.x1 - s.cx)
+            val a1 = atan2(s.y2 - s.cy, s.x2 - s.cx)
+            var delta = a1 - a0
+            if (s.ccw) { while (delta <= 0) delta += 2 * PI } else { while (delta >= 0) delta -= 2 * PI }
+            if (abs(delta) <= PI + 1e-12) {
+                winding += arcWinding(s.x1, s.y1, s.x2, s.y2, s.cx, s.cy, r, s.ccw)
+            } else {
+                val mid = a0 + delta / 2
+                val mx = s.cx + r * cos(mid); val my = s.cy + r * sin(mid)
+                winding += arcWinding(s.x1, s.y1, mx, my, s.cx, s.cy, r, s.ccw)
+                winding += arcWinding(mx, my, s.x2, s.y2, s.cx, s.cy, r, s.ccw)
+            }
+        }
+    }
+    return abs(winding) > PI
 }
 
-/** `outer` umschließt `inner`, wenn die Mehrzahl der Stützpunkte von `inner` innerhalb liegt. */
-private fun contains(outer: List<Vec2>, inner: List<Vec2>): Boolean = inner.count { inside(outer, it.x, it.y) } * 2 > inner.size
+/** `outer` umschließt `inner`, wenn die Mehrzahl der Stützpunkte von `inner` innerhalb der exakten Kontur liegt. */
+private fun contains(outer: Loop, inner: List<Vec2>): Boolean = inner.count { inside(outer, it.x, it.y) } * 2 > inner.size
