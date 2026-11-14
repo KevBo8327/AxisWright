@@ -192,14 +192,12 @@ private fun ModelTopBar(hub: ProjectHub, compact: Boolean) {
         if (uri != null && mesh != null) scope.writeExport(context, uri) { mesh.toThreeMf() }
     }
     val stepExporter = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("model/step")) { uri ->
-        // eigene Kopie, hier auf dem UI-Thread gezogen: ein Neuaufbau während des Schreibens gibt sonst den Körper frei, den
-        // OpenCascade gerade liest (nativer Absturz). Die Kopie teilt die Geometrie, sie kostet kaum etwas.
-        val copy = state.output?.body?.let { runCatching { it.translate(0.0, 0.0, 0.0) }.getOrNull() }
-        if (uri != null && copy != null) {
-            // OpenCascade schreibt nur in Dateipfade: erst in den Cache, dann an den gewählten Ort
-            val tmp = java.io.File.createTempFile("export", ".step", context.cacheDir)
-            scope.writeExport(context, uri, cleanup = { copy.close(); tmp.delete() }) { copy.writeStep(tmp); tmp.readBytes() }
-        } else copy?.close()
+        if (uri == null) return@rememberLauncherForActivityResult
+        // Tiefe Kopie auf dem UI-Thread, damit ein paralleler Neuaufbau das Original nicht vor Export-Ende schließt.
+        val copy = state.output?.body?.let { runCatching { it.copy() }.getOrNull() } ?: return@rememberLauncherForActivityResult
+        // OpenCascade schreibt nur in Dateipfade: erst in den Cache, dann an den gewählten Ort
+        val tmp = java.io.File.createTempFile("export", ".step", context.cacheDir)
+        scope.writeExport(context, uri, cleanup = { copy.close(); tmp.delete() }) { copy.writeStep(tmp); tmp.readBytes() }
     }
     val projectExporter = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
         if (uri != null) {

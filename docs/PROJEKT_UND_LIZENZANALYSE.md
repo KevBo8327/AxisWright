@@ -366,11 +366,11 @@ Bei der Überprüfung aller 62 `.so`-Bibliotheken in `app-release.apk` und der e
 - [x] **L-07:** (erledigt 21.10.2026: Eigenentwicklung, Copyright-Kopf eingetragen) Urheberschaft von `Streaminghalterung.scad` verifizieren und per Header dokumentieren (oder durch eigenes Beispiel ersetzen).
 - [ ] **L-10:** `DocumentCodec.FORMAT` in `DocumentCodec.kt:26` auf `"paramworker-model"` umstellen.
 - [ ] **T-01 & T-02:** Bit-Packing-Kollision in `ShellFeature.innerElement` / `MirrorNaming` sowie fehlende `faceAliases` in `edgeFaceTags` / `edgesBetween` beheben.
-- [ ] **T-04:** Null-Checks nach allen JNI-Allokationen in `cadbrep.cpp` und `cadgeom.cpp` ergänzen.
+- [x] **T-04:** Null-Checks nach allen JNI-Allokationen in `cadbrep.cpp` und `cadgeom.cpp` ergänzen. *(erledigt 14.11.2026: Null-/Längenprüfungen in `cadbrep.cpp` und `cadgeom.cpp` ergänzt, inkl. T-15 `size_t`/Tessellierungs- und Eingabegrenzen)*
 - [ ] **T-08 & T-11:** Slider-Undo-Flutung in `Workspace.kt` abstellen und `decimalComma()` in `Document.applyParameters()` / `WorkspaceState.evaluate()` ergänzen.
 
 ### Kurzfristig (für Version 1.0)
-- [ ] **T-03 & T-13:** `BrepShape`-Lifecycle synchronisieren, Zwischen-Shapes in `Document.build()` schließen, `STEPControl_Writer` per Mutex schützen und `translate(0,0,0)` beim Export echt kopieren.
+- [x] **T-03 & T-13:** `BrepShape`-Lifecycle synchronisieren, Zwischen-Shapes in `Document.build()` schließen, `STEPControl_Writer` per Mutex schützen und `translate(0,0,0)` beim Export echt kopieren. *(erledigt 14.11.2026: `HandleGuard` statt `finalize()`, Zwischen-Shapes in `Document.build()` waren bereits deterministisch geschlossen, `g_stepMutex` + `BRepBuilderAPI_Copy` ergänzt, `addMeasure`/`measure` asynchron)*
 - [ ] **T-05 & T-06:** `placementFreedom()` aus dem UI-Render-Pass (`statusText()`) entfernen und über den Nullraum berechnen; QR-Zerlegung statt $J^T J$-Jacobi; `AngleDim`-Sprungstelle glätten.
 - [ ] **T-07:** Planare Regionen-Erkennung in `Regions.kt` für geteilte Kanten (Knotengrad $\ge 3$) erweitern.
 - [ ] **T-09 & T-14:** Prefix-Caching für `Document.build()` einführen und `onStop()`-Speichern vom Main-Thread entkoppeln.

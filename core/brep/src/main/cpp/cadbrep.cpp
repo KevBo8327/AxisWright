@@ -19,6 +19,7 @@
 #include <BRepAlgoAPI_Common.hxx>
 #include <BRepAlgoAPI_Cut.hxx>
 #include <BRepAlgoAPI_Fuse.hxx>
+#include <BRepBuilderAPI_Copy.hxx>
 #include <BRepBuilderAPI_MakeEdge.hxx>
 #include <BRepBuilderAPI_MakeVertex.hxx>
 #include <BRepExtrema_DistShapeShape.hxx>
@@ -67,6 +68,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
+#include <limits>
 #include <memory>
 #include <mutex>
 #include <stdexcept>
@@ -99,6 +101,7 @@ void addNames(jlong& primary, std::vector<jlong>& aliases, jlong tag, const std:
 }
 
 std::mutex g_mutex;
+std::mutex g_stepMutex;  // STEPControl_Writer verändert globale Interface_Static-Werte in OCCT
 std::unordered_map<jlong, Entry> g_shapes;
 jlong g_next = 1;
 
@@ -172,7 +175,13 @@ class Reader {
     if (p_ >= end_) throw std::runtime_error("Ungültiges Profil (Ende erreicht)");
     return *p_++;
   }
-  int nextInt() { return static_cast<int>(std::lround(next())); }
+  int nextInt() {
+    double v = next();
+    if (!std::isfinite(v) || v < std::numeric_limits<int>::min() || v > std::numeric_limits<int>::max())
+      throw std::runtime_error("Ungültiger Ganzzahlwert im Profil");
+    return static_cast<int>(std::lround(v));
+  }
+  size_t remaining() const { return static_cast<size_t>(end_ - p_); }
 
  private:
   const double* p_;
@@ -181,7 +190,7 @@ class Reader {
 
 TopoDS_Wire readWire(Reader& r, std::vector<gp_Pnt>& mids) {
   int nSegs = r.nextInt();
-  if (nSegs <= 0) throw std::runtime_error("Kontur ohne Segmente");
+  if (nSegs <= 0 || static_cast<size_t>(nSegs) > r.remaining() / 3) throw std::runtime_error("Kontur ohne gültige Segmente");
   BRepBuilderAPI_MakeWire wire;
   for (int i = 0; i < nSegs; ++i) {
     int type = r.nextInt();
@@ -228,7 +237,7 @@ TopoDS_Wire readWire(Reader& r, std::vector<gp_Pnt>& mids) {
 TopoDS_Face readProfile(const double* prog, size_t len, std::vector<gp_Pnt>& mids) {
   Reader r(prog, len);
   int nWires = r.nextInt();
-  if (nWires <= 0) throw std::runtime_error("Profil ohne Kontur");
+  if (nWires <= 0 || static_cast<size_t>(nWires) > r.remaining() / 4) throw std::runtime_error("Profil ohne gültige Kontur");
   TopoDS_Wire outer = readWire(r, mids);
   BRepBuilderAPI_MakeFace mk(gp_Pln(), outer, Standard_True);
   if (!mk.IsDone()) throw std::runtime_error("Aus der äußeren Kontur lässt sich keine Fläche bilden (nicht geschlossen?)");
@@ -260,18 +269,54 @@ auto guarded(JNIEnv* env, F&& f) -> decltype(f()) {
 
 jfloatArray toJ(JNIEnv* env, const std::vector<float>& v) {
   jfloatArray a = env->NewFloatArray(static_cast<jsize>(v.size()));
+  if (!a) return nullptr;
   if (!v.empty()) env->SetFloatArrayRegion(a, 0, static_cast<jsize>(v.size()), v.data());
   return a;
 }
 jintArray toJ(JNIEnv* env, const std::vector<jint>& v) {
   jintArray a = env->NewIntArray(static_cast<jsize>(v.size()));
+  if (!a) return nullptr;
   if (!v.empty()) env->SetIntArrayRegion(a, 0, static_cast<jsize>(v.size()), v.data());
   return a;
 }
 jdoubleArray toJ(JNIEnv* env, const std::vector<double>& v) {
   jdoubleArray a = env->NewDoubleArray(static_cast<jsize>(v.size()));
+  if (!a) return nullptr;
   if (!v.empty()) env->SetDoubleArrayRegion(a, 0, static_cast<jsize>(v.size()), v.data());
   return a;
+}
+jlongArray toJ(JNIEnv* env, const std::vector<jlong>& v) {
+  jlongArray a = env->NewLongArray(static_cast<jsize>(v.size()));
+  if (!a) return nullptr;
+  if (!v.empty()) env->SetLongArrayRegion(a, 0, static_cast<jsize>(v.size()), v.data());
+  return a;
+}
+
+std::vector<double> readDoubleArray(JNIEnv* env, jdoubleArray arr, const char* name) {
+  if (!arr) throw std::runtime_error(std::string(name) + " fehlt");
+  jsize n = env->GetArrayLength(arr);
+  if (n < 0) throw std::runtime_error(std::string(name) + " ungültig");
+  std::vector<double> out(static_cast<size_t>(n));
+  if (n > 0) env->GetDoubleArrayRegion(arr, 0, n, out.data());
+  return out;
+}
+
+std::vector<jlong> readLongArray(JNIEnv* env, jlongArray arr, const char* name) {
+  if (!arr) throw std::runtime_error(std::string(name) + " fehlt");
+  jsize n = env->GetArrayLength(arr);
+  if (n < 0) throw std::runtime_error(std::string(name) + " ungültig");
+  std::vector<jlong> out(static_cast<size_t>(n));
+  if (n > 0) env->GetLongArrayRegion(arr, 0, n, out.data());
+  return out;
+}
+
+std::vector<jint> readIntArray(JNIEnv* env, jintArray arr, const char* name) {
+  if (!arr) throw std::runtime_error(std::string(name) + " fehlt");
+  jsize n = env->GetArrayLength(arr);
+  if (n < 0) throw std::runtime_error(std::string(name) + " ungültig");
+  std::vector<jint> out(static_cast<size_t>(n));
+  if (n > 0) env->GetIntArrayRegion(arr, 0, n, out.data());
+  return out;
 }
 
 jlong booleanOp(jlong ha, jlong hb, int op) {
@@ -292,15 +337,20 @@ jlong booleanOp(jlong ha, jlong hb, int op) {
   return run(BRepAlgoAPI_Common(a.shape, b.shape), "Schnittmenge fehlgeschlagen");
 }
 
-jlong transformed(jlong h, const gp_Trsf& t) {
-  Entry e = getEntry(h);
-  BRepBuilderAPI_Transform tr(e.shape, t, Standard_True);
-  TopoDS_Shape result = tr.Shape();
+template <typename Mod>
+jlong applyModification(const Entry& e, Mod&& mod) {
+  if (!mod.IsDone()) throw std::runtime_error("Formänderung fehlgeschlagen");
+  TopoDS_Shape result = mod.Shape();
   TopTools_IndexedMapOfShape faces = facesOf(result);
   std::vector<jlong> tags(static_cast<size_t>(faces.Extent()), 0);
   Aliases aliases;
-  propagate(e, faces, tags, aliases, [&](const TopoDS_Shape& f) { return std::vector<TopoDS_Shape>{tr.ModifiedShape(f)}; });
+  propagate(e, faces, tags, aliases, [&](const TopoDS_Shape& f) { return std::vector<TopoDS_Shape>{mod.ModifiedShape(f)}; });
   return store(result, std::move(tags), std::move(aliases));
+}
+
+jlong transformed(jlong h, const gp_Trsf& t) {
+  Entry e = getEntry(h);
+  return applyModification(e, BRepBuilderAPI_Transform(e.shape, t, Standard_True));
 }
 
 // Liest Profil und Segmentnamen aus den Java-Feldern.
@@ -311,13 +361,9 @@ struct ProfileInput {
 };
 
 ProfileInput readProfileInput(JNIEnv* env, jdoubleArray profile, jlongArray segmentTags) {
-  jsize n = env->GetArrayLength(profile);
-  std::vector<double> prog(static_cast<size_t>(n));
-  env->GetDoubleArrayRegion(profile, 0, n, prog.data());
+  std::vector<double> prog = readDoubleArray(env, profile, "Profil");
   ProfileInput in;
-  jsize nt = env->GetArrayLength(segmentTags);
-  in.segTags.resize(static_cast<size_t>(nt));
-  if (nt > 0) env->GetLongArrayRegion(segmentTags, 0, nt, in.segTags.data());
+  in.segTags = readLongArray(env, segmentTags, "Segmentnamen");
   in.face = readProfile(prog.data(), prog.size(), in.mids);
   if (!in.segTags.empty() && in.segTags.size() != in.mids.size()) throw std::runtime_error("Anzahl der Segmentnamen passt nicht zum Profil");
   return in;
@@ -399,9 +445,8 @@ JNIEXPORT jlong JNICALL Java_dev_androidcad_brep_NativeBrep_extrude(JNIEnv* env,
 JNIEXPORT jlong JNICALL Java_dev_androidcad_brep_NativeBrep_revolve(JNIEnv* env, jclass, jdoubleArray profile, jdoubleArray axis, jdouble angle,
                                                                     jlongArray segmentTags, jlong startTag, jlong endTag) {
   return guarded(env, [&]() -> jlong {
-    if (env->GetArrayLength(axis) != 4) throw std::runtime_error("Drehachse braucht 4 Werte (Punkt, Richtung)");
-    double a[4];
-    env->GetDoubleArrayRegion(axis, 0, 4, a);
+    std::vector<double> a = readDoubleArray(env, axis, "Drehachse");
+    if (a.size() != 4) throw std::runtime_error("Drehachse braucht 4 Werte (Punkt, Richtung)");
     if (std::hypot(a[2], a[3]) < 1e-12) throw std::runtime_error("Drehachse ohne Richtung");
     if (!(angle > 0.0 && angle <= 360.0)) throw std::runtime_error("Drehwinkel muss zwischen 0 und 360 Grad liegen");
     ProfileInput in = readProfileInput(env, profile, segmentTags);
@@ -425,13 +470,9 @@ JNIEXPORT jlong JNICALL Java_dev_androidcad_brep_NativeBrep_fillet(JNIEnv* env, 
     Entry e = getEntry(h);
     TopTools_IndexedMapOfShape edges;
     TopExp::MapShapes(e.shape, TopAbs_EDGE, edges);
-    jsize n = env->GetArrayLength(edgeIds);
-    std::vector<jint> ids(static_cast<size_t>(n));
-    env->GetIntArrayRegion(edgeIds, 0, n, ids.data());
-    jsize nt = env->GetArrayLength(edgeTags);
-    std::vector<jlong> tagsForEdges(static_cast<size_t>(nt));
-    if (nt > 0) env->GetLongArrayRegion(edgeTags, 0, nt, tagsForEdges.data());
-    if (nt != 0 && nt != n) throw std::runtime_error("Anzahl der Namen passt nicht zur Anzahl der Kanten");
+    std::vector<jint> ids = readIntArray(env, edgeIds, "Kanten-IDs");
+    std::vector<jlong> tagsForEdges = readLongArray(env, edgeTags, "Kantennamen");
+    if (!tagsForEdges.empty() && tagsForEdges.size() != ids.size()) throw std::runtime_error("Anzahl der Namen passt nicht zur Anzahl der Kanten");
     auto run = [&](auto&& mk) -> jlong {
     for (jint id : ids) {
       if (id < 1 || id > edges.Extent()) throw std::runtime_error("Kanten-ID außerhalb des gültigen Bereichs");
@@ -468,17 +509,13 @@ JNIEXPORT jlong JNICALL Java_dev_androidcad_brep_NativeBrep_shell(JNIEnv* env, j
     if (!(thickness > 0)) throw std::runtime_error("Wandstärke muss größer als 0 sein");
     Entry e = getEntry(h);
     TopTools_IndexedMapOfShape oldFaces = facesOf(e.shape);
-    jsize n = env->GetArrayLength(faceIds);
-    std::vector<jint> ids(static_cast<size_t>(n));
-    if (n > 0) env->GetIntArrayRegion(faceIds, 0, n, ids.data());
+    std::vector<jint> ids = readIntArray(env, faceIds, "Flächen-IDs");
     TopTools_ListOfShape closing;
     for (jint id : ids) {
       if (id < 1 || id > oldFaces.Extent()) throw std::runtime_error("Flächen-ID außerhalb des gültigen Bereichs");
       closing.Append(oldFaces(id));
     }
-    jsize np = env->GetArrayLength(innerTags);
-    std::vector<jlong> pairs(static_cast<size_t>(np));
-    if (np > 0) env->GetLongArrayRegion(innerTags, 0, np, pairs.data());
+    std::vector<jlong> pairs = readLongArray(env, innerTags, "Innennamen");
     std::unordered_map<jlong, jlong> inner;
     for (size_t i = 0; i + 1 < pairs.size(); i += 2) inner[pairs[i]] = pairs[i + 1];
 
@@ -536,12 +573,18 @@ JNIEXPORT jlong JNICALL Java_dev_androidcad_brep_NativeBrep_translate(JNIEnv* en
   });
 }
 
+JNIEXPORT jlong JNICALL Java_dev_androidcad_brep_NativeBrep_copy(JNIEnv* env, jclass, jlong h) {
+  return guarded(env, [&]() -> jlong {
+    Entry e = getEntry(h);
+    return applyModification(e, BRepBuilderAPI_Copy(e.shape, Standard_True));
+  });
+}
+
 // Starre Bewegung (Drehung + Verschiebung): 12 Werte zeilenweise einer 3x4-Matrix [R | t].
 JNIEXPORT jlong JNICALL Java_dev_androidcad_brep_NativeBrep_transform(JNIEnv* env, jclass, jlong h, jdoubleArray m) {
   return guarded(env, [&]() -> jlong {
-    if (env->GetArrayLength(m) != 12) throw std::runtime_error("Transformation braucht 12 Werte (3x4)");
-    double v[12];
-    env->GetDoubleArrayRegion(m, 0, 12, v);
+    std::vector<double> v = readDoubleArray(env, m, "Transformation");
+    if (v.size() != 12) throw std::runtime_error("Transformation braucht 12 Werte (3x4)");
     gp_Trsf t;
     t.SetValues(v[0], v[1], v[2], v[3], v[4], v[5], v[6], v[7], v[8], v[9], v[10], v[11]);
     return transformed(h, t);
@@ -551,9 +594,8 @@ JNIEXPORT jlong JNICALL Java_dev_androidcad_brep_NativeBrep_transform(JNIEnv* en
 // Spiegelung an der Ebene durch (px, py, pz) mit der Normalen (nx, ny, nz): 6 Werte.
 JNIEXPORT jlong JNICALL Java_dev_androidcad_brep_NativeBrep_mirror(JNIEnv* env, jclass, jlong h, jdoubleArray plane) {
   return guarded(env, [&]() -> jlong {
-    if (env->GetArrayLength(plane) != 6) throw std::runtime_error("Spiegelebene braucht 6 Werte (Punkt, Normale)");
-    double v[6];
-    env->GetDoubleArrayRegion(plane, 0, 6, v);
+    std::vector<double> v = readDoubleArray(env, plane, "Spiegelebene");
+    if (v.size() != 6) throw std::runtime_error("Spiegelebene braucht 6 Werte (Punkt, Normale)");
     gp_Trsf t;
     t.SetMirror(gp_Ax2(gp_Pnt(v[0], v[1], v[2]), gp_Dir(v[3], v[4], v[5])));
     return transformed(h, t);
@@ -565,17 +607,13 @@ JNIEXPORT jlong JNICALL Java_dev_androidcad_brep_NativeBrep_mirror(JNIEnv* env, 
 JNIEXPORT jlong JNICALL Java_dev_androidcad_brep_NativeBrep_retag(JNIEnv* env, jclass, jlong h, jlongArray tags, jlongArray aliasPairs) {
   return guarded(env, [&]() -> jlong {
     Entry e = getEntry(h);
-    jsize n = env->GetArrayLength(tags);
-    if (static_cast<size_t>(n) != e.faceTags.size()) throw std::runtime_error("Anzahl der Flächennamen passt nicht zur Anzahl der Flächen");
-    std::vector<jlong> t(static_cast<size_t>(n));
-    if (n > 0) env->GetLongArrayRegion(tags, 0, n, t.data());
-    jsize na = env->GetArrayLength(aliasPairs);
-    std::vector<jlong> pairs(static_cast<size_t>(na));
-    if (na > 0) env->GetLongArrayRegion(aliasPairs, 0, na, pairs.data());
-    Aliases aliases(static_cast<size_t>(n));
+    std::vector<jlong> t = readLongArray(env, tags, "Flächennamen");
+    if (t.size() != e.faceTags.size()) throw std::runtime_error("Anzahl der Flächennamen passt nicht zur Anzahl der Flächen");
+    std::vector<jlong> pairs = readLongArray(env, aliasPairs, "Zweitnamen");
+    Aliases aliases(t.size());
     for (size_t i = 0; i + 1 < pairs.size(); i += 2) {
       jlong face = pairs[i];
-      if (face < 1 || face > n) throw std::runtime_error("Flächen-ID eines Zweitnamens außerhalb des gültigen Bereichs");
+      if (face < 1 || static_cast<size_t>(face) > t.size()) throw std::runtime_error("Flächen-ID eines Zweitnamens außerhalb des gültigen Bereichs");
       addNames(t[static_cast<size_t>(face - 1)], aliases[static_cast<size_t>(face - 1)], pairs[i + 1], {});
     }
     return store(e.shape, std::move(t), std::move(aliases));
@@ -589,9 +627,7 @@ JNIEXPORT jlongArray JNICALL Java_dev_androidcad_brep_NativeBrep_faceAliases(JNI
     std::vector<jlong> out;
     for (size_t i = 0; i < e.faceAliases.size(); ++i)
       for (jlong t : e.faceAliases[i]) { out.push_back(static_cast<jlong>(i + 1)); out.push_back(t); }
-    jlongArray a = env->NewLongArray(static_cast<jsize>(out.size()));
-    if (!out.empty()) env->SetLongArrayRegion(a, 0, static_cast<jsize>(out.size()), out.data());
-    return a;
+    return toJ(env, out);
   });
 }
 
@@ -699,9 +735,12 @@ JNIEXPORT jdouble JNICALL Java_dev_androidcad_brep_NativeBrep_faceArea(JNIEnv* e
 JNIEXPORT void JNICALL Java_dev_androidcad_brep_NativeBrep_writeStep(JNIEnv* env, jclass, jlong h, jstring path) {
   guarded(env, [&]() -> int {
     TopoDS_Shape s = get(h);  // Kopie des Verweises: der Körper bleibt gültig, auch wenn das Handle währenddessen freigegeben wird
+    if (!path) throw std::runtime_error("Dateipfad fehlt");
     const char* p = env->GetStringUTFChars(path, nullptr);
+    if (!p) return 0;  // JNI hat bereits OutOfMemoryError vorgemerkt
     std::string file(p);
     env->ReleaseStringUTFChars(path, p);
+    std::lock_guard<std::mutex> stepLock(g_stepMutex);
     STEPControl_Writer writer;
     if (writer.Transfer(s, STEPControl_AsIs) != IFSelect_RetDone) throw std::runtime_error("Körper ließ sich nicht nach STEP übertragen");
     if (writer.Write(file.c_str()) != IFSelect_RetDone) throw std::runtime_error("STEP-Datei ließ sich nicht schreiben");
@@ -766,6 +805,13 @@ JNIEXPORT jdoubleArray JNICALL Java_dev_androidcad_brep_NativeBrep_edgeInfo(JNIE
 //                         float[] edgePositions, int[] edgePointCounts, int[] edgeIds (1-basiert) }
 JNIEXPORT jobjectArray JNICALL Java_dev_androidcad_brep_NativeBrep_tessellate(JNIEnv* env, jclass, jlong h, jdouble linear, jdouble angular) {
   return guarded(env, [&]() -> jobjectArray {
+    if (!std::isfinite(linear) || linear < 1e-4 || !std::isfinite(angular) || angular < 1e-3) {
+      throw std::runtime_error("Tessellierungsgenauigkeit außerhalb des gültigen Bereichs");
+    }
+    constexpr size_t kMaxTriangles = 1'000'000;
+    constexpr size_t kMaxVertices = 1'000'000;
+    constexpr size_t kMaxEdgePoints = 2'000'000;
+
     TopoDS_Shape shape = get(h);
     BRepMesh_IncrementalMesh mesher(shape, linear, Standard_False, angular, Standard_True);
 
@@ -778,6 +824,11 @@ JNIEXPORT jobjectArray JNICALL Java_dev_androidcad_brep_NativeBrep_tessellate(JN
       TopLoc_Location loc;
       Handle(Poly_Triangulation) tri = BRep_Tool::Triangulation(face, loc);
       if (tri.IsNull()) continue;
+      if (tri->NbNodes() < 0 || tri->NbTriangles() < 0 ||
+          pos.size() / 3 + static_cast<size_t>(tri->NbNodes()) > kMaxVertices ||
+          triFace.size() + static_cast<size_t>(tri->NbTriangles()) > kMaxTriangles) {
+        throw std::runtime_error("Tessellierung überschreitet Dreiecks- oder Punktlimit");
+      }
       const gp_Trsf trsf = loc.Transformation();
       const jint base = static_cast<jint>(pos.size() / 3);
       for (int i = 1; i <= tri->NbNodes(); ++i) {
@@ -801,6 +852,9 @@ JNIEXPORT jobjectArray JNICALL Java_dev_androidcad_brep_NativeBrep_tessellate(JN
     for (int ei = 1; ei <= edges.Extent(); ++ei) {
       BRepAdaptor_Curve c(TopoDS::Edge(edges(ei)));
       GCPnts_TangentialDeflection pts(c, angular, linear);
+      if (pts.NbPoints() < 0 || edgePos.size() / 3 + static_cast<size_t>(pts.NbPoints()) > kMaxEdgePoints) {
+        throw std::runtime_error("Tessellierung überschreitet Kantenpunktlimit");
+      }
       for (int i = 1; i <= pts.NbPoints(); ++i) {
         gp_Pnt p = pts.Value(i);
         edgePos.insert(edgePos.end(), {static_cast<float>(p.X()), static_cast<float>(p.Y()), static_cast<float>(p.Z())});
@@ -810,13 +864,22 @@ JNIEXPORT jobjectArray JNICALL Java_dev_androidcad_brep_NativeBrep_tessellate(JN
     }
 
     jclass objCls = env->FindClass("java/lang/Object");
+    if (!objCls) return nullptr;
     jobjectArray out = env->NewObjectArray(6, objCls, nullptr);
-    env->SetObjectArrayElement(out, 0, toJ(env, pos));
-    env->SetObjectArrayElement(out, 1, toJ(env, tris));
-    env->SetObjectArrayElement(out, 2, toJ(env, triFace));
-    env->SetObjectArrayElement(out, 3, toJ(env, edgePos));
-    env->SetObjectArrayElement(out, 4, toJ(env, edgeCounts));
-    env->SetObjectArrayElement(out, 5, toJ(env, edgeIds));
+    if (!out) return nullptr;
+    jobject parts[6] = {
+        toJ(env, pos),
+        toJ(env, tris),
+        toJ(env, triFace),
+        toJ(env, edgePos),
+        toJ(env, edgeCounts),
+        toJ(env, edgeIds),
+    };
+    for (jsize i = 0; i < 6; ++i) {
+      if (!parts[i]) return nullptr;
+      env->SetObjectArrayElement(out, i, parts[i]);
+      env->DeleteLocalRef(parts[i]);
+    }
     return out;
   });
 }
@@ -849,9 +912,7 @@ JNIEXPORT jdoubleArray JNICALL Java_dev_androidcad_brep_NativeBrep_faceGeometry(
 JNIEXPORT jlongArray JNICALL Java_dev_androidcad_brep_NativeBrep_faceTags(JNIEnv* env, jclass, jlong h) {
   return guarded(env, [&]() -> jlongArray {
     Entry e = getEntry(h);
-    jlongArray a = env->NewLongArray(static_cast<jsize>(e.faceTags.size()));
-    if (!e.faceTags.empty()) env->SetLongArrayRegion(a, 0, static_cast<jsize>(e.faceTags.size()), e.faceTags.data());
-    return a;
+    return toJ(env, e.faceTags);
   });
 }
 
@@ -880,9 +941,7 @@ JNIEXPORT jlongArray JNICALL Java_dev_androidcad_brep_NativeBrep_edgeFaceTags(JN
       out.push_back(std::min(a, b));
       out.push_back(std::max(a, b));
     }
-    jlongArray arr = env->NewLongArray(static_cast<jsize>(out.size()));
-    if (!out.empty()) env->SetLongArrayRegion(arr, 0, static_cast<jsize>(out.size()), out.data());
-    return arr;
+    return toJ(env, out);
   });
 }
 

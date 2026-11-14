@@ -12,6 +12,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
+#include <limits>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -71,12 +72,16 @@ struct Item {
 
 [[noreturn]] void fail(const std::string& msg) { throw std::runtime_error(msg); }
 
+constexpr int kMaxSegments = 65536;
+constexpr size_t kMaxVertices = 2'000'000;
+constexpr size_t kMaxTriangles = 2'000'000;
+
 class Machine {
  public:
   Machine(const double* prog, size_t len) : p_(prog), end_(prog + len) {}
 
   Manifold run() {
-    while (p_ < end_) step(static_cast<int>(next()));
+    while (p_ < end_) step(nextInt());
     if (st_.empty()) return Manifold();
     if (st_.size() > 1) combine(OpType::Add, st_.size());
     Item top = std::move(st_.back());
@@ -89,11 +94,27 @@ class Machine {
   const double* end_;
   std::vector<Item> st_;
 
+  size_t remaining() const { return static_cast<size_t>(end_ - p_); }
   double next() {
     if (p_ >= end_) fail("Ungültiges Programm (Ende erreicht)");
     return *p_++;
   }
-  int nextInt() { return static_cast<int>(std::lround(next())); }
+  int nextInt() {
+    double v = next();
+    if (!std::isfinite(v) || v < std::numeric_limits<int>::min() || v > std::numeric_limits<int>::max())
+      fail("Ungültiger Ganzzahlwert im Programm");
+    return static_cast<int>(std::lround(v));
+  }
+  size_t nextStackCount(const char* what) {
+    int n = nextInt();
+    if (n < 0 || static_cast<size_t>(n) > st_.size()) fail(std::string(what) + ": ungültige Operandenanzahl");
+    return static_cast<size_t>(n);
+  }
+  int nextSegments(const char* what) {
+    int seg = nextInt();
+    if (seg < 0 || seg > kMaxSegments) fail(std::string(what) + ": Segmentanzahl außerhalb des gültigen Bereichs");
+    return seg;
+  }
   bool nextBool() { return next() != 0.0; }
 
   Item pop() {
@@ -150,21 +171,21 @@ class Machine {
       }
       case SPHERE: {
         double r = next();
-        int seg = nextInt();
+        int seg = nextSegments("sphere");
         st_.push_back(Item::of(Manifold::Sphere(r, seg)));
         break;
       }
       case CYLINDER: {
         double h = next(), r1 = next(), r2 = next();
         bool center = nextBool();
-        int seg = nextInt();
+        int seg = nextSegments("cylinder");
         st_.push_back(Item::of(Manifold::Cylinder(h, r1, r2, seg, center)));
         break;
       }
       case POLYHEDRON: polyhedron(); break;
       case CIRCLE: {
         double r = next();
-        int seg = nextInt();
+        int seg = nextSegments("circle");
         st_.push_back(Item::of(CrossSection::Circle(r, seg)));
         break;
       }
@@ -176,11 +197,11 @@ class Machine {
       }
       case POLYGON: polygon(); break;
       case TRANSFORM: transform(); break;
-      case UNION: combine(OpType::Add, static_cast<size_t>(nextInt())); break;
-      case DIFFERENCE: combine(OpType::Subtract, static_cast<size_t>(nextInt())); break;
-      case INTERSECTION: combine(OpType::Intersect, static_cast<size_t>(nextInt())); break;
-      case HULL: hull(static_cast<size_t>(nextInt())); break;
-      case MINKOWSKI: minkowski(static_cast<size_t>(nextInt())); break;
+      case UNION: combine(OpType::Add, nextStackCount("union")); break;
+      case DIFFERENCE: combine(OpType::Subtract, nextStackCount("difference")); break;
+      case INTERSECTION: combine(OpType::Intersect, nextStackCount("intersection")); break;
+      case HULL: hull(nextStackCount("hull")); break;
+      case MINKOWSKI: minkowski(nextStackCount("minkowski")); break;
       case LINEAR_EXTRUDE: linearExtrude(); break;
       case ROTATE_EXTRUDE: rotateExtrude(); break;
       case OFFSET: offset(); break;
@@ -190,13 +211,17 @@ class Machine {
 
   void polyhedron() {
     int np = nextInt();
+    if (np < 0 || static_cast<size_t>(np) > remaining() / 3) fail("polyhedron: ungültige Punktanzahl");
     MeshGL64 mesh;
     mesh.numProp = 3;
-    mesh.vertProperties.reserve(static_cast<size_t>(np) * 3);
-    for (int i = 0; i < np * 3; ++i) mesh.vertProperties.push_back(next());
+    const size_t nCoords = static_cast<size_t>(np) * 3;
+    mesh.vertProperties.reserve(nCoords);
+    for (size_t i = 0; i < nCoords; ++i) mesh.vertProperties.push_back(next());
     int nf = nextInt();
+    if (nf < 0 || static_cast<size_t>(nf) > remaining()) fail("polyhedron: ungültige Flächenanzahl");
     for (int f = 0; f < nf; ++f) {
       int k = nextInt();
+      if (k < 0 || static_cast<size_t>(k) > remaining()) fail("polyhedron: ungültige Eckenzahl");
       std::vector<uint64_t> idx(static_cast<size_t>(k));
       for (int j = 0; j < k; ++j) {
         int v = nextInt();
@@ -231,9 +256,11 @@ class Machine {
 
   void polygon() {
     int npaths = nextInt();
+    if (npaths < 0 || static_cast<size_t>(npaths) > remaining()) fail("polygon: ungültige Konturanzahl");
     Polygons polys;
     for (int i = 0; i < npaths; ++i) {
       int n = nextInt();
+      if (n < 0 || static_cast<size_t>(n) > remaining() / 2) fail("polygon: ungültige Punktanzahl");
       SimplePolygon sp;
       sp.reserve(static_cast<size_t>(n));
       for (int j = 0; j < n; ++j) {
@@ -295,7 +322,7 @@ class Machine {
     double h = next();
     bool center = nextBool();
     double twist = next();
-    int slices = nextInt();
+    int slices = nextSegments("linear_extrude");
     double sx = next(), sy = next();
     Item it = pop();
     if (!it.is2d) fail("linear_extrude: 2D-Form erwartet");
@@ -313,7 +340,7 @@ class Machine {
 
   void rotateExtrude() {
     double angle = next();
-    int seg = nextInt();
+    int seg = nextSegments("rotate_extrude");
     Item it = pop();
     if (!it.is2d) fail("rotate_extrude: 2D-Form erwartet");
     if (it.shape.IsEmpty()) {
@@ -327,7 +354,7 @@ class Machine {
     double amount = next();
     bool round = nextBool();
     bool chamfer = nextBool();
-    int seg = nextInt();
+    int seg = nextSegments("offset");
     Item it = pop();
     if (!it.is2d) fail("offset: 2D-Form erwartet");
     auto jt = round ? CrossSection::JoinType::Round : (chamfer ? CrossSection::JoinType::Bevel : CrossSection::JoinType::Miter);
@@ -346,28 +373,52 @@ void throwJava(JNIEnv* env, const char* msg) {
 extern "C" JNIEXPORT jobjectArray JNICALL
 Java_dev_androidcad_geometry_NativeKernel_nativeBuild(JNIEnv* env, jclass, jdoubleArray program) {
   try {
+    if (!program) fail("Programm fehlt");
     jsize len = env->GetArrayLength(program);
+    if (len < 0) fail("Ungültige Programmlänge");
     std::vector<double> prog(static_cast<size_t>(len));
-    env->GetDoubleArrayRegion(program, 0, len, prog.data());
+    if (len > 0) env->GetDoubleArrayRegion(program, 0, len, prog.data());
 
     Manifold result = Machine(prog.data(), prog.size()).run();
     MeshGL mesh = result.GetMeshGL();
 
     const size_t nv = mesh.NumVert();
     const size_t nt = mesh.NumTri();
+    const size_t maxJsize = static_cast<size_t>(std::numeric_limits<jsize>::max());
+    if (nv > kMaxVertices || nt > kMaxTriangles || nv > maxJsize / 3 || nt > maxJsize / 3) {
+      fail("Netz überschreitet Größenlimit");
+    }
     std::vector<float> pos(nv * 3);
     for (size_t i = 0; i < nv; ++i)
       for (size_t k = 0; k < 3; ++k) pos[i * 3 + k] = mesh.vertProperties[i * mesh.numProp + k];
 
     jfloatArray jpos = env->NewFloatArray(static_cast<jsize>(pos.size()));
-    env->SetFloatArrayRegion(jpos, 0, static_cast<jsize>(pos.size()), pos.data());
+    if (!jpos) return nullptr;
+    if (!pos.empty()) env->SetFloatArrayRegion(jpos, 0, static_cast<jsize>(pos.size()), pos.data());
+
     jintArray jidx = env->NewIntArray(static_cast<jsize>(nt * 3));
-    env->SetIntArrayRegion(jidx, 0, static_cast<jsize>(nt * 3), reinterpret_cast<const jint*>(mesh.triVerts.data()));
+    if (!jidx) {
+      env->DeleteLocalRef(jpos);
+      return nullptr;
+    }
+    if (nt > 0) env->SetIntArrayRegion(jidx, 0, static_cast<jsize>(nt * 3), reinterpret_cast<const jint*>(mesh.triVerts.data()));
 
     jclass objCls = env->FindClass("java/lang/Object");
+    if (!objCls) {
+      env->DeleteLocalRef(jpos);
+      env->DeleteLocalRef(jidx);
+      return nullptr;
+    }
     jobjectArray out = env->NewObjectArray(2, objCls, nullptr);
+    if (!out) {
+      env->DeleteLocalRef(jpos);
+      env->DeleteLocalRef(jidx);
+      return nullptr;
+    }
     env->SetObjectArrayElement(out, 0, jpos);
     env->SetObjectArrayElement(out, 1, jidx);
+    env->DeleteLocalRef(jpos);
+    env->DeleteLocalRef(jidx);
     return out;
   } catch (const std::exception& e) {
     throwJava(env, e.what());
