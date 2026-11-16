@@ -21,7 +21,7 @@ A clear and concise description of what you expected to happen.
 ## Environment
 - Device: [e.g. Google Pixel Tablet, Samsung Galaxy Tab S9]
 - Android version: [e.g. Android 14]
-- App version: [e.g. 0.9.2-beta]
+- App version: [e.g. 0.9.3-beta]
 - App variant: [FOSS / Google Play]
 
 ## Additional Context

@@ -15,14 +15,33 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 
-// TODO(Nutzer): Eigene Spenden- und Quellcode-URLs eintragen
 object Distribution {
-    const val SOURCE_CODE_URL = "https://PLACEHOLDER/source"
-    const val LIBERAPAY_URL = "https://liberapay.com/PLACEHOLDER"
-    const val GITHUB_SPONSORS_URL = "https://github.com/sponsors/PLACEHOLDER"
+    const val SOURCE_CODE_URL = "https://github.com/KevBo8327/AxisWright"
+
+    // TODO(Nutzer): Eigene Spenden-URLs eintragen (leer lassen, bis die Konten eingerichtet sind)
+    const val LIBERAPAY_URL = ""
+    const val GITHUB_SPONSORS_URL = ""
+
+    internal enum class SupportProvider { LIBERAPAY, GITHUB_SPONSORS }
+
+    internal data class SupportLink(val provider: SupportProvider, val url: String)
+
+    internal fun supportLinks(
+        liberapayUrl: String = LIBERAPAY_URL,
+        githubSponsorsUrl: String = GITHUB_SPONSORS_URL,
+    ): List<SupportLink> = buildList {
+        if (liberapayUrl.isNotBlank()) add(SupportLink(SupportProvider.LIBERAPAY, liberapayUrl))
+        if (githubSponsorsUrl.isNotBlank()) add(SupportLink(SupportProvider.GITHUB_SPONSORS, githubSponsorsUrl))
+    }
+
+    internal fun hasSupportLinks(
+        liberapayUrl: String = LIBERAPAY_URL,
+        githubSponsorsUrl: String = GITHUB_SPONSORS_URL,
+    ): Boolean = supportLinks(liberapayUrl, githubSponsorsUrl).isNotEmpty()
 
     @Composable
     fun MenuItems(onOpenSupport: () -> Unit) {
+        if (!hasSupportLinks()) return
         MenuItem(
             text = stringResource(R.string.menu_support),
             icon = CadIcon.HEART,
@@ -32,7 +51,7 @@ object Distribution {
 
     @Composable
     fun Dialogs(showSupport: Boolean, onDismissSupport: () -> Unit) {
-        if (showSupport) {
+        if (showSupport && hasSupportLinks()) {
             SupportDialog(onDismiss = onDismissSupport)
         }
     }
@@ -42,6 +61,8 @@ object Distribution {
 private fun SupportDialog(onDismiss: () -> Unit) {
     val context = LocalContext.current
     val colors = MaterialTheme.colorScheme
+    val links = Distribution.supportLinks()
+    if (links.isEmpty()) return
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.support_title)) },
@@ -56,21 +77,17 @@ private fun SupportDialog(onDismiss: () -> Unit) {
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    Button(
-                        onClick = {
-                            openUrl(context, Distribution.LIBERAPAY_URL)
-                        },
-                        modifier = Modifier.weight(1f),
-                    ) {
-                        Text(stringResource(R.string.support_liberapay))
-                    }
-                    Button(
-                        onClick = {
-                            openUrl(context, Distribution.GITHUB_SPONSORS_URL)
-                        },
-                        modifier = Modifier.weight(1f),
-                    ) {
-                        Text(stringResource(R.string.support_github))
+                    for (link in links) {
+                        val labelRes = when (link.provider) {
+                            Distribution.SupportProvider.LIBERAPAY -> R.string.support_liberapay
+                            Distribution.SupportProvider.GITHUB_SPONSORS -> R.string.support_github
+                        }
+                        Button(
+                            onClick = { openUrl(context, link.url) },
+                            modifier = Modifier.weight(1f),
+                        ) {
+                            Text(stringResource(labelRes))
+                        }
                     }
                 }
             }

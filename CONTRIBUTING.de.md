@@ -42,7 +42,7 @@ Vor jedem Commit oder Pull Request müssen die JVM- und Lint-Tests bestanden wer
 - Kleinteilige, in sich geschlossene Commits bevorzugen.
 
 ### 6. Ablauf für Pull Requests
-1. Repository forken und eigenen Arbeitszweig erstellen (`feature/...` oder `fix/...`).
+1. Repository unter [https://github.com/KevBo8327/AxisWright](https://github.com/KevBo8327/AxisWright) (Spiegel: [Codeberg](https://codeberg.org/kb-it-service/AxisWright_CAD)) forken und eigenen Arbeitszweig erstellen (`feature/...` oder `fix/...`).
 2. Änderungen implementieren und Tests lokal ausführen.
 3. Pull Request gegen den Hauptzweig `main` öffnen.
 4. CLA-Häkchen im Pull-Request-Formular setzen.

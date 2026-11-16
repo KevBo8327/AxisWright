@@ -42,7 +42,7 @@ All unit and lint tests must pass before submitting contributions:
 - Keep commits cohesive and minimal.
 
 ### 6. Pull Request Workflow
-1. Fork the repository and create your topic branch (`feature/...` or `fix/...`).
+1. Fork the repository at [https://github.com/KevBo8327/AxisWright](https://github.com/KevBo8327/AxisWright) (mirror: [Codeberg](https://codeberg.org/kb-it-service/AxisWright_CAD)) and create your topic branch (`feature/...` or `fix/...`).
 2. Make your changes and verify that all tests pass.
 3. Open a Pull Request against the `main` branch.
 4. Check the CLA acceptance box in the Pull Request template.

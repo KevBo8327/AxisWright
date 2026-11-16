@@ -14,7 +14,7 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "Android-CAD"
+rootProject.name = "AxisWright"
 
 include(":core:lang")
 include(":core:geometry")

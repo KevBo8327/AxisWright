@@ -1,3 +1,5 @@
+import com.android.build.api.variant.FilterConfiguration
+import com.android.build.api.variant.impl.VariantOutputImpl
 import java.util.Properties
 
 plugins {
@@ -30,6 +32,10 @@ gradle.taskGraph.whenReady {
     ) throw GradleException("Kein Upload-Schlüssel: keystore.properties anlegen, siehe README (nur zum Testen: -PallowDebugSignedRelease=true).")
 }
 
+// APK-Splits nur für reine APK-Builds aktivieren; AAB-Bundles (z. B. bundlePlayRelease) schlagen bei AGP 9 mit isShrinkResources=true
+// und aktivierten ABI-Splits fehl (Issue 402800800) und nutzen stattdessen ndk.abiFilters.
+val isBundleBuild = gradle.startParameter.taskNames.any { it.contains("bundle", ignoreCase = true) }
+
 android {
     namespace = "dev.androidcad.app"
     compileSdk = 36
@@ -40,10 +46,26 @@ android {
         minSdk = 26
         targetSdk = 36
         // versionCode = Major·1000 + Minor·100 + Patch (0.9.0 → 900, 1.0.0 → 1000); jeder Upload in Play braucht einen höheren Wert
-        versionCode = 902
-        versionName = "0.9.2-beta"
-        // Googlebooks laufen auch auf Intel/AMD → x86_64 ist Pflicht neben arm64.
-        ndk { abiFilters += listOf("arm64-v8a", "x86_64") }
+        versionCode = 903
+        versionName = "0.9.3-beta"
+        if (isBundleBuild) {
+            // Googlebooks laufen auch auf Intel/AMD → x86_64 ist Pflicht neben arm64.
+            ndk { abiFilters += listOf("arm64-v8a", "x86_64") }
+        }
+    }
+
+    // APK-Splits je ABI (arm64-v8a für Geräte, x86_64 für Emulator/Chromebooks), ohne universelle APK.
+    // Betrifft nur APK-Builds (AAB/bundle bleibt unverändert und bündelt weiterhin beide ABIs).
+    // Beide ABI-APKs behalten versionCode = 903 (für GitHub-Releases/F-Droid sauber nach Major·1000+Minor·100+Patch; jede Zielarchitektur installiert nur ihr eigenes APK).
+    if (!isBundleBuild) {
+        splits {
+            abi {
+                isEnable = true
+                reset()
+                include("arm64-v8a", "x86_64")
+                isUniversalApk = false
+            }
+        }
     }
 
     flavorDimensions += "distribution"
@@ -83,6 +105,23 @@ android {
 
     // Zweisprachig (values = Englisch, values-de = Deutsch): ein Text, der in einer Sprache fehlt, ist ein Fehler
     lint { error += setOf("MissingTranslation", "ExtraTranslation") }
+}
+
+androidComponents {
+    onVariants(selector().withBuildType("release")) { variant ->
+        variant.outputs.forEach { output ->
+            val abi = output.filters
+                .firstOrNull { it.filterType == FilterConfiguration.FilterType.ABI }
+                ?.identifier
+            val versionName = output.versionName.orNull
+            val flavor = variant.flavorName
+            if (abi != null && versionName != null && !flavor.isNullOrEmpty()) {
+                (output as? VariantOutputImpl)?.outputFileName?.set(
+                    "AxisWright-$versionName-$flavor-$abi.apk"
+                )
+            }
+        }
+    }
 }
 
 dependencies {
