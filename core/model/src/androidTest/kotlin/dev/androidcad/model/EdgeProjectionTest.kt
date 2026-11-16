@@ -157,11 +157,12 @@ class EdgeProjectionTest {
 
     @Test
     fun aProjectedEdgeSurvivesWhenItsFaceIsMergedWithAnother() {
-        // Block A (Höhe 10) und daneben Block B (Höhe 5); Skizze auf B oben mit der projizierten rechten Kante (x = 60)
+        // Block A (Höhe 10) und daneben Block B (Höhe 5, Vorderseite zunächst bei y = -5 nicht koplanar mit A);
+        // Skizze auf B oben mit projizierter rechter Kante (x = 60) und vorderer Kante
         val doc = Document()
         doc.addExtrude("A", doc.addSketch("A").also { it.sketch.addRectangle(0.0, 0.0, 40.0, 20.0) }, 10.0)
         val skB = doc.addSketch("B")
-        val rect = skB.sketch.addRectangle(40.0, 0.0, 60.0, 20.0)
+        val rect = skB.sketch.addRectangle(40.0, -5.0, 60.0, 20.0)
         val b = doc.addExtrude("B", skB, 5.0)
         val topB = FaceRef(b.id, FaceRole.TOP)
         val rightEdge = EdgeRef.of(topB, FaceRef(b.id, FaceRole.SIDE, rect.edges[1].value))
@@ -171,7 +172,9 @@ class EdgeProjectionTest {
             val wanted = r.projectable.getValue(sk.id).filter { it.edge == rightEdge || it.edge == frontEdge }
             assertEquals(2, doc.addProjections(sk.id, wanted))
         }
-        // B so hoch wie A: sowohl Deckfläche als auch Vorderseite werden mit A verschmolzen (beide Namen von B nur noch Zweitnamen)
+        // B auf Vorderseite y = 0 und Höhe 10 bringen: sowohl Deckfläche als auch Vorderseite werden mit A verschmolzen (beide Namen von B nur noch Zweitnamen)
+        skB.sketch.movePoint(rect.corners[0], 40.0, 0.0)
+        skB.sketch.movePoint(rect.corners[1], 60.0, 0.0)
         doc.update(b.copy(distance = 10.0))
         doc.build().use { r ->
             assertTrue(r.isOk, r.errors.toString())
