@@ -226,4 +226,104 @@ class BrepTest {
             assertEquals(5.0, b[5], 1e-4)
         }
     }
+
+    private fun assertOutwardTriangleWinding(shape: BrepShape) {
+        val mesh = shape.tessellate(linearDeflection = 0.05, angularDeflection = 0.3)
+        val planes = shape.planarFaces()
+        assertEquals((1..shape.faceCount).toSet(), mesh.triangleFace.toSet(), "Jede Fläche muss Dreiecke liefern")
+        assertVolume(shape.volume(), mesh.volume(), 5e-3)
+
+        val pos = mesh.positions
+        val tris = mesh.triangles
+        for (t in 0 until mesh.triangleCount) {
+            val a = 3 * tris[3 * t]; val b = 3 * tris[3 * t + 1]; val c = 3 * tris[3 * t + 2]
+            val ux = (pos[b] - pos[a]).toDouble(); val uy = (pos[b + 1] - pos[a + 1]).toDouble(); val uz = (pos[b + 2] - pos[a + 2]).toDouble()
+            val vx = (pos[c] - pos[a]).toDouble(); val vy = (pos[c + 1] - pos[a + 1]).toDouble(); val vz = (pos[c + 2] - pos[a + 2]).toDouble()
+            val nx = uy * vz - uz * vy
+            val ny = uz * vx - ux * vz
+            val nz = ux * vy - uy * vx
+            val len = kotlin.math.sqrt(nx * nx + ny * ny + nz * nz)
+            if (len < 1e-9) continue
+            val faceId = mesh.triangleFace[t]
+            val plane = planes[faceId - 1]
+            if (plane != null) {
+                val dot = (nx * plane.normal.first + ny * plane.normal.second + nz * plane.normal.third) / len
+                assertTrue(dot > 0.99, "Dreieck $t (Fläche $faceId) zeigt nicht nach außen: dot=$dot")
+            }
+        }
+    }
+
+    @Test
+    fun boxMinusCylinderHasOutwardTriangleWinding() {
+        // Quader 80x50x20 minus Blindbohrung r=8, Tiefe 10 von oben
+        BrepShape.extrude(Profile.rectangle(0.0, 0.0, 80.0, 50.0), 20.0).use { box ->
+            BrepShape.extrude(Profile.circle(40.0, 25.0, 8.0), 12.0).translate(0.0, 0.0, 10.0).use { cyl ->
+                box.cut(cyl).use { cut ->
+                    cut.unifyFaces().use { result ->
+                        assertOutwardTriangleWinding(result)
+                        // Mantel der Bohrung: jede Dreiecksnormale zeigt radial zur Zylinderachse (40, 25) nach innen
+                        val mesh = result.tessellate(linearDeflection = 0.05, angularDeflection = 0.3)
+                        val planes = result.planarFaces()
+                        val pos = mesh.positions
+                        val tris = mesh.triangles
+                        var curvedCount = 0
+                        for (t in 0 until mesh.triangleCount) {
+                            val faceId = mesh.triangleFace[t]
+                            if (planes[faceId - 1] != null) continue
+                            curvedCount++
+                            val a = 3 * tris[3 * t]; val b = 3 * tris[3 * t + 1]; val c = 3 * tris[3 * t + 2]
+                            val ux = (pos[b] - pos[a]).toDouble(); val uy = (pos[b + 1] - pos[a + 1]).toDouble(); val uz = (pos[b + 2] - pos[a + 2]).toDouble()
+                            val vx = (pos[c] - pos[a]).toDouble(); val vy = (pos[c + 1] - pos[a + 1]).toDouble(); val vz = (pos[c + 2] - pos[a + 2]).toDouble()
+                            val nx = uy * vz - uz * vy; val ny = uz * vx - ux * vz
+                            val mx = (pos[a] + pos[b] + pos[c]) / 3.0
+                            val my = (pos[a + 1] + pos[b + 1] + pos[c + 1]) / 3.0
+                            val radialDot = nx * (40.0 - mx) + ny * (25.0 - my)
+                            assertTrue(radialDot > 0.0, "Zylinderwand-Dreieck $t zeigt nicht zur Achse: $radialDot")
+                        }
+                        assertTrue(curvedCount > 0)
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
+    fun boxMinusTextLikeIslandContourHasOutwardTriangleWinding() {
+        // Quader 80x50x20, auf der Vorderseite (y=0) eine B-ähnliche Kontur mit zwei Inneninseln um 2 mm graviert
+        fun rectLoop(x: Double, y: Double, w: Double, h: Double) = listOf(
+            ProfileSegment.Line(x, y, x + w, y),
+            ProfileSegment.Line(x + w, y, x + w, y + h),
+            ProfileSegment.Line(x + w, y + h, x, y + h),
+            ProfileSegment.Line(x, y + h, x, y),
+        )
+        val bLikeProfile = Profile.rectangle(30.0, 4.0, 12.0, 12.0)
+            .withHole(rectLoop(33.0, 5.5, 6.0, 3.5))
+            .withHole(rectLoop(33.0, 11.0, 6.0, 3.5))
+        // Workplane XZ: lokales (x, y) -> (x, 0, y), Normale -Y; 3 mm tief (1 mm Vorlauf vor y=0 bis y=2)
+        val frontTransform = doubleArrayOf(
+            1.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, -1.0, 2.0,
+            0.0, 1.0, 0.0, 0.0,
+        )
+        BrepShape.extrude(Profile.rectangle(0.0, 0.0, 80.0, 50.0), 20.0).use { box ->
+            BrepShape.extrude(bLikeProfile, 3.0).use { rawTool ->
+                rawTool.transform(frontTransform).use { tool ->
+                    box.cut(tool).use { engraved ->
+                        engraved.unifyFaces().use { unified ->
+                            assertOutwardTriangleWinding(unified)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
+    fun mirroredShapeHasOutwardTriangleWinding() {
+        BrepShape.extrude(Profile.rectangle(0.0, 0.0, 20.0, 30.0), 10.0).use { box ->
+            box.mirror(0.0, 0.0, 0.0, 1.0, 0.0, 0.0).use { mirrored ->
+                assertOutwardTriangleWinding(mirrored)
+            }
+        }
+    }
 }

@@ -835,7 +835,8 @@ JNIEXPORT jobjectArray JNICALL Java_dev_androidcad_brep_NativeBrep_tessellate(JN
         gp_Pnt p = tri->Node(i).Transformed(trsf);
         pos.insert(pos.end(), {static_cast<float>(p.X()), static_cast<float>(p.Y()), static_cast<float>(p.Z())});
       }
-      const bool reversed = face.Orientation() == TopAbs_REVERSED;
+      // Flächenorientierung und ggf. Spiegelung der Lage drehen die Dreieckswicklung um.
+      const bool reversed = (face.Orientation() == TopAbs_REVERSED) != trsf.IsNegative();
       for (int i = 1; i <= tri->NbTriangles(); ++i) {
         int a, b, c;
         tri->Triangle(i).Get(a, b, c);

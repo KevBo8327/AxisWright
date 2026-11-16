@@ -5,6 +5,7 @@ import dev.androidcad.viewport.SceneFrame
 import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
 import kotlin.test.assertSame
 import kotlin.test.assertTrue
 
@@ -83,5 +84,21 @@ class MeshViewportTest {
 
         cache.get(m2, lines2)
         assertEquals(3, computations)
+    }
+
+    @Test
+    fun fragmentShaderUsesCapColorOnlyWhenClipEnabled() {
+        // Die eigentliche GLSL-Ausführung braucht OpenGL ES auf dem Gerät; der JVM-Test prüft den Shader-Quelltext.
+        val fs = MeshRenderer.FRAGMENT
+        assertTrue(fs.contains("uniform int uClipEnabled;"))
+        assertTrue(fs.contains("uniform vec3 uCapColor;"))
+        assertFalse(
+            fs.contains("gl_FrontFacing ? uColor : uCapColor"),
+            "Ohne aktive Schnittebene dürfen Rückseiten nicht in Kappenfarbe gezeichnet werden",
+        )
+        assertTrue(
+            fs.contains("uClipEnabled != 0 && !gl_FrontFacing"),
+            "Kappenfarbe darf nur bei aktivem Schnitt (uClipEnabled != 0) für Rückseiten greifen",
+        )
     }
 }
