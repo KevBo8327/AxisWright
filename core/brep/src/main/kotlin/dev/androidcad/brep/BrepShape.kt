@@ -71,6 +71,8 @@ class BrepMesh(
     val edgePositions: FloatArray,
     val edgePointCounts: IntArray,
     val edgeIds: IntArray,
+    /** 1-basierte IDs der Flächen, für die trotz Nachvernetzung keine Triangulation erzeugt werden konnte. */
+    val failedFaces: IntArray = IntArray(0),
 ) {
     val triangleCount: Int get() = triangles.size / 3
 
@@ -294,7 +296,11 @@ class BrepShape private constructor(handle: Long) : AutoCloseable {
      */
     fun tessellate(linearDeflection: Double = 0.1, angularDeflection: Double = 0.5): BrepMesh {
         val r = call { h -> NativeBrep.tessellate(h, linearDeflection, angularDeflection) }
-        return BrepMesh(r[0] as FloatArray, r[1] as IntArray, r[2] as IntArray, r[3] as FloatArray, r[4] as IntArray, r[5] as IntArray)
+        return BrepMesh(
+            r[0] as FloatArray, r[1] as IntArray, r[2] as IntArray,
+            r[3] as FloatArray, r[4] as IntArray, r[5] as IntArray,
+            r.getOrNull(6) as? IntArray ?: IntArray(0),
+        )
     }
 
     override fun close() = guard.close()

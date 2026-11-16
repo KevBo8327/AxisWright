@@ -13,6 +13,7 @@
 // weitere = Löcher. type 0 = Linie (x1 y1 x2 y2), 1 = Bogen (x1 y1 x2 y2 cx cy ccw), 2 = Kreis (cx cy r).
 
 #include <jni.h>
+#include <android/log.h>
 
 #include <BRepAdaptor_Curve.hxx>
 #include <BRepAdaptor_Surface.hxx>
@@ -35,16 +36,20 @@
 #include <STEPControl_Writer.hxx>
 #include <BRepCheck_Analyzer.hxx>
 #include <BRepOffsetAPI_MakeThickSolid.hxx>
+#include <BRepMesh_Context.hxx>
 #include <BRepMesh_IncrementalMesh.hxx>
 #include <BRepPrimAPI_MakePrism.hxx>
 #include <BRepPrimAPI_MakeRevol.hxx>
+#include <BRepTools.hxx>
 #include <gp_Ax1.hxx>
 #include <BRep_Tool.hxx>
 #include <GCPnts_AbscissaPoint.hxx>
 #include <GeomAbs_SurfaceType.hxx>
 #include <GCPnts_TangentialDeflection.hxx>
 #include <GProp_GProps.hxx>
+#include <IMeshTools_Parameters.hxx>
 #include <Poly_Triangulation.hxx>
+#include <Precision.hxx>
 #include <ShapeFix_Face.hxx>
 #include <ShapeUpgrade_UnifySameDomain.hxx>
 #include <BRepTools_History.hxx>
@@ -243,8 +248,8 @@ TopoDS_Face readProfile(const double* prog, size_t len, std::vector<gp_Pnt>& mid
   if (!mk.IsDone()) throw std::runtime_error("Aus der äußeren Kontur lässt sich keine Fläche bilden (nicht geschlossen?)");
   for (int i = 1; i < nWires; ++i) mk.Add(readWire(r, mids));
   ShapeFix_Face fix(mk.Face());
-  fix.FixOrientation(); // Löcher müssen entgegengesetzt zur Außenkontur laufen
-  fix.Perform();
+  fix.FixSmallAreaWireMode() = 0;  // kleine gültige Inseln/Löcher nicht verwerfen
+  fix.Perform();                   // richtet Wires/PCurves und anschließend die Orientierung (Löcher entgegengesetzt) aus
   return fix.Face();
 }
 
@@ -801,8 +806,9 @@ JNIEXPORT jdoubleArray JNICALL Java_dev_androidcad_brep_NativeBrep_edgeInfo(JNIE
   });
 }
 
-// Rückgabe: Object[6] = { float[] positions, int[] triangles, int[] triangleFace (1-basiert),
-//                         float[] edgePositions, int[] edgePointCounts, int[] edgeIds (1-basiert) }
+// Rückgabe: Object[7] = { float[] positions, int[] triangles, int[] triangleFace (1-basiert),
+//                         float[] edgePositions, int[] edgePointCounts, int[] edgeIds (1-basiert),
+//                         int[] failedFaces (1-basiert, leer bei Erfolg) }
 JNIEXPORT jobjectArray JNICALL Java_dev_androidcad_brep_NativeBrep_tessellate(JNIEnv* env, jclass, jlong h, jdouble linear, jdouble angular) {
   return guarded(env, [&]() -> jobjectArray {
     if (!std::isfinite(linear) || linear < 1e-4 || !std::isfinite(angular) || angular < 1e-3) {
@@ -813,17 +819,72 @@ JNIEXPORT jobjectArray JNICALL Java_dev_androidcad_brep_NativeBrep_tessellate(JN
     constexpr size_t kMaxEdgePoints = 2'000'000;
 
     TopoDS_Shape shape = get(h);
-    BRepMesh_IncrementalMesh mesher(shape, linear, Standard_False, angular, Standard_True);
+    IMeshTools_Parameters meshParams;
+    meshParams.Deflection = linear;
+    meshParams.Angle = angular;
+    meshParams.Relative = Standard_False;
+    meshParams.InParallel = Standard_True;
+    meshParams.AdjustMinSize = Standard_True;
 
-    std::vector<float> pos;
-    std::vector<jint> tris, triFace;
+    BRepMesh_IncrementalMesh mesher;
+    mesher.SetShape(shape);
+    mesher.ChangeParameters() = meshParams;
+    mesher.Perform();
+
     TopTools_IndexedMapOfShape faces;
     TopExp::MapShapes(shape, TopAbs_FACE, faces);
+
+    auto hasEmptyFace = [&]() -> bool {
+      for (int fi = 1; fi <= faces.Extent(); ++fi) {
+        TopLoc_Location loc;
+        Handle(Poly_Triangulation) tri = BRep_Tool::Triangulation(TopoDS::Face(faces(fi)), loc);
+        if (tri.IsNull() || tri->NbTriangles() <= 0) return true;
+      }
+      return false;
+    };
+
+    // Fehlgeschlagene Teilflächen gemeinsam mit Delabella nachvernetzen, damit Kantenpunkte zwischen Nachbarflächen konsistent bleiben.
+    if (hasEmptyFace()) {
+      __android_log_print(ANDROID_LOG_WARN, "cadbrep",
+                          "BRepMesh Erstlauf unvollständig (Status=0x%x); starte Delabella-Nachvernetzung",
+                          mesher.GetStatusFlags());
+      BRepTools::Clean(shape);
+      Handle(BRepMesh_Context) delabellaCtx = new BRepMesh_Context(IMeshTools_MeshAlgoType_Delabella);
+      mesher.Perform(delabellaCtx);
+    }
+
+    std::vector<float> pos;
+    std::vector<jint> tris, triFace, failedFaces;
     for (int fi = 1; fi <= faces.Extent(); ++fi) {
       TopoDS_Face face = TopoDS::Face(faces(fi));
       TopLoc_Location loc;
       Handle(Poly_Triangulation) tri = BRep_Tool::Triangulation(face, loc);
-      if (tri.IsNull()) continue;
+      if (tri.IsNull() || tri->NbTriangles() <= 0) {
+        // Letzter Rückfall für einzelne Problemflächen: Wires reparieren und direkt mit Delabella ohne Innenknoten vernetzen.
+        TopoDS_Face fixedFace = face;
+        ShapeFix_Face sff(fixedFace);
+        sff.FixSmallAreaWireMode() = 0;
+        sff.Perform();
+        fixedFace = sff.Face();
+        BRepTools::Clean(fixedFace);
+        IMeshTools_Parameters faceParams = meshParams;
+        faceParams.Deflection = std::min(linear, 0.01);
+        faceParams.MinSize = Precision::Confusion();
+        faceParams.InternalVerticesMode = Standard_False;
+        faceParams.InParallel = Standard_False;
+        Handle(BRepMesh_Context) faceCtx = new BRepMesh_Context(IMeshTools_MeshAlgoType_Delabella);
+        BRepMesh_IncrementalMesh faceMesher;
+        faceMesher.SetShape(fixedFace);
+        faceMesher.ChangeParameters() = faceParams;
+        faceMesher.Perform(faceCtx);
+        tri = BRep_Tool::Triangulation(fixedFace, loc);
+        face = fixedFace;
+      }
+      if (tri.IsNull() || tri->NbTriangles() <= 0) {
+        __android_log_print(ANDROID_LOG_ERROR, "cadbrep", "Fläche %d ohne Triangulation (Status=0x%x)", fi, mesher.GetStatusFlags());
+        failedFaces.push_back(fi);
+        continue;
+      }
       if (tri->NbNodes() < 0 || tri->NbTriangles() < 0 ||
           pos.size() / 3 + static_cast<size_t>(tri->NbNodes()) > kMaxVertices ||
           triFace.size() + static_cast<size_t>(tri->NbTriangles()) > kMaxTriangles) {
@@ -866,17 +927,18 @@ JNIEXPORT jobjectArray JNICALL Java_dev_androidcad_brep_NativeBrep_tessellate(JN
 
     jclass objCls = env->FindClass("java/lang/Object");
     if (!objCls) return nullptr;
-    jobjectArray out = env->NewObjectArray(6, objCls, nullptr);
+    jobjectArray out = env->NewObjectArray(7, objCls, nullptr);
     if (!out) return nullptr;
-    jobject parts[6] = {
+    jobject parts[7] = {
         toJ(env, pos),
         toJ(env, tris),
         toJ(env, triFace),
         toJ(env, edgePos),
         toJ(env, edgeCounts),
         toJ(env, edgeIds),
+        toJ(env, failedFaces),
     };
-    for (jsize i = 0; i < 6; ++i) {
+    for (jsize i = 0; i < 7; ++i) {
       if (!parts[i]) return nullptr;
       env->SetObjectArrayElement(out, i, parts[i]);
       env->DeleteLocalRef(parts[i]);

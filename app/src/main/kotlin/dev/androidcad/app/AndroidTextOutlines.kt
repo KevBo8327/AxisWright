@@ -47,21 +47,13 @@ object AndroidTextOutlines : TextOutlines {
             val n = approx.size / 3
             if (n < 3) continue
 
-            val segs = ArrayList<LoopSegment>()
-            for (i in 0 until n - 1) {
-                val x1 = approx[i * 3 + 1].toDouble()
-                val y1 = -approx[i * 3 + 2].toDouble() // Android: Y nach unten, CAD: Y nach oben
-                val x2 = approx[(i + 1) * 3 + 1].toDouble()
-                val y2 = -approx[(i + 1) * 3 + 2].toDouble()
-                if (hypot(x2 - x1, y2 - y1) > 1e-6) {
-                    segs += LoopSegment.Line(x1, y1, x2, y2)
-                }
+            val rawPoints = ArrayList<Pair<Double, Double>>(n)
+            for (i in 0 until n) {
+                rawPoints += approx[i * 3 + 1].toDouble() to -approx[i * 3 + 2].toDouble() // Android: Y nach unten, CAD: Y nach oben
             }
-            val firstX = approx[1].toDouble(); val firstY = -approx[2].toDouble()
-            val lastX = approx[(n - 1) * 3 + 1].toDouble(); val lastY = -approx[(n - 1) * 3 + 2].toDouble()
-            if (hypot(firstX - lastX, firstY - lastY) > 1e-6) {
-                segs += LoopSegment.Line(lastX, lastY, firstX, firstY)
-            }
+            val minSegLen = (error * 0.1).coerceAtLeast(1e-3)
+            val collinearTol = (error * 0.25).coerceAtLeast(1e-4)
+            val segs = simplifyClosedContour(rawPoints, minSegLen, collinearTol)
             if (segs.size >= 3) {
                 val area = abs(signedArea(segs))
                 if (area > 1e-6) {
@@ -82,4 +74,76 @@ object AndroidTextOutlines : TextOutlines {
         }
         return a / 2.0
     }
+}
+
+/**
+ * Bereinigt eine geschlossene Kontur aus [Path.approximate]: fasst Punkte mit Abstand ≤ [minSegmentLength]
+ * zusammen, entfernt kollineare Zwischenpunkte sowie spitze Rücksprünge (Spikes) und garantiert eine
+ * lückenlos geschlossene Segmentfolge.
+ */
+internal fun simplifyClosedContour(
+    points: List<Pair<Double, Double>>,
+    minSegmentLength: Double,
+    collinearTolerance: Double,
+): List<LoopSegment.Line> {
+    if (points.size < 3) return emptyList()
+    val pts = ArrayList<Pair<Double, Double>>(points.size)
+    for (p in points) {
+        if (pts.isEmpty()) {
+            pts += p
+        } else {
+            val prev = pts.last()
+            if (hypot(p.first - prev.first, p.second - prev.second) > minSegmentLength) {
+                pts += p
+            }
+        }
+    }
+    while (pts.size >= 3) {
+        val first = pts.first()
+        val last = pts.last()
+        if (hypot(first.first - last.first, first.second - last.second) <= minSegmentLength) {
+            pts.removeAt(pts.lastIndex)
+        } else {
+            break
+        }
+    }
+    if (pts.size < 3) return emptyList()
+
+    var changed = true
+    while (changed && pts.size > 3) {
+        changed = false
+        var i = 0
+        while (i < pts.size && pts.size > 3) {
+            val a = pts[(i - 1 + pts.size) % pts.size]
+            val b = pts[i]
+            val c = pts[(i + 1) % pts.size]
+            val abx = b.first - a.first; val aby = b.second - a.second
+            val acx = c.first - a.first; val acy = c.second - a.second
+            val bcx = c.first - b.first; val bcy = c.second - b.second
+            val abLen = hypot(abx, aby)
+            val acLen = hypot(acx, acy)
+            val bcLen = hypot(bcx, bcy)
+            val cross = abs(abx * acy - aby * acx)
+            val perpDist = if (acLen > 1e-12) cross / acLen else minOf(abLen, bcLen)
+            val dotForward = abx * bcx + aby * bcy
+            val shortOrSpike = abLen <= minSegmentLength || bcLen <= minSegmentLength || acLen <= minSegmentLength
+            val collinearOrFoldback = perpDist <= collinearTolerance && (dotForward >= 0.0 || minOf(abLen, bcLen) <= collinearTolerance * 4.0)
+            if (shortOrSpike || collinearOrFoldback) {
+                pts.removeAt(i)
+                changed = true
+            } else {
+                i++
+            }
+        }
+    }
+    if (pts.size < 3) return emptyList()
+
+    val segs = ArrayList<LoopSegment.Line>(pts.size)
+    for (i in pts.indices) {
+        val p1 = pts[i]
+        val p2 = pts[(i + 1) % pts.size]
+        if (hypot(p2.first - p1.first, p2.second - p1.second) <= 1e-6) return emptyList()
+        segs += LoopSegment.Line(p1.first, p1.second, p2.first, p2.second)
+    }
+    return segs
 }
