@@ -56,6 +56,15 @@ Ausgeführter Befehl:
 
 | Nr. | Bereich | Schweregrad | Beschreibung / Beleg |
 | --- | --- | --- | --- |
-| 1 | Gerätetest `:core:model` (`EdgeProjectionTest`) | **falsches Ergebnis** *(Testfehler, kein Produktfehler)* | `EdgeProjectionTest.aProjectedEdgeSurvivesWhenItsFaceIsMergedWithAnother` (`EdgeProjectionTest.kt:172`) schlägt mit `AssertionError: Expected <2>, actual <1>` fehl, weil der Test annimmt, `B`s Vorderseite behalte bei `Höhe B = 5` noch ihren eigenen Hauptnamen in `r.projectable`, obwohl `UnifySameDomain` sie bereits mit der koplanaren Vorderseite von `A` unter `A`s Hauptnamen verschmolzen hat. |
+| 1 | Gerätetest `:core:model` (`EdgeProjectionTest`) | **falsches Ergebnis** *(Testfehler, kein Produktfehler; im Nachtrag behoben)* | `EdgeProjectionTest.aProjectedEdgeSurvivesWhenItsFaceIsMergedWithAnother` (`EdgeProjectionTest.kt:172`) schlug ursprünglich mit `AssertionError: Expected <2>, actual <1>` fehl, weil der Test annahm, `B`s Vorderseite behalte bei `Höhe B = 5` noch ihren eigenen Hauptnamen in `r.projectable`, obwohl `UnifySameDomain` sie bereits mit der koplanaren Vorderseite von `A` unter `A`s Hauptnamen verschmolzen hatte. |
 
 *(Hinweis ohne Fehlercharakter: Die Quellcode- und Spenden-URLs in `app/src/{foss,play}/kotlin/dev/androidcad/app/Distribution.kt` sind erwartungsgemäß noch als `PLACEHOLDER`-URLs hinterlegt, siehe dortigen `TODO(Nutzer)`-Kommentar; die App öffnet den Browser sauber ohne Absturz. In `adb logcat -d` traten während der Sichtprüfung keine `AndroidRuntime:E`-Abstürze auf.)*
+
+---
+
+## 4. Nachtrag – Korrektur des Testfehlers in `EdgeProjectionTest`
+
+- **Änderung (nur Testcode, kein Produktcode):** In `core/model/src/androidTest/kotlin/dev/androidcad/model/EdgeProjectionTest.kt` (`aProjectedEdgeSurvivesWhenItsFaceIsMergedWithAnother`) startet Block `B` nun mit der Vorderseite bei `y = -5.0` (Rechteck `40.0, -5.0, 60.0, 20.0`), sodass sie im Ausgangszustand bei Höhe `5.0` **nicht** koplanar mit Block `A` (`y = 0.0`) ist und sowohl `topB` als auch `frontB` eigene Hauptnamen besitzen. Im zweiten Schritt wird `B`s Vorderseite auf `y = 0.0` verschoben und die Höhe auf `10.0` erhöht, sodass erst durch die Änderung sowohl Deckfläche als auch Vorderseite mit `A` verschmelzen und beide projizierten Kanten über ihre Zweitnamen erhalten bleiben.
+- **Erneuter Testlauf (`:core:model:connectedDebugAndroidTest` auf `Pixel_10_Pro_XL`, `x86_64`):** **95 / 95 bestanden**, 0 fehlgeschlagen, 0 übersprungen (`EdgeProjectionTest` 7/7 grün).
+- **Aktualisierte Gesamtsumme über alle drei Module:** **162 / 162 bestanden** (`:core:brep` 50/50, `:core:model` 95/95, `:core:geometry` 17/17).
+
