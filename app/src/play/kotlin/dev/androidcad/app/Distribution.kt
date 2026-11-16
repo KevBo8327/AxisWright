@@ -2,9 +2,8 @@ package dev.androidcad.app
 
 import androidx.compose.runtime.Composable
 
-// TODO(Nutzer): Eigene Quellcode-URL eintragen
 object Distribution {
-    const val SOURCE_CODE_URL = "https://PLACEHOLDER/source"
+    const val SOURCE_CODE_URL = "https://github.com/KevBo8327/AxisWright"
 
     @Composable
     fun MenuItems(onOpenSupport: () -> Unit) {
