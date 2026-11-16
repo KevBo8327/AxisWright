@@ -6,6 +6,9 @@ AxisWright is a free and open-source (GPL-3.0-or-later) parametric 3D CAD applic
 
 The app works entirely **offline**: no user accounts, no cloud sync required, no ads, no telemetry/tracking, and no internet permission.
 
+- **GitHub:** [https://github.com/KevBo8327/AxisWright](https://github.com/KevBo8327/AxisWright)
+- **Codeberg Mirror:** [https://codeberg.org/kb-it-service/AxisWright_CAD](https://codeberg.org/kb-it-service/AxisWright_CAD)
+
 ## Screenshots
 
 | Start Page | 2D Sketch with Constraints | 3D Model with Fillets |
@@ -69,7 +72,7 @@ On Linux/macOS, run with PowerShell 7 (`pwsh ./scripts/build-occt.ps1 -Abis x86_
 
 ### 2. Build Variants: FOSS and Play
 The application defines two flavors:
-- **`foss`**: Targeted for F-Droid and independent APK distribution. Includes a "Support development…" menu entry with donation links.
+- **`foss`**: Targeted for F-Droid and independent APK distribution (GitHub Releases). Includes a "Support development…" menu entry once donation links are configured.
 - **`play`**: Targeted for Google Play. Does not contain any donation links or UI (complying with Google Play policies).
 
 > **Note on F-Droid:** F-Droid builds the `foss` flavor (`assembleFossRelease`).
@@ -96,9 +99,7 @@ Contributions are warmly welcome!
 
 ## Donations
 
-AxisWright is completely free, ad-free, and has no paywalls or subscriptions. If you enjoy the app and want to support ongoing development, consider a voluntary donation:
-- **Liberapay:** [https://liberapay.com/PLACEHOLDER](https://liberapay.com/PLACEHOLDER)
-- **GitHub Sponsors:** [https://github.com/sponsors/PLACEHOLDER](https://github.com/sponsors/PLACEHOLDER)
+AxisWright is completely free, ad-free, and has no paywalls or subscriptions. Donation links will follow soon.
 
 ## Trademark
 

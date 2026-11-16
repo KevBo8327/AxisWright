@@ -19,5 +19,11 @@ android, cad, parametric, parametric-cad, opencascade, 3d-printing, kotlin, jetp
 ## Website
 
 ```text
-https://PLACEHOLDER
+https://github.com/KevBo8327/AxisWright
+```
+
+## Mirror
+
+```text
+https://codeberg.org/kb-it-service/AxisWright_CAD
 ```
