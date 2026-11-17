@@ -245,22 +245,22 @@ internal class MeshRenderer : GLSurfaceView.Renderer {
 
     private fun link(vs: String, fs: String): Int = linkShaderProgram(AndroidShaderGl, vs, fs)
 
-    private companion object {
-        const val GRADIENT_VERTEX = """#version 300 es
+    internal companion object {
+        private const val GRADIENT_VERTEX = """#version 300 es
 out float vY;
 void main() {
     vec2 p = vec2(float((gl_VertexID << 1) & 2), float(gl_VertexID & 2)) * 2.0 - 1.0;  // (-1,-1), (3,-1), (-1,3)
     vY = p.y * 0.5 + 0.5;
     gl_Position = vec4(p, 0.0, 1.0);
 }"""
-        const val GRADIENT_FRAGMENT = """#version 300 es
+        private const val GRADIENT_FRAGMENT = """#version 300 es
 precision mediump float;
 uniform vec3 uTop;
 uniform vec3 uBottom;
 in float vY;
 out vec4 outColor;
 void main() { outColor = vec4(mix(uBottom, uTop, clamp(vY, 0.0, 1.0)), 1.0); }"""
-        const val VERTEX = """#version 300 es
+        private const val VERTEX = """#version 300 es
 uniform mat4 uMvp;
 uniform mat4 uView;
 in vec3 aPos;
@@ -291,7 +291,8 @@ void main() {
     vec3 n = normalize(cross(dFdx(vViewPos), dFdy(vViewPos)));
     if (n.z < 0.0) n = -n;
     float diff = clamp(dot(n, normalize(vec3(-0.35, 0.45, 0.82))), 0.0, 1.0);
-    vec3 col = gl_FrontFacing ? uColor : uCapColor;
+    // Kappenfarbe nur bei aktiver Schnittebene (uClipEnabled != 0); ohne Schnitt bleiben auch Rückseiten in uColor.
+    vec3 col = (uClipEnabled != 0 && !gl_FrontFacing) ? uCapColor : uColor;
     outColor = vec4(col * (0.42 + 0.58 * diff), 1.0);  // kräftiges Grundlicht: auch abgewandte Seiten bleiben vor dunklem Grund lesbar
 }"""
     }

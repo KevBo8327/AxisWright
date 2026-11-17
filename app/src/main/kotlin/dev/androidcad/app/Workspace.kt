@@ -7,7 +7,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import dev.androidcad.brep.BrepMesh
 import dev.androidcad.brep.BrepShape
+import dev.androidcad.brep.BrepText
 import dev.androidcad.brep.EdgeInfo
+import dev.androidcad.text.Msg
 import dev.androidcad.geometry.Mesh
 import dev.androidcad.model.BodyOp
 import dev.androidcad.model.Document
@@ -1917,6 +1919,13 @@ class WorkspaceState(
         // der Körper bleibt offen (Messen) und wird mit dem nächsten Aufbau freigegeben; scheitert dieser hier, sofort
         try {
             val bm = body.tessellate(linearDeflection = 0.05, angularDeflection = 0.3)
+            val allErrors = if (bm.failedFaces.isEmpty()) {
+                errors
+            } else {
+                val ids = bm.failedFaces.joinToString(", ")
+                runCatching { android.util.Log.w("Workspace", "Tessellierung ohne Dreiecke für Flächen: $ids") }
+                errors + UiText.Core(Msg(BrepText.TESSELLATION_FAILED_FACES, bm.failedFaces.size, ids))
+            }
             val pairs = body.edgeFaceTags()
             val refs = bm.edgeIds.map { id ->
                 pairs.getOrNull(id - 1)?.let { (x, y) ->
@@ -1937,7 +1946,7 @@ class WorkspaceState(
                 edges = bm.edgeSegments(),
                 volumeMm3 = body.volume(),
                 faceCount = body.faceCount,
-                errors = errors,
+                errors = allErrors,
                 millis = (System.nanoTime() - t0) / 1_000_000,
                 polylines = bm.edgePositions,
                 edgeCounts = bm.edgePointCounts,

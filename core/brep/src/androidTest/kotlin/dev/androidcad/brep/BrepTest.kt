@@ -226,4 +226,218 @@ class BrepTest {
             assertEquals(5.0, b[5], 1e-4)
         }
     }
+
+    private fun assertOutwardTriangleWinding(shape: BrepShape) {
+        val mesh = shape.tessellate(linearDeflection = 0.05, angularDeflection = 0.3)
+        assertTrue(mesh.failedFaces.isEmpty(), "Unvernetzte Flächen: ${mesh.failedFaces.toList()}")
+        val planes = shape.planarFaces()
+        assertEquals((1..shape.faceCount).toSet(), mesh.triangleFace.toSet(), "Jede Fläche muss Dreiecke liefern")
+        assertVolume(shape.volume(), mesh.volume(), 5e-3)
+
+        val pos = mesh.positions
+        val tris = mesh.triangles
+        for (t in 0 until mesh.triangleCount) {
+            val a = 3 * tris[3 * t]; val b = 3 * tris[3 * t + 1]; val c = 3 * tris[3 * t + 2]
+            val ux = (pos[b] - pos[a]).toDouble(); val uy = (pos[b + 1] - pos[a + 1]).toDouble(); val uz = (pos[b + 2] - pos[a + 2]).toDouble()
+            val vx = (pos[c] - pos[a]).toDouble(); val vy = (pos[c + 1] - pos[a + 1]).toDouble(); val vz = (pos[c + 2] - pos[a + 2]).toDouble()
+            val nx = uy * vz - uz * vy
+            val ny = uz * vx - ux * vz
+            val nz = ux * vy - uy * vx
+            val len = kotlin.math.sqrt(nx * nx + ny * ny + nz * nz)
+            if (len < 1e-9) continue
+            val faceId = mesh.triangleFace[t]
+            val plane = planes[faceId - 1]
+            if (plane != null) {
+                val dot = (nx * plane.normal.first + ny * plane.normal.second + nz * plane.normal.third) / len
+                assertTrue(dot > 0.99, "Dreieck $t (Fläche $faceId) zeigt nicht nach außen: dot=$dot")
+            }
+        }
+    }
+
+    @Test
+    fun boxMinusCylinderHasOutwardTriangleWinding() {
+        // Quader 80x50x20 minus Blindbohrung r=8, Tiefe 10 von oben
+        BrepShape.extrude(Profile.rectangle(0.0, 0.0, 80.0, 50.0), 20.0).use { box ->
+            BrepShape.extrude(Profile.circle(40.0, 25.0, 8.0), 12.0).translate(0.0, 0.0, 10.0).use { cyl ->
+                box.cut(cyl).use { cut ->
+                    cut.unifyFaces().use { result ->
+                        assertOutwardTriangleWinding(result)
+                        // Mantel der Bohrung: jede Dreiecksnormale zeigt radial zur Zylinderachse (40, 25) nach innen
+                        val mesh = result.tessellate(linearDeflection = 0.05, angularDeflection = 0.3)
+                        val planes = result.planarFaces()
+                        val pos = mesh.positions
+                        val tris = mesh.triangles
+                        var curvedCount = 0
+                        for (t in 0 until mesh.triangleCount) {
+                            val faceId = mesh.triangleFace[t]
+                            if (planes[faceId - 1] != null) continue
+                            curvedCount++
+                            val a = 3 * tris[3 * t]; val b = 3 * tris[3 * t + 1]; val c = 3 * tris[3 * t + 2]
+                            val ux = (pos[b] - pos[a]).toDouble(); val uy = (pos[b + 1] - pos[a + 1]).toDouble(); val uz = (pos[b + 2] - pos[a + 2]).toDouble()
+                            val vx = (pos[c] - pos[a]).toDouble(); val vy = (pos[c + 1] - pos[a + 1]).toDouble(); val vz = (pos[c + 2] - pos[a + 2]).toDouble()
+                            val nx = uy * vz - uz * vy; val ny = uz * vx - ux * vz
+                            val mx = (pos[a] + pos[b] + pos[c]) / 3.0
+                            val my = (pos[a + 1] + pos[b + 1] + pos[c + 1]) / 3.0
+                            val radialDot = nx * (40.0 - mx) + ny * (25.0 - my)
+                            assertTrue(radialDot > 0.0, "Zylinderwand-Dreieck $t zeigt nicht zur Achse: $radialDot")
+                        }
+                        assertTrue(curvedCount > 0)
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
+    fun boxMinusTextLikeIslandContourHasOutwardTriangleWinding() {
+        // Quader 80x50x20, auf der Vorderseite (y=0) eine B-ähnliche Kontur mit zwei Inneninseln um 2 mm graviert
+        fun rectLoop(x: Double, y: Double, w: Double, h: Double) = listOf(
+            ProfileSegment.Line(x, y, x + w, y),
+            ProfileSegment.Line(x + w, y, x + w, y + h),
+            ProfileSegment.Line(x + w, y + h, x, y + h),
+            ProfileSegment.Line(x, y + h, x, y),
+        )
+        val bLikeProfile = Profile.rectangle(30.0, 4.0, 12.0, 12.0)
+            .withHole(rectLoop(33.0, 5.5, 6.0, 3.5))
+            .withHole(rectLoop(33.0, 11.0, 6.0, 3.5))
+        // Workplane XZ: lokales (x, y) -> (x, 0, y), Normale -Y; 3 mm tief (1 mm Vorlauf vor y=0 bis y=2)
+        val frontTransform = doubleArrayOf(
+            1.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, -1.0, 2.0,
+            0.0, 1.0, 0.0, 0.0,
+        )
+        BrepShape.extrude(Profile.rectangle(0.0, 0.0, 80.0, 50.0), 20.0).use { box ->
+            BrepShape.extrude(bLikeProfile, 3.0).use { rawTool ->
+                rawTool.transform(frontTransform).use { tool ->
+                    box.cut(tool).use { engraved ->
+                        engraved.unifyFaces().use { unified ->
+                            assertOutwardTriangleWinding(unified)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
+    fun mirroredShapeHasOutwardTriangleWinding() {
+        BrepShape.extrude(Profile.rectangle(0.0, 0.0, 20.0, 30.0), 10.0).use { box ->
+            box.mirror(0.0, 0.0, 0.0, 1.0, 0.0, 0.0).use { mirrored ->
+                assertOutwardTriangleWinding(mirrored)
+            }
+        }
+    }
+
+    private fun assertWatertightClosedMesh(mesh: BrepMesh) {
+        // Gleiche 3D-Koordinaten verschweißen (jede Fläche hat in OCCT eigene Knoten) und Halbkanten zählen.
+        val pos = mesh.positions
+        val tris = mesh.triangles
+        val vertexIds = HashMap<Triple<Float, Float, Float>, Int>()
+        val mapped = IntArray(pos.size / 3) { i ->
+            val key = Triple(pos[3 * i], pos[3 * i + 1], pos[3 * i + 2])
+            vertexIds.getOrPut(key) { vertexIds.size }
+        }
+        val directedEdges = HashMap<Pair<Int, Int>, Int>()
+        for (t in 0 until mesh.triangleCount) {
+            val a = mapped[tris[3 * t]]; val b = mapped[tris[3 * t + 1]]; val c = mapped[tris[3 * t + 2]]
+            if (a == b || b == c || a == c) continue
+            for ((u, v) in listOf(a to b, b to c, c to a)) {
+                directedEdges.merge(u to v, 1, Int::plus)
+            }
+        }
+        assertTrue(directedEdges.isNotEmpty())
+        for ((edge, count) in directedEdges) {
+            assertEquals(1, count, "Halbkante $edge mehrfach verwendet ($count)")
+            assertEquals(1, directedEdges[edge.second to edge.first], "Offene Kante ohne Gegenrichtung bei $edge")
+        }
+    }
+
+    @Test
+    fun boxWithShortSegmentTextB8EngravingIsWatertightAndComplete() {
+        // Realistische Polylinien mit vielen kurzen Segmenten (wie aus Path.approximate) für 'B' und '8' inkl. Inseln.
+        fun closedSegs(pts: List<Pair<Double, Double>>): List<ProfileSegment> =
+            pts.indices.map { i ->
+                val a = pts[i]; val b = pts[(i + 1) % pts.size]
+                ProfileSegment.Line(a.first, a.second, b.first, b.second)
+            }
+
+        fun arcPoints(cx: Double, cy: Double, rx: Double, ry: Double, startRad: Double, endRad: Double, steps: Int): List<Pair<Double, Double>> =
+            (0..steps).map { k ->
+                val t = startRad + (endRad - startRad) * k / steps
+                (cx + rx * kotlin.math.cos(t)) to (cy + ry * kotlin.math.sin(t))
+            }
+
+        // 'B' in x=[18, 26.8], y=[4, 16] mit vielen kurzen Bogen- und Ecksegmenten (inkl. 0.02-mm-Übergängen)
+        val bOuterPts = buildList {
+            add(18.0 to 4.0)
+            add(18.0 to 16.0)
+            add(23.98 to 16.0)
+            addAll(arcPoints(24.0, 13.2, 2.8, 2.8, PI / 2, -PI / 2, 20))
+            add(23.98 to 10.4)
+            add(23.2 to 10.0)
+            add(23.98 to 9.6)
+            addAll(arcPoints(24.0, 6.8, 2.8, 2.8, PI / 2, -PI / 2, 20))
+            add(23.98 to 4.0)
+        }
+        val bHoleTopPts = buildList {
+            add(20.0 to 11.4)
+            add(23.58 to 11.4)
+            addAll(arcPoints(23.6, 13.0, 1.6, 1.6, -PI / 2, PI / 2, 18))
+            add(23.58 to 14.6)
+            add(20.0 to 14.6)
+        }
+        val bHoleBotPts = buildList {
+            add(20.0 to 5.4)
+            add(23.58 to 5.4)
+            addAll(arcPoints(23.6, 7.0, 1.6, 1.6, -PI / 2, PI / 2, 18))
+            add(23.58 to 8.6)
+            add(20.0 to 8.6)
+        }
+        val bProfile = Profile(closedSegs(bOuterPts), listOf(closedSegs(bHoleTopPts), closedSegs(bHoleBotPts)))
+
+        // '8' in x=[33.8, 40.2], y=[3.8, 16] mit zwei Inneninseln und vielen kurzen Bogensegmenten
+        val eightOuterPts = buildList {
+            addAll(arcPoints(37.0, 13.0, 3.0, 3.0, PI / 6, 5 * PI / 6, 16))
+            add(34.0 to 13.0)
+            add(34.4 to 11.4)
+            add(35.2 to 10.0)
+            add(34.2 to 8.5)
+            add(33.8 to 7.0)
+            addAll(arcPoints(37.0, 7.0, 3.2, 3.2, 7 * PI / 6, 11 * PI / 6, 16))
+            add(40.2 to 7.0)
+            add(39.8 to 8.5)
+            add(38.8 to 10.0)
+            add(39.6 to 11.4)
+            add(40.0 to 13.0)
+        }
+        val eightHoleTopPts = arcPoints(37.0, 13.0, 1.6, 1.6, 0.0, 2 * PI * 23 / 24, 23)
+        val eightHoleBotPts = arcPoints(37.0, 7.0, 1.8, 1.6, 0.0, 2 * PI * 23 / 24, 23)
+        val eightProfile = Profile(closedSegs(eightOuterPts), listOf(closedSegs(eightHoleTopPts), closedSegs(eightHoleBotPts)))
+
+        // Workplane XZ: lokales (x, y) -> (x, 0, y), Normale -Y; 3 mm tief (y in [-1, 2])
+        val frontTransform = doubleArrayOf(
+            1.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, -1.0, 2.0,
+            0.0, 1.0, 0.0, 0.0,
+        )
+        BrepShape.extrude(Profile.rectangle(0.0, 0.0, 80.0, 50.0), 20.0).use { box ->
+            BrepShape.extrude(bProfile, 3.0).use { bRaw ->
+                BrepShape.extrude(eightProfile, 3.0).use { eRaw ->
+                    bRaw.union(eRaw).use { joined ->
+                        joined.transform(frontTransform).use { tool ->
+                            box.cut(tool).use { engraved ->
+                                engraved.unifyFaces().use { result ->
+                                    val mesh = result.tessellate(linearDeflection = 0.05, angularDeflection = 0.3)
+                                    assertTrue(mesh.failedFaces.isEmpty(), "Unvernetzte Flächen: ${mesh.failedFaces.toList()}")
+                                    assertEquals((1..result.faceCount).toSet(), mesh.triangleFace.toSet(), "Jede Fläche muss trianguliert sein")
+                                    assertOutwardTriangleWinding(result)
+                                    assertWatertightClosedMesh(mesh)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
 }

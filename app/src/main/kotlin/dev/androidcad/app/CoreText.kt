@@ -419,6 +419,7 @@ private fun BrepText.res(): Int = when (this) {
     BrepText.EXTRUSION_HEIGHT_ZERO -> R.string.core_brep_extrusion_height_zero
     BrepText.REVOLVE_AXIS_NO_DIRECTION -> R.string.core_brep_revolve_axis_no_direction
     BrepText.REVOLVE_ANGLE_RANGE -> R.string.core_brep_revolve_angle_range
+    BrepText.TESSELLATION_FAILED_FACES -> R.string.core_brep_tessellation_failed_faces
 }
 
 private fun GeometryText.res(): Int = when (this) {

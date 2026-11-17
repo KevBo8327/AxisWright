@@ -300,6 +300,7 @@
     <string name="core_brep_extrusion_height_zero">Extrusionshöhe darf nicht 0 sein</string>
     <string name="core_brep_revolve_axis_no_direction">Drehachse braucht eine Richtung</string>
     <string name="core_brep_revolve_angle_range">Drehwinkel muss zwischen 0 und 360 Grad liegen</string>
+    <string name="core_brep_tessellation_failed_faces">%1$d Fläche(n) konnten nicht vernetzt werden (IDs: %2$s)</string>
 
     <!-- Geometriekern (Manifold/CSG) -->
     <string name="core_geometry_error">Geometriefehler</string>

@@ -300,6 +300,7 @@
     <string name="core_brep_extrusion_height_zero">Extrusion height must not be 0</string>
     <string name="core_brep_revolve_axis_no_direction">Revolve axis needs a direction</string>
     <string name="core_brep_revolve_angle_range">Revolve angle must be between 0 and 360 degrees</string>
+    <string name="core_brep_tessellation_failed_faces">%1$d face(s) could not be tessellated (IDs: %2$s)</string>
 
     <!-- Geometriekern (Manifold/CSG) -->
     <string name="core_geometry_error">Geometry error</string>
