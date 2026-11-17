@@ -249,7 +249,8 @@ TopoDS_Face readProfile(const double* prog, size_t len, std::vector<gp_Pnt>& mid
   for (int i = 1; i < nWires; ++i) mk.Add(readWire(r, mids));
   ShapeFix_Face fix(mk.Face());
   fix.FixSmallAreaWireMode() = 0;  // kleine gültige Inseln/Löcher nicht verwerfen
-  fix.Perform();                   // richtet Wires/PCurves und anschließend die Orientierung (Löcher entgegengesetzt) aus
+  fix.FixOrientation();            // Löcher müssen entgegengesetzt zur Außenkontur laufen
+  fix.Perform();                   // richtet Wires/PCurves und anschließend die Orientierung aus
   return fix.Face();
 }
 
@@ -960,6 +961,7 @@ JNIEXPORT jdoubleArray JNICALL Java_dev_androidcad_brep_NativeBrep_faceGeometry(
       if (surf.GetType() == GeomAbs_Plane) {
         gp_Pln pl = surf.Plane();
         gp_Dir d = pl.Axis().Direction();
+        if (!pl.Direct()) d.Reverse();  // Linkshändiges System (nach Spiegelung): dS/du × dS/dv ist −Axis().Direction()
         if (face.Orientation() == TopAbs_REVERSED) d.Reverse();  // Außennormale des Körpers
         gp_Pnt o = pl.Location();
         out.insert(out.end(), {1.0, o.X(), o.Y(), o.Z(), d.X(), d.Y(), d.Z()});
