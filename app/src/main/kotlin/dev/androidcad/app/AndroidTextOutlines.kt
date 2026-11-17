@@ -29,8 +29,11 @@ object AndroidTextOutlines : TextOutlines {
 
         val rawPath = Path()
         paint.getTextPath(text, 0, text.length, 0f, 0f, rawPath)
-
-        val measure = PathMeasure(rawPath, false)
+        // Schriften (z. B. variable Roboto-Glyphen wie 'B') können überlappende Teilkonturen enthalten;
+        // Vereinigung mit sich selbst löst Selbstüberschneidungen über Skia-PathOps in disjunkte Konturen auf.
+        val path = Path()
+        val simplified = path.op(rawPath, Path(rawPath), Path.Op.UNION) && !path.isEmpty
+        val measure = PathMeasure(if (simplified) path else rawPath, false)
         val loops = ArrayList<Loop>()
         val contourPath = Path()
         // Akzeptabler Fehler für Path.approximate: 0.5% der Höhe, zwischen 0.01 mm und 0.1 mm
