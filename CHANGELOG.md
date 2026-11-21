@@ -5,6 +5,16 @@ All notable changes to AxisWright will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.4-beta] - 2026-11-17
+
+### Fixed
+- **Watertight Engraving & Text Meshing:** Cleaned overlapping text sub-contours and added Delabella re-meshing for failed B-rep faces so STL and 3MF exports contain no missing faces or holes.
+- **Section View Cap Color:** Restricted the section cap color to Section View mode only, preventing normal model faces from rendering in cap color.
+- **Mirrored Plane Normals & Hole Orientation:** Fixed hole orientation in `readProfile` and plane normals after mirroring in `cadbrep`.
+
+### Changed
+- **Google Play & Privacy Documentation:** Updated Play Store metadata, dual-language store screenshots, GitHub Pages privacy policy (`docs/privacy/`), and Play Console submission guide.
+
 ## [0.9.3-beta] - 2026-11-16
 
 ### Added

@@ -1,0 +1,1 @@
+AxisWright 0.9.4-beta: Watertight engraving and text meshing (cleaned overlapping text contours and Delabella fallback so STL/3MF exports have no missing faces). Section cap color is now only shown in Section View. Fixed hole orientation and mirrored plane normals in B-rep modeling.

@@ -1,0 +1,1 @@
+AxisWright 0.9.4-beta: Dichte Vernetzung für Text und Gravuren (bereinigte Textkonturen und Delabella-Nachvernetzung ohne fehlende Dreiecke in STL/3MF). Kappenfarbe wird nur noch in der Schnittansicht angezeigt. Lochorientierung und gespiegelte Ebenen-Normalen in der 3D-Geometrie korrigiert.

@@ -46,8 +46,8 @@ android {
         minSdk = 26
         targetSdk = 36
         // versionCode = Major·1000 + Minor·100 + Patch (0.9.0 → 900, 1.0.0 → 1000); jeder Upload in Play braucht einen höheren Wert
-        versionCode = 903
-        versionName = "0.9.3-beta"
+        versionCode = 904
+        versionName = "0.9.4-beta"
         if (isBundleBuild) {
             // Googlebooks laufen auch auf Intel/AMD → x86_64 ist Pflicht neben arm64.
             ndk { abiFilters += listOf("arm64-v8a", "x86_64") }
@@ -56,7 +56,7 @@ android {
 
     // APK-Splits je ABI (arm64-v8a für Geräte, x86_64 für Emulator/Chromebooks), ohne universelle APK.
     // Betrifft nur APK-Builds (AAB/bundle bleibt unverändert und bündelt weiterhin beide ABIs).
-    // Beide ABI-APKs behalten versionCode = 903 (für GitHub-Releases/F-Droid sauber nach Major·1000+Minor·100+Patch; jede Zielarchitektur installiert nur ihr eigenes APK).
+    // Beide ABI-APKs behalten versionCode = 904 (für GitHub-Releases/F-Droid sauber nach Major·1000+Minor·100+Patch; jede Zielarchitektur installiert nur ihr eigenes APK).
     if (!isBundleBuild) {
         splits {
             abi {
