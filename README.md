@@ -8,6 +8,7 @@ The app works entirely **offline**: no user accounts, no cloud sync required, no
 
 - **GitHub:** [https://github.com/KevBo8327/AxisWright](https://github.com/KevBo8327/AxisWright)
 - **Codeberg Mirror:** [https://codeberg.org/kb-it-service/AxisWright_CAD](https://codeberg.org/kb-it-service/AxisWright_CAD)
+- **Website & Privacy Policy:** [https://kevbo8327.github.io/AxisWright/privacy/](https://kevbo8327.github.io/AxisWright/privacy/)
 
 ## Screenshots
 

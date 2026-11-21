@@ -1,11 +1,11 @@
 # Store-Eintrag (Google Play)
 
 Längengrenzen von Google Play: Titel 30, Kurzbeschreibung 80, Langbeschreibung 4000 Zeichen.
-Kategorie: **Produktivität**. Kontakt-E-Mail und Datenschutz-URL (siehe `docs/privacy/index.html`) trägt der Entwickler ein.
+Kategorie: **Produktivität**. Kontakt-E-Mail: `kb-it-services@outlook.de`. Datenschutz-URL: `https://kevbo8327.github.io/AxisWright/privacy/` (Quelle: `docs/privacy/index.html`).
 
 Regeln für die Texte: nur beschreiben, was die App heute kann; keine Namen anderer Programme (Play-Richtlinie zu Metadaten);
-keine Superlative wie „beste“ oder „Nr. 1“. Die englische Fassung erst veröffentlichen, wenn die App übersetzt ist (Phase 3) –
-sonst verspricht der Eintrag eine Sprache, die die App nicht hat.
+keine Superlative wie „beste“ oder „Nr. 1“. Beide Sprachen (Deutsch und Englisch) können veröffentlicht werden, da die App vollständig zweisprachig ist.
+Weitere Play-Console-Formulare: siehe [play-console.md](play-console.md).
 
 ## Deutsch
 
@@ -117,16 +117,16 @@ The geometry kernel is Open CASCADE Technology. AxisWright is in active developm
 |---|---|---|
 | App-Symbol | 512 × 512 PNG | `docs/store/icon-512.png` ✓ |
 | Grafik für den Eintrag | 1024 × 500 | `docs/store/feature-graphic.png` ✓ |
-| Screenshots Smartphone | mind. 2, Seitenverhältnis höchstens 2:1 | `docs/store/screenshots/phone-*.png` (5 × 1080 × 2160) ✓ |
-| Screenshots 7″-Tablet | mind. 1 | `docs/store/screenshots/tablet7-*.png` (5 × 1200 × 1920) ✓ |
-| Screenshots 10″-Tablet | mind. 1 | `docs/store/screenshots/tablet10-*.png` (5 × 2560 × 1600) ✓ |
+| Screenshots Smartphone | mind. 2, Seitenverhältnis höchstens 2:1 | `docs/store/screenshots/phone-{de,en}-*.png` (je 7 × 1080 × 2160) ✓ |
+| Screenshots 7″-Tablet | mind. 1 | `docs/store/screenshots/tablet7-{de,en}-*.png` (je 7 × 1200 × 1920) ✓ |
+| Screenshots 10″-Tablet | mind. 1 | `docs/store/screenshots/tablet10-{de,en}-*.png` (je 7 × 2560 × 1600) ✓ |
 
-Screenshots (18.10.2026, Emulator, Darstellung Dunkel, App-Sprache Deutsch, Statusleiste im Demo-Modus; 24-Bit-PNG ohne Transparenz),
-je Gerät in dieser Reihenfolge:
+Screenshots (v0.9.4-beta, Emulator, Darstellung Dunkel, je ein Satz Deutsch `de` und Englisch `en`, Statusleiste im Demo-Modus; 24-Bit-PNG ohne Transparenz, zusätzlich in `fastlane/metadata/android/{de-DE,en-US}/images/`),
+je Gerät und Sprache in dieser Reihenfolge:
 1. `…-1-start` – Startseite mit Schnellstart und zuletzt bearbeiteten Modellen (Vorschaubilder)
-2. `…-2-skizze` – Skizze der Montageplatte mit Maßen, „vollständig bestimmt“
-3. `…-3-modell` – Montageplatte in 3D mit Zeitleiste und Einstellungen der Verrundung
-4. `…-4-parameter` – ausgehöhltes Gehäuse mit Parameter-Tabelle (Breite, Tiefe, Höhe, Wand; Wandstärke folgt „wand“)
-5. `…-5-export` – Export-Menü (STEP, 3MF, Projekt; auf dem Smartphone zusätzlich STL und Volumen)
-
-Noch offen (bei Bedarf): Messen mit Abstandslinie, ein Drehteil.
+2. `…-2-skizze` – Skizze der Montageplatte mit Maßen und Bedingungen, „vollständig bestimmt“
+3. `…-3-modell` – Montageplatte in 3D mit Verrundung, Senkbohrung (Kegelsenkung), Zeitleiste und Bohrungseinstellungen
+4. `…-4-parameter` – ausgehöhltes Gehäuse mit Parameter-Tabelle (Breite, Tiefe, Höhe, Wand; Werte folgen den Parametern)
+5. `…-5-export` – Export-Menü (STL, STEP, 3MF, Projekt, Skript-Editor)
+6. `…-6-gravur` – Gravurschild mit sauber vernetzter Textgravur (`AXIS 0.9.4`)
+7. `…-7-schnitt` – Schnittansicht der Montageplatte mit Kappenfarbe ausschließlich an den Schnittflächen
