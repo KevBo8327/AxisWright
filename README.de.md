@@ -8,6 +8,7 @@ Die App arbeitet vollständig **offline**: ohne Benutzerkonto, ohne Cloud-Zwang,
 
 - **GitHub:** [https://github.com/KevBo8327/AxisWright](https://github.com/KevBo8327/AxisWright)
 - **Codeberg-Spiegel:** [https://codeberg.org/kb-it-service/AxisWright_CAD](https://codeberg.org/kb-it-service/AxisWright_CAD)
+- **Website & Datenschutzerklärung:** [https://kevbo8327.github.io/AxisWright/privacy/](https://kevbo8327.github.io/AxisWright/privacy/)
 
 ## Screenshots
 
